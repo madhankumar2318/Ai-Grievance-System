@@ -106,6 +106,9 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  /* Prevent white flash before theme JS loads */
+  background: #020617;
+  color-scheme: dark;
 }
 
 body {

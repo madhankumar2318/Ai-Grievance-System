@@ -245,7 +245,7 @@ export default function AdminDashboard() {
                                             <td style={{ padding: "1.1rem 1.25rem", fontSize: "0.875rem", color: "var(--text-muted)" }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                                     <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "800", color: "var(--text-muted)", flexShrink: 0 }}>
-                                                        {c.user.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                                                        {c.user.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
                                                     </div>
                                                     {c.user}
                                                 </div>

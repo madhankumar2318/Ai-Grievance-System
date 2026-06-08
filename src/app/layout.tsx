@@ -30,6 +30,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* ── Anti-flash script: runs synchronously before first paint ── */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('grievance_theme');
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var theme = saved || (prefersDark ? 'dark' : 'light');
+                  document.documentElement.setAttribute('data-theme', theme);
+                  document.documentElement.style.background = theme === 'dark' ? '#020617' : '#f0f4ff';
+                } catch(e) {
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                  document.documentElement.style.background = '#020617';
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <AuthProvider>
           <ThemeProvider>
