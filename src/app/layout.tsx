@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* ── Anti-flash script: runs synchronously before first paint ── */}
         <script
@@ -41,10 +41,8 @@ export default function RootLayout({
                   var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                   var theme = saved || (prefersDark ? 'dark' : 'light');
                   document.documentElement.setAttribute('data-theme', theme);
-                  document.documentElement.style.background = theme === 'dark' ? '#020617' : '#f0f4ff';
                 } catch(e) {
                   document.documentElement.setAttribute('data-theme', 'dark');
-                  document.documentElement.style.background = '#020617';
                 }
               })();
             `,
