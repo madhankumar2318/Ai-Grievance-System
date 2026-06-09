@@ -19,13 +19,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Mock credentials for demo
-export const MOCK_CREDENTIALS = [
-    { email: "user@demo.com", password: "user123", username: "Rahul Sharma", role: "user" as UserRole },
-    { email: "authority@demo.com", password: "auth123", username: "Officer Priya", role: "authority" as UserRole },
-    { email: "chief@demo.com", password: "chief123", username: "Chief Kumar", role: "chief" as UserRole },
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
 
@@ -42,7 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = (authUser: AuthUser) => {
         setUser(authUser);
-        localStorage.setItem("grievance_user", JSON.stringify(authUser));
+        // Only store safe metadata — NO passwords ever stored here
+        localStorage.setItem("grievance_user", JSON.stringify({
+            username: authUser.username,
+            email: authUser.email,
+            role: authUser.role,
+        }));
     };
 
     const logout = () => {

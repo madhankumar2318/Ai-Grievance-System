@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth, MOCK_CREDENTIALS, UserRole } from "@/context/AuthContext";
+import { useAuth, UserRole } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useLang } from "@/context/LanguageContext";
@@ -8,7 +8,7 @@ import { useLang } from "@/context/LanguageContext";
 /* ── Types ──────────────────────────────────────────────────────────────── */
 interface RegisteredUser {
     email: string;
-    password: string;
+    passwordHash: string;  // ← bcrypt hash, NEVER plain text
     username: string;
     role: UserRole;
     phone?: string;
@@ -22,7 +22,7 @@ interface RegisteredUser {
     serviceId?: string;
 }
 
-/* ── localStorage helpers ───────────────────────────────────────────────── */
+/* ── Secure localStorage helpers ────────────────────────────────────────── */
 function getRegisteredUsers(): RegisteredUser[] {
     if (typeof window === "undefined") return [];
     try { return JSON.parse(localStorage.getItem("gs_registered_users") || "[]"); }
@@ -33,13 +33,9 @@ function saveRegisteredUser(u: RegisteredUser) {
     list.push(u);
     localStorage.setItem("gs_registered_users", JSON.stringify(list));
 }
-function findUser(email: string, password: string, role: UserRole): RegisteredUser | undefined {
-    const demo = MOCK_CREDENTIALS.find(c => c.email === email && c.password === password && c.role === role);
-    if (demo) return demo as RegisteredUser;
-    return getRegisteredUsers().find(u => u.email === email && u.password === password && u.role === role);
-}
+const DEMO_EMAILS = ["user@demo.com", "authority@demo.com", "chief@demo.com"];
 function emailExists(email: string): boolean {
-    if (MOCK_CREDENTIALS.some(c => c.email === email)) return true;
+    if (DEMO_EMAILS.includes(email)) return true;
     return getRegisteredUsers().some(u => u.email === email);
 }
 
@@ -86,15 +82,53 @@ const DISTRICTS_BY_STATE: Record<string, string[]> = {
 
 const INDIAN_STATES = Object.keys(DISTRICTS_BY_STATE).sort();
 
-/* ── ID validation helpers ──────────────────────────────────────────────── */
+/* ── Verhoeff checksum tables (same algorithm UIDAI uses for Aadhaar) ──────── */
+const VERHOEFF_D = [
+    [0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],
+    [3,4,0,1,2,8,9,5,6,7],[4,0,1,2,3,9,5,6,7,8],[5,9,8,7,6,0,4,3,2,1],
+    [6,5,9,8,7,1,0,4,3,2],[7,6,5,9,8,2,1,0,4,3],[8,7,6,5,9,3,2,1,0,4],
+    [9,8,7,6,5,4,3,2,1,0],
+];
+const VERHOEFF_P = [
+    [0,1,2,3,4,5,6,7,8,9],[1,5,7,6,2,8,3,0,9,4],[5,8,0,3,7,9,6,1,4,2],
+    [8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,6,8,7,0],[4,2,8,6,5,7,3,9,0,1],
+    [2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8],
+];
+const VERHOEFF_INV = [0,4,3,2,1,9,8,7,6,5];
+function verhoeffCheck(num: string): boolean {
+    let c = 0;
+    const digits = num.split("").reverse().map(Number);
+    for (let i = 0; i < digits.length; i++) {
+        c = VERHOEFF_D[c][VERHOEFF_P[i % 8][digits[i]]];
+    }
+    return c === 0;
+}
+
+/* ── PAN check-digit validation ──────────────────────────────────────── */
+function validatePanCheckDigit(pan: string): boolean {
+    // PAN format: AAAAA9999A
+    // 4th character encodes PAN holder type: P=Person, C=Company, H=HUF etc.
+    const validTypes = ["P","C","H","F","A","T","B","L","J","G"];
+    if (!validTypes.includes(pan[3])) return false;
+    // 5th character is first letter of last name (A-Z) — just verify it's alpha
+    if (!/[A-Z]/.test(pan[4])) return false;
+    return true;
+}
+
+/* ── ID validation helpers ────────────────────────────────────────────────────── */
 function validateId(type: string, value: string): string {
     const v = value.trim().toUpperCase();
     if (type === "aadhaar") {
         if (!/^\d{12}$/.test(v)) return "Aadhaar must be exactly 12 digits.";
+        if (v[0] === "0" || v[0] === "1") return "Aadhaar number cannot start with 0 or 1.";
+        if (!verhoeffCheck(v)) return "Invalid Aadhaar number (checksum failed). Please check and re-enter.";
     } else if (type === "pan") {
         if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v)) return "PAN must be in format: ABCDE1234F";
+        if (!validatePanCheckDigit(v)) return "Invalid PAN structure. Check the 4th character (must be P/C/H/F/A/T/B/L/J/G).";
     } else if (type === "license") {
-        if (v.length < 10) return "License number must be at least 10 characters.";
+        // Indian DL format: XX00 00000000000 (state code + RTO + year + serial)
+        if (v.length < 10 || v.length > 16) return "License number must be 10–16 characters.";
+        if (!/^[A-Z]{2}/.test(v)) return "License must start with 2-letter state code (e.g. MH, TN, DL).";
     }
     return "";
 }
@@ -160,6 +194,9 @@ export default function LoginPage() {
         },
     };
 
+    // Demo mode: set NEXT_PUBLIC_DEMO_MODE=false in Vercel env to hide demo hints on production
+    const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+
     /* ── Login state ── */
     const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
     const [email, setEmail] = useState("");
@@ -182,6 +219,13 @@ export default function LoginPage() {
     const [suErrors, setSuErrors] = useState<Record<string, string>>({});
     const [suLoading, setSuLoading] = useState(false);
     const [suSuccess, setSuSuccess] = useState(false);
+    /* OTP state for citizen signup */
+    const [otpSent, setOtpSent] = useState(false);
+    const [otpValue, setOtpValue] = useState("");
+    const [otpVerified, setOtpVerified] = useState(false);
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [otpError, setOtpError] = useState("");
+    const [otpCooldown, setOtpCooldown] = useState(0);
 
     /* ── Authority sign-up state ── */
     const [au, setAu] = useState({
@@ -210,20 +254,33 @@ export default function LoginPage() {
         if (chErrors[key]) setChErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
     };
 
-    /* ── Login handler ── */
+    /* ── Login handler — calls server API (bcrypt compare) ── */
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedRole) { setLoginError(t("login_error_role")); return; }
         setLoginLoading(true); setLoginError("");
-        await new Promise(r => setTimeout(r, 750));
-        const match = findUser(email, password, selectedRole);
-        if (match) {
-            login({ username: match.username, email: match.email, role: match.role });
-            if (match.role === "user") router.push("/");
-            else if (match.role === "authority") router.push("/admin");
-            else router.push("/chief");
-        } else {
-            setLoginError(t("login_error_creds"));
+        try {
+            const res = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    role: selectedRole,
+                    registeredUsers: getRegisteredUsers(),
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.user) {
+                login({ username: data.user.username, email: data.user.email, role: data.user.role as UserRole });
+                if (data.user.role === "user") router.push("/");
+                else if (data.user.role === "authority") router.push("/admin");
+                else router.push("/chief");
+            } else {
+                setLoginError(t("login_error_creds"));
+            }
+        } catch {
+            setLoginError("Connection error. Please try again.");
         }
         setLoginLoading(false);
     };
@@ -287,54 +344,126 @@ export default function LoginPage() {
         return Object.keys(errs).length === 0;
     };
 
-    /* ── Sign-up submit ── */
+    /* ── OTP: Send ── */
+    const sendOtp = async () => {
+        if (!su.email.includes("@")) { setOtpError("Enter a valid email first."); return; }
+        setOtpLoading(true); setOtpError("");
+        try {
+            const res = await fetch("/api/auth/otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: su.email, action: "send" }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOtpSent(true);
+                setOtpCooldown(60);
+                if (data.devMode && data.otp) {
+                    setOtpValue(data.otp);
+                    setOtpError(`Dev mode: OTP pre-filled (${data.otp}). Resend not configured.`);
+                }
+                let t = 60;
+                const interval = setInterval(() => { t--; setOtpCooldown(t); if (t <= 0) clearInterval(interval); }, 1000);
+            } else {
+                setOtpError(data.error || "Failed to send OTP.");
+            }
+        } catch { setOtpError("Connection error. Try again."); }
+        setOtpLoading(false);
+    };
+
+    /* ── OTP: Verify ── */
+    const verifyOtp = async () => {
+        if (!otpValue.trim()) { setOtpError("Please enter the OTP."); return; }
+        setOtpLoading(true); setOtpError("");
+        try {
+            const res = await fetch("/api/auth/otp", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: su.email, otp: otpValue.trim() }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOtpVerified(true); setOtpError("");
+                setSuErrors(prev => { const n = {...prev}; delete n.otp; return n; });
+            } else {
+                setOtpError(data.error || "Invalid OTP.");
+            }
+        } catch { setOtpError("Connection error. Try again."); }
+        setOtpLoading(false);
+    };
+
+    /* ── Citizen Sign-up — requires email OTP first ── */
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!otpVerified) { setSuErrors({ otp: "Please verify your email with the OTP before registering." }); return; }
         if (!validateSignup()) return;
         setSuLoading(true);
-        await new Promise(r => setTimeout(r, 1000));
-        saveRegisteredUser({
-            email: su.email, password: su.password,
-            username: su.name.trim(), role: "user",
-            phone: su.phone, state: su.state,
-            district: su.district, pincode: su.pincode,
-            idType: su.idType, idNumber: su.idNumber.trim().toUpperCase(),
-        });
-        setSuSuccess(true);
+        try {
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: su.email, password: su.password,
+                    username: su.name.trim(), role: "user",
+                    phone: su.phone, state: su.state,
+                    district: su.district, pincode: su.pincode,
+                    idType: su.idType, idNumber: su.idNumber.trim().toUpperCase(),
+                    registeredUsers: getRegisteredUsers(),
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.user) {
+                saveRegisteredUser(data.user);
+                setSuSuccess(true);
+                setTimeout(() => {
+                    setMode("login"); setSelectedRole("user"); setEmail(su.email); setPassword("");
+                    setSu({ name: "", email: "", phone: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "" });
+                    setSuErrors({}); setSuSuccess(false);
+                }, 1800);
+            } else {
+                setSuErrors({ email: data.error || "Registration failed. Please try again." });
+            }
+        } catch {
+            setSuErrors({ email: "Connection error. Please try again." });
+        }
         setSuLoading(false);
-        setTimeout(() => {
-            setMode("login");
-            setSelectedRole("user");
-            setEmail(su.email);
-            setPassword("");
-            setSu({ name: "", email: "", phone: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "" });
-            setSuErrors({});
-            setSuSuccess(false);
-        }, 1800);
     };
 
     const handleAuthSignup = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateAuthSignup()) return;
         setAuLoading(true);
-        await new Promise(r => setTimeout(r, 1000));
-        saveRegisteredUser({
-            email: au.email, password: au.password,
-            username: au.name.trim(), role: "authority",
-            phone: au.phone,
-            authorityRole: au.authorityRole, serviceId: au.serviceId.trim(),
-        });
-        setAuSuccess(true);
+        try {
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: au.email,
+                    password: au.password,
+                    username: au.name.trim(),
+                    role: "authority",
+                    phone: au.phone,
+                    authorityRole: au.authorityRole,
+                    serviceId: au.serviceId.trim(),
+                    registeredUsers: getRegisteredUsers(),
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.user) {
+                saveRegisteredUser(data.user);
+                setAuSuccess(true);
+                setTimeout(() => {
+                    setMode("login"); setSelectedRole("authority"); setEmail(au.email); setPassword("");
+                    setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "" });
+                    setAuErrors({}); setAuSuccess(false);
+                }, 1800);
+            } else {
+                setAuErrors({ email: data.error || "Registration failed. Please try again." });
+            }
+        } catch {
+            setAuErrors({ email: "Connection error. Please try again." });
+        }
         setAuLoading(false);
-        setTimeout(() => {
-            setMode("login");
-            setSelectedRole("authority");
-            setEmail(au.email);
-            setPassword("");
-            setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "" });
-            setAuErrors({});
-            setAuSuccess(false);
-        }, 1800);
     };
 
     /* ── Chief sign-up validation + handler ── */
@@ -359,24 +488,36 @@ export default function LoginPage() {
         e.preventDefault();
         if (!validateChiefSignup()) return;
         setChLoading(true);
-        await new Promise(r => setTimeout(r, 1000));
-        saveRegisteredUser({
-            email: ch.email, password: ch.password,
-            username: ch.name.trim(), role: "chief",
-            phone: ch.phone,
-            serviceId: ch.officerId.trim().toUpperCase(),
-        });
-        setChSuccess(true);
+        try {
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: ch.email,
+                    password: ch.password,
+                    username: ch.name.trim(),
+                    role: "chief",
+                    phone: ch.phone,
+                    serviceId: ch.officerId.trim().toUpperCase(),
+                    registeredUsers: getRegisteredUsers(),
+                }),
+            });
+            const data = await res.json();
+            if (data.success && data.user) {
+                saveRegisteredUser(data.user);
+                setChSuccess(true);
+                setTimeout(() => {
+                    setMode("login"); setSelectedRole("chief"); setEmail(ch.email); setPassword("");
+                    setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "" });
+                    setChErrors({}); setChSuccess(false);
+                }, 1800);
+            } else {
+                setChErrors({ email: data.error || "Registration failed. Please try again." });
+            }
+        } catch {
+            setChErrors({ email: "Connection error. Please try again." });
+        }
         setChLoading(false);
-        setTimeout(() => {
-            setMode("login");
-            setSelectedRole("chief");
-            setEmail(ch.email);
-            setPassword("");
-            setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "" });
-            setChErrors({});
-            setChSuccess(false);
-        }, 1800);
     };
 
     const switchMode = (m: "login" | "signup" | "auth-signup" | "chief-signup") => {
@@ -457,20 +598,26 @@ export default function LoginPage() {
                                 <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: cfg.gradient, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", boxShadow: `0 4px 12px ${cfg.color}44` }}>{cfg.icon}</div>
                                 <div>
                                     <div style={{ fontWeight: "700", fontSize: "0.95rem" }}>{cfg.label} Login</div>
-                                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Secure demo access</div>
+                                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                        {DEMO_MODE ? "Secure demo access" : "Secure access"}
+                                    </div>
                                 </div>
                             </div>
-                            <button type="button" onClick={fillDemo}
-                                style={{ padding: "0.35rem 0.85rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "700", background: `${cfg.color}18`, color: cfg.color, border: `1px solid ${cfg.color}40`, cursor: "pointer", transition: "var(--transition)" }}
-                                onMouseEnter={e => { e.currentTarget.style.background = `${cfg.color}30`; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = `${cfg.color}18`; }}
-                            >⚡ Fill Demo</button>
+                            {DEMO_MODE && (
+                                <button type="button" onClick={fillDemo}
+                                    style={{ padding: "0.35rem 0.85rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "700", background: `${cfg.color}18`, color: cfg.color, border: `1px solid ${cfg.color}40`, cursor: "pointer", transition: "var(--transition)" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = `${cfg.color}30`; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = `${cfg.color}18`; }}
+                                >⚡ Fill Demo</button>
+                            )}
                         </div>
 
                         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                             <div>
                                 <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: "600", fontSize: "0.875rem" }}>{t("login_email")}</label>
-                                <input type="email" required placeholder={`e.g. ${cfg.hint.split(" / ")[0]}`} value={email} onChange={e => setEmail(e.target.value)} />
+                                <input type="email" required
+                                    placeholder={DEMO_MODE ? `e.g. ${cfg.hint.split(" / ")[0]}` : "Enter your email"}
+                                    value={email} onChange={e => setEmail(e.target.value)} />
                             </div>
                             <div>
                                 <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: "600", fontSize: "0.875rem" }}>{t("login_password")}</label>
@@ -573,6 +720,43 @@ export default function LoginPage() {
                                             <Field label="Phone Number" icon="📱" error={suErrors.phone}>
                                                 <input style={inputStyle(!!suErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={su.phone} onChange={e => setSuField("phone", e.target.value.replace(/\D/g, ""))} />
                                             </Field>
+                                        </div>
+
+                                        {/* ── Email OTP Verification ── */}
+                                        <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: otpVerified ? "rgba(16,185,129,0.08)" : "rgba(99,102,241,0.06)", border: `1px solid ${otpVerified ? "#10b98130" : "rgba(99,102,241,0.2)"}`, transition: "all 0.3s ease" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: otpVerified ? "#10b981" : "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+                                                {otpVerified ? "✅ Email Verified" : "🔐 Verify Your Email"}
+                                            </div>
+                                            {otpVerified ? (
+                                                <div style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: "600" }}>
+                                                    ✓ {su.email} has been verified successfully.
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                                                        <button type="button" onClick={sendOtp} disabled={otpLoading || otpCooldown > 0}
+                                                            style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpCooldown > 0 ? "var(--bg-card)" : "linear-gradient(135deg,#6366f1,#8b5cf6)", color: otpCooldown > 0 ? "var(--text-muted)" : "white", border: "none", cursor: otpCooldown > 0 ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "var(--transition)" }}>
+                                                            {otpLoading ? "Sending…" : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSent ? "Resend OTP" : "Send OTP"}
+                                                        </button>
+                                                        {otpSent && (
+                                                            <input
+                                                                style={{ ...inputStyle(false), flex: 1, fontFamily: "monospace", letterSpacing: "0.2em", textAlign: "center", fontSize: "1rem" }}
+                                                                type="text" placeholder="6-digit OTP" maxLength={6}
+                                                                value={otpValue} onChange={e => { setOtpValue(e.target.value.replace(/\D/g, "")); setOtpError(""); }}
+                                                            />
+                                                        )}
+                                                        {otpSent && (
+                                                            <button type="button" onClick={verifyOtp} disabled={otpLoading || otpValue.length !== 6}
+                                                                style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpValue.length === 6 ? "linear-gradient(135deg,#10b981,#06b6d4)" : "var(--bg-card)", color: otpValue.length === 6 ? "white" : "var(--text-muted)", border: "none", cursor: otpValue.length === 6 ? "pointer" : "not-allowed", whiteSpace: "nowrap", transition: "var(--transition)" }}>
+                                                                {otpLoading ? "…" : "Verify"}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {otpError && <p style={{ fontSize: "0.72rem", color: otpError.includes("Dev mode") ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: "600" }}>{otpError}</p>}
+                                                    {suErrors.otp && !otpSent && <p style={{ fontSize: "0.72rem", color: "#ef4444", margin: 0, fontWeight: "600" }}>⚠️ {suErrors.otp}</p>}
+                                                    {!otpSent && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: 0 }}>A 6-digit OTP will be sent to your email to verify ownership.</p>}
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
