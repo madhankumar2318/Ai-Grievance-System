@@ -16,7 +16,8 @@ interface RegisteredUser {
     district?: string;
     pincode?: string;
     idType?: string;
-    idNumber?: string;
+    idHash?: string;       // ← SHA-256 hash of idNumber, NEVER plain text
+    dob?: string;          // ← Date of Birth (YYYY-MM-DD)
     /* authority fields */
     authorityRole?: string;
     serviceId?: string;
@@ -37,6 +38,17 @@ const DEMO_EMAILS = ["user@demo.com", "authority@demo.com", "chief@demo.com"];
 function emailExists(email: string): boolean {
     if (DEMO_EMAILS.includes(email)) return true;
     return getRegisteredUsers().some(u => u.email === email);
+}
+
+/* ── Age calculation helper ─────────────────────────────────────────────── */
+function calculateAge(dob: string): number {
+    const birth = new Date(dob);
+    if (isNaN(birth.getTime())) return 0;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
 }
 
 /* ── Districts by state (all 36 states / UTs of India) ─────────────────── */
@@ -104,32 +116,12 @@ function verhoeffCheck(num: string): boolean {
     return c === 0;
 }
 
-/* ── PAN check-digit validation ──────────────────────────────────────── */
-function validatePanCheckDigit(pan: string): boolean {
-    // PAN format: AAAAA9999A
-    // 4th character encodes PAN holder type: P=Person, C=Company, H=HUF etc.
-    const validTypes = ["P","C","H","F","A","T","B","L","J","G"];
-    if (!validTypes.includes(pan[3])) return false;
-    // 5th character is first letter of last name (A-Z) — just verify it's alpha
-    if (!/[A-Z]/.test(pan[4])) return false;
-    return true;
-}
-
-/* ── ID validation helpers ────────────────────────────────────────────────────── */
-function validateId(type: string, value: string): string {
-    const v = value.trim().toUpperCase();
-    if (type === "aadhaar") {
-        if (!/^\d{12}$/.test(v)) return "Aadhaar must be exactly 12 digits.";
-        if (v[0] === "0" || v[0] === "1") return "Aadhaar number cannot start with 0 or 1.";
-        if (!verhoeffCheck(v)) return "Invalid Aadhaar number (checksum failed). Please check and re-enter.";
-    } else if (type === "pan") {
-        if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v)) return "PAN must be in format: ABCDE1234F";
-        if (!validatePanCheckDigit(v)) return "Invalid PAN structure. Check the 4th character (must be P/C/H/F/A/T/B/L/J/G).";
-    } else if (type === "license") {
-        // Indian DL format: XX00 00000000000 (state code + RTO + year + serial)
-        if (v.length < 10 || v.length > 16) return "License number must be 10–16 characters.";
-        if (!/^[A-Z]{2}/.test(v)) return "License must start with 2-letter state code (e.g. MH, TN, DL).";
-    }
+/* ── Aadhaar validation (Verhoeff checksum — same algorithm UIDAI uses) ─── */
+function validateAadhaar(value: string): string {
+    const v = value.trim().replace(/\s+/g, "");
+    if (!/^\d{12}$/.test(v))       return "Aadhaar must be exactly 12 digits.";
+    if (v[0] === "0" || v[0] === "1") return "Aadhaar number cannot start with 0 or 1.";
+    if (!verhoeffCheck(v))          return "Invalid Aadhaar number (checksum failed). Please double-check.";
     return "";
 }
 
@@ -142,12 +134,7 @@ const inputStyle = (error?: boolean): React.CSSProperties => ({
     boxSizing: "border-box",
 });
 
-/* ── ID type config (defined OUTSIDE component to prevent remount) ─────── */
-const ID_TYPES = [
-    { value: "aadhaar", label: "Aadhaar Card", icon: "🪪", placeholder: "12-digit Aadhaar number" },
-    { value: "pan", label: "PAN Card", icon: "💳", placeholder: "e.g. ABCDE1234F" },
-    { value: "license", label: "Driving License", icon: "🚗", placeholder: "e.g. MH0120201234567" },
-];
+/* ── Aadhaar is the only accepted ID (strongest govt-grade validation) ──── */
 
 /* ── Reusable field wrapper (defined OUTSIDE component to prevent remount) ─ */
 function Field({ label, icon, error, children }: { label: string; icon: string; error?: string; children: React.ReactNode }) {
@@ -211,6 +198,7 @@ export default function LoginPage() {
     /* ── Sign-up state ── */
     const [su, setSu] = useState({
         name: "", email: "", phone: "",
+        dob: "",                              // Date of Birth
         idType: "aadhaar", idNumber: "",
         state: "", district: "", pincode: "",
         password: "", confirm: "",
@@ -309,9 +297,13 @@ export default function LoginPage() {
         if (!su.email.includes("@")) errs.email = "Enter a valid email address.";
         else if (emailExists(su.email)) errs.email = "This email is already registered.";
         if (!/^\d{10}$/.test(su.phone)) errs.phone = "Enter a valid 10-digit mobile number.";
-        const idErr = validateId(su.idType, su.idNumber);
-        if (su.idNumber.trim() === "") errs.idNumber = "ID number is required.";
-        else if (idErr) errs.idNumber = idErr;
+        /* ── DOB + 18+ check (client-side; server also enforces this) ── */
+        if (!su.dob) errs.dob = "Date of birth is required.";
+        else if (calculateAge(su.dob) < 18)
+            errs.dob = "You must be 18 years or older to register.";
+        /* ── Aadhaar (only accepted ID) ── */
+        if (su.idNumber.trim() === "") errs.idNumber = "Aadhaar number is required.";
+        else { const idErr = validateAadhaar(su.idNumber); if (idErr) errs.idNumber = idErr; }
         if (!su.state) errs.state = "Please select your state.";
         if (!su.district.trim()) errs.district = "District name is required.";
         if (!/^\d{6}$/.test(su.pincode)) errs.pincode = "Enter a valid 6-digit pincode.";
@@ -407,21 +399,26 @@ export default function LoginPage() {
                     username: su.name.trim(), role: "user",
                     phone: su.phone, state: su.state,
                     district: su.district, pincode: su.pincode,
-                    idType: su.idType, idNumber: su.idNumber.trim().toUpperCase(),
+                    idType: su.idType,
+                    idNumber: su.idNumber.trim().toUpperCase(), // server hashes & discards plain text
+                    dob: su.dob,
                     registeredUsers: getRegisteredUsers(),
                 }),
             });
             const data = await res.json();
             if (data.success && data.user) {
-                saveRegisteredUser(data.user);
+                saveRegisteredUser(data.user);  // user object has idHash, NOT idNumber
                 setSuSuccess(true);
                 setTimeout(() => {
                     setMode("login"); setSelectedRole("user"); setEmail(su.email); setPassword("");
-                    setSu({ name: "", email: "", phone: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "" });
+                    setSu({ name: "", email: "", phone: "", dob: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "" });
                     setSuErrors({}); setSuSuccess(false);
                 }, 1800);
             } else {
-                setSuErrors({ email: data.error || "Registration failed. Please try again." });
+                // Map server field-specific errors to the correct form field
+                if (data.field === "dob") setSuErrors({ dob: data.error });
+                else if (data.field === "idNumber") setSuErrors({ idNumber: data.error });
+                else setSuErrors({ email: data.error || "Registration failed. Please try again." });
             }
         } catch {
             setSuErrors({ email: "Connection error. Please try again." });
@@ -546,7 +543,7 @@ export default function LoginPage() {
     const chPwStrength = ch.password.length === 0 ? null : chPwScore === 1 ? "Weak" : chPwScore === 2 ? "Good" : "Strong";
     const chPwColor = chPwStrength === "Weak" ? "#ef4444" : chPwStrength === "Good" ? "#f59e0b" : "#10b981";
 
-    const selectedIdType = ID_TYPES.find(i => i.value === su.idType)!;
+
 
     /* ════════════════════════════════════════════════════════ JSX ══ */
     return (
@@ -722,6 +719,37 @@ export default function LoginPage() {
                                             </Field>
                                         </div>
 
+                                        {/* ── Date of Birth ── */}
+                                        <Field label="Date of Birth" icon="🎂" error={suErrors.dob}>
+                                            <div style={{ position: "relative" }}>
+                                                <input
+                                                    style={{
+                                                        ...inputStyle(!!suErrors.dob),
+                                                        colorScheme: "dark",
+                                                    }}
+                                                    type="date"
+                                                    max={(() => {
+                                                        // max = today minus 18 years
+                                                        const d = new Date();
+                                                        d.setFullYear(d.getFullYear() - 18);
+                                                        return d.toISOString().split("T")[0];
+                                                    })()}
+                                                    value={su.dob}
+                                                    onChange={e => setSuField("dob", e.target.value)}
+                                                />
+                                                {su.dob && calculateAge(su.dob) >= 18 && (
+                                                    <span style={{
+                                                        position: "absolute", right: "0.75rem", top: "50%",
+                                                        transform: "translateY(-50%)", fontSize: "0.75rem",
+                                                        color: "#10b981", fontWeight: "700",
+                                                    }}>✓ Age {calculateAge(su.dob)}</span>
+                                                )}
+                                            </div>
+                                            <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: "0.25rem 0 0" }}>
+                                                You must be 18 years or older to register.
+                                            </p>
+                                        </Field>
+
                                         {/* ── Email OTP Verification ── */}
                                         <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: otpVerified ? "rgba(16,185,129,0.08)" : "rgba(99,102,241,0.06)", border: `1px solid ${otpVerified ? "#10b98130" : "rgba(99,102,241,0.2)"}`, transition: "all 0.3s ease" }}>
                                             <div style={{ fontSize: "0.7rem", fontWeight: "800", color: otpVerified ? "#10b981" : "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
@@ -761,38 +789,29 @@ export default function LoginPage() {
                                     </div>
                                 </div>
 
-                                {/* ── Section 2: ID Proof ── */}
+                                {/* ── Section 2: Aadhaar Verification ── */}
                                 <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🪪 Identity Verification</div>
+                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>🪪 Aadhaar Verification</div>
+                                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "0 0 0.875rem", lineHeight: 1.5 }}>
+                                        We use Aadhaar's built-in Verhoeff checksum algorithm — the same used by UIDAI — to verify your number is genuine before registration.
+                                    </p>
 
-                                    {/* ID Type selector */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.5rem", marginBottom: "0.875rem" }}>
-                                        {ID_TYPES.map(id => (
-                                            <button key={id.value} type="button"
-                                                onClick={() => { setSuField("idType", id.value); setSuField("idNumber", ""); }}
-                                                style={{
-                                                    padding: "0.6rem 0.4rem", borderRadius: "0.625rem",
-                                                    border: su.idType === id.value ? "2px solid #ec4899" : "1.5px solid var(--border)",
-                                                    background: su.idType === id.value ? "#ec489915" : "var(--bg-card)",
-                                                    cursor: "pointer", transition: "var(--transition)",
-                                                    display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem",
-                                                }}
-                                            >
-                                                <span style={{ fontSize: "1.2rem" }}>{id.icon}</span>
-                                                <span style={{ fontSize: "0.6rem", fontWeight: "700", color: su.idType === id.value ? "#ec4899" : "var(--text-muted)" }}>{id.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    <Field label={`${selectedIdType.label} Number`} icon={selectedIdType.icon} error={suErrors.idNumber}>
+                                    <Field label="Aadhaar Number" icon="🪪" error={suErrors.idNumber}>
                                         <input
-                                            style={{ ...inputStyle(!!suErrors.idNumber), textTransform: "uppercase", fontFamily: "monospace", letterSpacing: "0.06em" }}
+                                            style={{ ...inputStyle(!!suErrors.idNumber), fontFamily: "monospace", letterSpacing: "0.15em", fontSize: "1rem" }}
                                             type="text"
-                                            placeholder={selectedIdType.placeholder}
+                                            inputMode="numeric"
+                                            placeholder="Enter 12-digit Aadhaar number"
                                             value={su.idNumber}
-                                            maxLength={su.idType === "aadhaar" ? 12 : su.idType === "pan" ? 10 : 20}
-                                            onChange={e => setSuField("idNumber", e.target.value)}
+                                            maxLength={12}
+                                            onChange={e => setSuField("idNumber", e.target.value.replace(/\D/g, ""))}
                                         />
+                                        {su.idNumber.length === 12 && !validateAadhaar(su.idNumber) && (
+                                            <p style={{ fontSize: "0.72rem", color: "#10b981", margin: "0.3rem 0 0", fontWeight: "700" }}>✅ Valid Aadhaar (checksum passed)</p>
+                                        )}
+                                        <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: "0.25rem 0 0" }}>
+                                            Your Aadhaar number is hashed (SHA-256) before storage — it is never saved in plain text.
+                                        </p>
                                     </Field>
                                 </div>
 
