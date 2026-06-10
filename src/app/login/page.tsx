@@ -187,6 +187,7 @@ export default function LoginPage() {
         idType: "aadhaar", idNumber: "",
         state: "", district: "", pincode: "",
         password: "", confirm: "",
+        otpToken: "",
     });
     const [showSuPw, setShowSuPw] = useState(false);
     const [suErrors, setSuErrors] = useState<Record<string, string>>({});
@@ -266,7 +267,17 @@ export default function LoginPage() {
 
     /* ── Sign-up field change ── */
     const setSuField = (key: string, value: string) => {
-        setSu(prev => ({ ...prev, [key]: value }));
+        setSu(prev => {
+            const next = { ...prev, [key]: value };
+            if (key === "email") {
+                next.otpToken = "";
+                setOtpVerified(false);
+                setOtpSent(false);
+                setOtpValue("");
+                setOtpError("");
+            }
+            return next;
+        });
         if (suErrors[key]) setSuErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
     };
     const setAuField = (key: string, value: string) => {
@@ -358,6 +369,7 @@ export default function LoginPage() {
             const data = await res.json();
             if (data.success) {
                 setOtpVerified(true); setOtpError("");
+                setSu(prev => ({ ...prev, otpToken: data.verificationToken || "" }));
                 setSuErrors(prev => { const n = {...prev}; delete n.otp; return n; });
             } else {
                 setOtpError(data.error || "Invalid OTP.");
@@ -384,6 +396,7 @@ export default function LoginPage() {
                     idType: su.idType,
                     idNumber: su.idNumber.trim().toUpperCase(), // server hashes & discards plain text
                     dob: su.dob,
+                    otpToken: su.otpToken,
                 }),
             });
             const data = await res.json();
@@ -391,7 +404,7 @@ export default function LoginPage() {
                 setSuSuccess(true);
                 setTimeout(() => {
                     setMode("login"); setSelectedRole("user"); setEmail(su.email); setPassword("");
-                    setSu({ name: "", email: "", phone: "", dob: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "" });
+                    setSu({ name: "", email: "", phone: "", dob: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "", otpToken: "" });
                     setSuErrors({}); setSuSuccess(false);
                 }, 1800);
             } else {

@@ -89,3 +89,20 @@ export function verifyJWT(token: string): JWTPayload | null {
         return null;
     }
 }
+
+/**
+ * Sign an email verification token (valid for 15 minutes / 900 seconds)
+ */
+export function signVerificationToken(email: string): string {
+    return signJWT({ email, username: "", role: "verification" }, 900);
+}
+
+/**
+ * Verify an email verification token
+ */
+export function verifyVerificationToken(token: string, expectedEmail: string): boolean {
+    const payload = verifyJWT(token);
+    if (!payload) return false;
+    return payload.role === "verification" && payload.email.toLowerCase() === expectedEmail.toLowerCase();
+}
+

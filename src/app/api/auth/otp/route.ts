@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { signVerificationToken } from "@/lib/auth";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -7,6 +8,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Note: This resets on server restart — acceptable for development.
 // For production with multiple instances, use Redis or Supabase table.
 const otpStore = new Map<string, { otp: string; expiresAt: number; attempts: number }>();
+
 
 function generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
@@ -125,7 +127,8 @@ export async function PUT(req: Request) {
 
         // ✅ OTP correct — clear it so it can't be reused
         otpStore.delete(email);
-        return NextResponse.json({ success: true, message: "Email verified successfully." });
+        const verificationToken = signVerificationToken(email);
+        return NextResponse.json({ success: true, message: "Email verified successfully.", verificationToken });
 
     } catch (err) {
         console.error("OTP verify error:", err);
