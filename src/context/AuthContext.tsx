@@ -43,7 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }));
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await fetch("/api/auth/logout", { method: "POST" });
+        } catch (err) {
+            console.error("Error clearing session cookie:", err);
+        }
         setUser(null);
         localStorage.removeItem("grievance_user");
     };

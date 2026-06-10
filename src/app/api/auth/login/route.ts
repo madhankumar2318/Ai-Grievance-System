@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabase";
+import { signJWT } from "@/lib/auth";
 
 // Pre-hashed demo passwords (generated once, never plain text in code)
 // plain texts: user123, auth123, chief123
@@ -47,6 +49,23 @@ export async function POST(req: Request) {
             }
             const demoPlain = DEMO_PASSWORDS[email];
             if (password === demoPlain) {
+                // Generate JWT token
+                const token = signJWT({
+                    email,
+                    username: demoEntry.username,
+                    role: demoEntry.role,
+                });
+
+                // Set HttpOnly cookie
+                const cookieStore = await cookies();
+                cookieStore.set("auth_token", token, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === "production",
+                    sameSite: "strict",
+                    maxAge: 86400, // 24 hours
+                    path: "/",
+                });
+
                 return NextResponse.json({
                     success: true,
                     user: { email, username: demoEntry.username, role: demoEntry.role },
@@ -79,6 +98,23 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, error: "Invalid credentials" });
         }
 
+        // Generate JWT token
+        const token = signJWT({
+            email: stored.email,
+            username: stored.username,
+            role: stored.role,
+        });
+
+        // Set HttpOnly cookie
+        const cookieStore = await cookies();
+        cookieStore.set("auth_token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 86400, // 24 hours
+            path: "/",
+        });
+
         return NextResponse.json({
             success: true,
             user: { email: stored.email, username: stored.username, role: stored.role },
@@ -89,4 +125,5 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
     }
 }
+
 

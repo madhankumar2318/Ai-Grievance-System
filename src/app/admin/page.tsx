@@ -74,13 +74,10 @@ export default function AdminDashboard() {
 
     const fetchComplaints = async () => {
         try {
-            const { supabase } = await import("@/lib/supabase");
-            const { data, error } = await supabase
-                .from("complaints")
-                .select("*")
-                .order("created_at", { ascending: false });
-            if (data) {
-                const mapped = data.map((c: any) => ({
+            const res = await fetch("/api/admin/complaints");
+            const data = await res.json();
+            if (data.success && data.complaints) {
+                const mapped = data.complaints.map((c: any) => ({
                     id: c.id,
                     subject: c.subject,
                     category: c.category,
@@ -121,9 +118,14 @@ export default function AdminDashboard() {
             } catch { /* silent */ }
         }
         try {
-            const { supabase } = await import("@/lib/supabase");
-            await supabase.from("complaints").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", id);
-        } catch { /* skip */ }
+            await fetch("/api/admin/update-status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, status: newStatus }),
+            });
+        } catch (err) {
+            console.error("Error updating status:", err);
+        }
     };
 
     const pending = complaints.filter(c => c.status === "Pending").length;

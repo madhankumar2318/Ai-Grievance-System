@@ -122,17 +122,12 @@ export default function ChiefDashboard() {
     const fetchComplaints = async () => {
         setLoading(true);
         try {
-            const { supabase, isConfigured } = await import("@/lib/supabase");
-            if (!isConfigured) { setLoading(false); return; }
+            const res = await fetch("/api/admin/complaints");
+            const data = await res.json();
 
-            const { data, error } = await supabase
-                .from("complaints")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (!error && data) {
+            if (data.success && data.complaints) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setComplaints(data.map((c: any) => ({
+                setComplaints(data.complaints.map((c: any) => ({
                     id: c.id,
                     subject: c.subject,
                     category: c.category || "Other",
