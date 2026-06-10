@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
+import { supabase } from "@/lib/supabase";
 
 const DEMO_EMAILS = ["user@demo.com", "authority@demo.com", "chief@demo.com"];
 
@@ -29,11 +30,15 @@ export async function POST(req: Request) {
             password,
             username,
             role,
-            registeredUsers = [],
+            phone,
+            state,
+            district,
+            pincode,
             idType,
             idNumber,   // raw – we hash it and NEVER store the plain text
             dob,        // Date of Birth (citizens only)
-            ...metadata // remaining safe fields (phone, state, district…)
+            authorityRole,
+            serviceId,
         } = body;
 
         // ── Basic required-field check ─────────────────────────────────
@@ -52,11 +57,19 @@ export async function POST(req: Request) {
             );
         }
 
-        // ── Check if email already taken ───────────────────────────────
-        const emailTaken = (registeredUsers as { email: string }[]).some(
-            (u) => u.email === email
-        );
-        if (emailTaken) {
+        // ── Check if email already taken in Supabase ───────────────────
+        const { data: existingUser, error: emailError } = await supabase
+            .from("users")
+            .select("email")
+            .eq("email", email)
+            .maybeSingle();
+
+        if (emailError) {
+            console.error("Database query error:", emailError);
+            return NextResponse.json({ success: false, error: "Database error." }, { status: 500 });
+        }
+
+        if (existingUser) {
             return NextResponse.json(
                 { success: false, error: "Email already registered" },
                 { status: 409 }
@@ -84,24 +97,25 @@ export async function POST(req: Request) {
                 );
             }
 
-            // 2️⃣  One ID = One account (SHA-256 duplicate check)
+            // 2️⃣  One ID = One account (SHA-256 duplicate check in Supabase)
             if (idNumber) {
                 idHash = hashId(idNumber);
-                const idTaken = (
-                    registeredUsers as { idHash?: string }[]
-                ).some((u) => u.idHash && u.idHash === idHash);
+                const { data: existingIdHash, error: idHashError } = await supabase
+                    .from("users")
+                    .select("email")
+                    .eq("id_hash", idHash)
+                    .maybeSingle();
 
-                if (idTaken) {
-                    const idLabel =
-                        idType === "pan"
-                            ? "PAN Card"
-                            : idType === "license"
-                            ? "Driving License"
-                            : "Aadhaar Card";
+                if (idHashError) {
+                    console.error("Database query error (id_hash):", idHashError);
+                    return NextResponse.json({ success: false, error: "Database error." }, { status: 500 });
+                }
+
+                if (existingIdHash) {
                     return NextResponse.json(
                         {
                             success: false,
-                            error: `This ${idLabel} is already registered with another account.`,
+                            error: `This Aadhaar Card is already registered with another account.`,
                             field: "idNumber",
                         },
                         { status: 409 }
@@ -113,21 +127,53 @@ export async function POST(req: Request) {
         // ── Hash password with bcrypt (12 salt rounds for extra security) ─
         const passwordHash = await bcrypt.hash(password, 12);
 
-        // ── Build the safe user record – NEVER include plain idNumber ──
-        const safeUser: Record<string, unknown> = {
+        // ── Build the user record – NEVER include plain idNumber ──
+        const userRecord: Record<string, any> = {
             email,
-            passwordHash,   // bcrypt hash, never plain text
+            password_hash: passwordHash,   // bcrypt hash, never plain text
             username,
             role,
-            ...metadata,    // phone, state, district, pincode etc.
+            phone: phone || null,
+            state: state || null,
+            district: district || null,
+            pincode: pincode || null,
         };
 
         // Store idType + idHash for citizens; skip plain idNumber entirely
         if (role === "user") {
-            if (idType) safeUser.idType = idType;
-            if (idHash) safeUser.idHash = idHash;   // ← hash only, never raw
-            if (dob) safeUser.dob = dob;
+            userRecord.id_type = idType || "aadhaar";
+            userRecord.id_hash = idHash || null;   // ← hash only, never raw
+            userRecord.dob = dob || null;
+        } else if (role === "authority") {
+            userRecord.authority_role = authorityRole || null;
+            userRecord.service_id = serviceId || null;
         }
+
+        // ── Insert into Supabase ───────────────────────────────────────
+        const { error: insertError } = await supabase
+            .from("users")
+            .insert(userRecord);
+
+        if (insertError) {
+            console.error("Database insert error:", insertError);
+            return NextResponse.json({ success: false, error: "Failed to save user record." }, { status: 500 });
+        }
+
+        // Return client-safe object (omit password_hash)
+        const safeUser = {
+            email,
+            username,
+            role,
+            phone,
+            state,
+            district,
+            pincode,
+            idType: userRecord.id_type,
+            idHash: userRecord.id_hash,
+            dob: userRecord.dob,
+            authorityRole: userRecord.authority_role,
+            serviceId: userRecord.service_id,
+        };
 
         return NextResponse.json({ success: true, user: safeUser });
 
@@ -139,3 +185,4 @@ export async function POST(req: Request) {
         );
     }
 }
+

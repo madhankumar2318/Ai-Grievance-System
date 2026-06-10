@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { supabase } from "@/lib/supabase";
 
 // Pre-hashed demo passwords (generated once, never plain text in code)
 // plain texts: user123, auth123, chief123
@@ -16,21 +17,13 @@ const DEMO_PASSWORDS: Record<string, string> = {
     "chief@demo.com":     "chief123",
 };
 
-interface StoredUser {
-    email: string;
-    passwordHash: string;
-    username: string;
-    role: string;
-}
-
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { email, password, role, registeredUsers = [] } = body as {
+        const { email, password, role } = body as {
             email: string;
             password: string;
             role: string;
-            registeredUsers: StoredUser[];
         };
 
         if (!email || !password || !role) {
@@ -62,17 +55,25 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, error: "Invalid credentials" });
         }
 
-        // ── Check registered users (hashed) ───────────────────────────
-        const stored = (registeredUsers as StoredUser[]).find(
-            (u) => u.email === email && u.role === role
-        );
+        // ── Check registered users (hashed in database) ─────────────────
+        const { data: stored, error: dbError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("email", email)
+            .eq("role", role)
+            .maybeSingle();
+
+        if (dbError) {
+            console.error("Database query error during login:", dbError);
+            return NextResponse.json({ success: false, error: "Database error" }, { status: 500 });
+        }
 
         if (!stored) {
             return NextResponse.json({ success: false, error: "Invalid credentials" });
         }
 
         // bcrypt compare — password against stored hash
-        const isValid = await bcrypt.compare(password, stored.passwordHash);
+        const isValid = await bcrypt.compare(password, stored.password_hash);
 
         if (!isValid) {
             return NextResponse.json({ success: false, error: "Invalid credentials" });
@@ -88,3 +89,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
     }
 }
+

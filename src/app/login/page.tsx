@@ -23,22 +23,7 @@ interface RegisteredUser {
     serviceId?: string;
 }
 
-/* ── Secure localStorage helpers ────────────────────────────────────────── */
-function getRegisteredUsers(): RegisteredUser[] {
-    if (typeof window === "undefined") return [];
-    try { return JSON.parse(localStorage.getItem("gs_registered_users") || "[]"); }
-    catch { return []; }
-}
-function saveRegisteredUser(u: RegisteredUser) {
-    const list = getRegisteredUsers();
-    list.push(u);
-    localStorage.setItem("gs_registered_users", JSON.stringify(list));
-}
 const DEMO_EMAILS = ["user@demo.com", "authority@demo.com", "chief@demo.com"];
-function emailExists(email: string): boolean {
-    if (DEMO_EMAILS.includes(email)) return true;
-    return getRegisteredUsers().some(u => u.email === email);
-}
 
 /* ── Age calculation helper ─────────────────────────────────────────────── */
 function calculateAge(dob: string): number {
@@ -255,7 +240,6 @@ export default function LoginPage() {
                     email,
                     password,
                     role: selectedRole,
-                    registeredUsers: getRegisteredUsers(),
                 }),
             });
             const data = await res.json();
@@ -295,7 +279,6 @@ export default function LoginPage() {
         const errs: Record<string, string> = {};
         if (!su.name.trim()) errs.name = "Full name is required.";
         if (!su.email.includes("@")) errs.email = "Enter a valid email address.";
-        else if (emailExists(su.email)) errs.email = "This email is already registered.";
         if (!/^\d{10}$/.test(su.phone)) errs.phone = "Enter a valid 10-digit mobile number.";
         /* ── DOB + 18+ check (client-side; server also enforces this) ── */
         if (!su.dob) errs.dob = "Date of birth is required.";
@@ -320,7 +303,6 @@ export default function LoginPage() {
         const errs: Record<string, string> = {};
         if (!au.name.trim()) errs.name = "Full name is required.";
         if (!au.email.includes("@")) errs.email = "Enter a valid email address.";
-        else if (emailExists(au.email)) errs.email = "This email is already registered.";
         if (!/^\d{10}$/.test(au.phone)) errs.phone = "Enter a valid 10-digit phone number.";
         if (!au.authorityRole) errs.authorityRole = "Please select your authority role.";
         if (!au.serviceId.trim()) errs.serviceId = "Service Card ID is required.";
@@ -402,12 +384,10 @@ export default function LoginPage() {
                     idType: su.idType,
                     idNumber: su.idNumber.trim().toUpperCase(), // server hashes & discards plain text
                     dob: su.dob,
-                    registeredUsers: getRegisteredUsers(),
                 }),
             });
             const data = await res.json();
             if (data.success && data.user) {
-                saveRegisteredUser(data.user);  // user object has idHash, NOT idNumber
                 setSuSuccess(true);
                 setTimeout(() => {
                     setMode("login"); setSelectedRole("user"); setEmail(su.email); setPassword("");
@@ -442,12 +422,10 @@ export default function LoginPage() {
                     phone: au.phone,
                     authorityRole: au.authorityRole,
                     serviceId: au.serviceId.trim(),
-                    registeredUsers: getRegisteredUsers(),
                 }),
             });
             const data = await res.json();
             if (data.success && data.user) {
-                saveRegisteredUser(data.user);
                 setAuSuccess(true);
                 setTimeout(() => {
                     setMode("login"); setSelectedRole("authority"); setEmail(au.email); setPassword("");
@@ -468,7 +446,6 @@ export default function LoginPage() {
         const errs: Record<string, string> = {};
         if (!ch.name.trim()) errs.name = "Full name is required.";
         if (!ch.email.includes("@")) errs.email = "Enter a valid email address.";
-        else if (emailExists(ch.email)) errs.email = "This email is already registered.";
         if (!/^\d{10}$/.test(ch.phone)) errs.phone = "Enter a valid 10-digit phone number.";
         if (!ch.officerId.trim()) errs.officerId = "Officer ID is required.";
         else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9\-]{6,20}$/.test(ch.officerId.trim()))
@@ -496,12 +473,10 @@ export default function LoginPage() {
                     role: "chief",
                     phone: ch.phone,
                     serviceId: ch.officerId.trim().toUpperCase(),
-                    registeredUsers: getRegisteredUsers(),
                 }),
             });
             const data = await res.json();
             if (data.success && data.user) {
-                saveRegisteredUser(data.user);
                 setChSuccess(true);
                 setTimeout(() => {
                     setMode("login"); setSelectedRole("chief"); setEmail(ch.email); setPassword("");
