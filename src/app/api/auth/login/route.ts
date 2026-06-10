@@ -22,11 +22,13 @@ const DEMO_PASSWORDS: Record<string, string> = {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { email, password, role } = body as {
+        const { email: rawEmail, password, role } = body as {
             email: string;
             password: string;
             role: string;
         };
+
+        const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
 
         if (!email || !password || !role) {
             return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });

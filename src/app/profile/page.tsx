@@ -33,7 +33,7 @@ export default function ProfilePage() {
         if (typeof window === "undefined") return "—";
         try {
             const users = JSON.parse(localStorage.getItem("gs_registered_users") || "[]");
-            const found = users.find((u: { email: string }) => u.email === user?.email);
+            const found = users.find((u: { email: string }) => (u.email || "").toLowerCase() === (user?.email || "").toLowerCase());
             return found ? new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "Demo Account";
         } catch { return "Demo Account"; }
     });
@@ -46,7 +46,7 @@ export default function ProfilePage() {
         if (typeof window === "undefined") return;
         try {
             const stored = JSON.parse(localStorage.getItem("grievance_complaints") || "[]");
-            const mine = stored.filter((c: { userEmail: string }) => c.userEmail === user?.email);
+            const mine = stored.filter((c: { userEmail: string }) => (c.userEmail || "").toLowerCase() === (user?.email || "").toLowerCase());
             setComplaints(mine.slice(-5).reverse());
         } catch { /* ignore */ }
     }, [user?.email]);

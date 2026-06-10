@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         const {
-            email,
+            email: rawEmail,
             password,
             username,
             role,
@@ -42,6 +42,8 @@ export async function POST(req: Request) {
             serviceId,
             otpToken,   // signed token verifying email ownership
         } = body;
+
+        const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
 
         // ── Basic required-field check ─────────────────────────────────
         if (!email || !password || !username || !role) {

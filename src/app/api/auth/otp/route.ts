@@ -17,7 +17,8 @@ function generateOTP(): string {
 /* ── Send OTP ─────────────────────────────────────────────────────────────── */
 export async function POST(req: Request) {
     try {
-        const { email, action } = await req.json();
+        const { email: rawEmail, action } = await req.json();
+        const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
 
         if (!email || !email.includes("@")) {
             return NextResponse.json({ success: false, error: "Invalid email address" }, { status: 400 });
@@ -99,7 +100,8 @@ export async function POST(req: Request) {
 /* ── Verify OTP ───────────────────────────────────────────────────────────── */
 export async function PUT(req: Request) {
     try {
-        const { email, otp } = await req.json();
+        const { email: rawEmail, otp } = await req.json();
+        const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
 
         if (!email || !otp) {
             return NextResponse.json({ success: false, error: "Email and OTP are required." }, { status: 400 });

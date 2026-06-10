@@ -328,7 +328,7 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setIsSubmitting(true);
     try {
-      const res = await fetch("/api/complaint", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData, userEmail: formData.email, attachmentCount: mediaFiles.length }) });
+      const res = await fetch("/api/complaint", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData, userEmail: (formData.email || "").toLowerCase().trim(), attachmentCount: mediaFiles.length }) });
       setResult(await res.json());
     } catch (err) { console.error(err); }
     finally { setIsSubmitting(false); }

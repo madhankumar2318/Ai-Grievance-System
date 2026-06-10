@@ -238,7 +238,7 @@ export default function LoginPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email,
+                    email: email.toLowerCase().trim(),
                     password,
                     role: selectedRole,
                 }),
@@ -331,13 +331,14 @@ export default function LoginPage() {
 
     /* ── OTP: Send ── */
     const sendOtp = async () => {
-        if (!su.email.includes("@")) { setOtpError("Enter a valid email first."); return; }
+        const normalizedEmail = su.email.toLowerCase().trim();
+        if (!normalizedEmail.includes("@")) { setOtpError("Enter a valid email first."); return; }
         setOtpLoading(true); setOtpError("");
         try {
             const res = await fetch("/api/auth/otp", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: su.email, action: "send" }),
+                body: JSON.stringify({ email: normalizedEmail, action: "send" }),
             });
             const data = await res.json();
             if (data.success) {
@@ -358,13 +359,14 @@ export default function LoginPage() {
 
     /* ── OTP: Verify ── */
     const verifyOtp = async () => {
+        const normalizedEmail = su.email.toLowerCase().trim();
         if (!otpValue.trim()) { setOtpError("Please enter the OTP."); return; }
         setOtpLoading(true); setOtpError("");
         try {
             const res = await fetch("/api/auth/otp", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: su.email, otp: otpValue.trim() }),
+                body: JSON.stringify({ email: normalizedEmail, otp: otpValue.trim() }),
             });
             const data = await res.json();
             if (data.success) {
@@ -385,11 +387,12 @@ export default function LoginPage() {
         if (!validateSignup()) return;
         setSuLoading(true);
         try {
+            const normalizedEmail = su.email.toLowerCase().trim();
             const res = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email: su.email, password: su.password,
+                    email: normalizedEmail, password: su.password,
                     username: su.name.trim(), role: "user",
                     phone: su.phone, state: su.state,
                     district: su.district, pincode: su.pincode,
@@ -403,7 +406,7 @@ export default function LoginPage() {
             if (data.success && data.user) {
                 setSuSuccess(true);
                 setTimeout(() => {
-                    setMode("login"); setSelectedRole("user"); setEmail(su.email); setPassword("");
+                    setMode("login"); setSelectedRole("user"); setEmail(normalizedEmail); setPassword("");
                     setSu({ name: "", email: "", phone: "", dob: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "", otpToken: "" });
                     setSuErrors({}); setSuSuccess(false);
                 }, 1800);
@@ -424,11 +427,12 @@ export default function LoginPage() {
         if (!validateAuthSignup()) return;
         setAuLoading(true);
         try {
+            const normalizedEmail = au.email.toLowerCase().trim();
             const res = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email: au.email,
+                    email: normalizedEmail,
                     password: au.password,
                     username: au.name.trim(),
                     role: "authority",
@@ -441,7 +445,7 @@ export default function LoginPage() {
             if (data.success && data.user) {
                 setAuSuccess(true);
                 setTimeout(() => {
-                    setMode("login"); setSelectedRole("authority"); setEmail(au.email); setPassword("");
+                    setMode("login"); setSelectedRole("authority"); setEmail(normalizedEmail); setPassword("");
                     setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "" });
                     setAuErrors({}); setAuSuccess(false);
                 }, 1800);
@@ -476,11 +480,12 @@ export default function LoginPage() {
         if (!validateChiefSignup()) return;
         setChLoading(true);
         try {
+            const normalizedEmail = ch.email.toLowerCase().trim();
             const res = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email: ch.email,
+                    email: normalizedEmail,
                     password: ch.password,
                     username: ch.name.trim(),
                     role: "chief",
@@ -492,7 +497,7 @@ export default function LoginPage() {
             if (data.success && data.user) {
                 setChSuccess(true);
                 setTimeout(() => {
-                    setMode("login"); setSelectedRole("chief"); setEmail(ch.email); setPassword("");
+                    setMode("login"); setSelectedRole("chief"); setEmail(normalizedEmail); setPassword("");
                     setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "" });
                     setChErrors({}); setChSuccess(false);
                 }, 1800);
