@@ -896,32 +896,32 @@ export default function LoginPage() {
 
                                         {/* ── Date of Birth ── */}
                                         <Field label="Date of Birth" icon="🎂" error={suErrors.dob}>
-                                            <div style={{ position: "relative" }}>
-                                                <input
-                                                    style={{
-                                                        ...inputStyle(!!suErrors.dob),
-                                                        colorScheme: "dark",
-                                                    }}
-                                                    type="date"
-                                                    max={(() => {
-                                                        // max = today minus 18 years
-                                                        const d = new Date();
-                                                        d.setFullYear(d.getFullYear() - 18);
-                                                        return d.toISOString().split("T")[0];
-                                                    })()}
-                                                    value={su.dob}
-                                                    onChange={e => setSuField("dob", e.target.value)}
-                                                />
-                                                {su.dob && calculateAge(su.dob) >= 18 && (
-                                                    <span style={{
-                                                        position: "absolute", right: "0.75rem", top: "50%",
-                                                        transform: "translateY(-50%)", fontSize: "0.75rem",
-                                                        color: "#10b981", fontWeight: "700",
-                                                    }}>✓ Age {calculateAge(su.dob)}</span>
-                                                )}
-                                            </div>
-                                            <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: "0.25rem 0 0" }}>
-                                                You must be 18 years or older to register.
+                                            <input
+                                                style={{
+                                                    ...inputStyle(!!suErrors.dob),
+                                                    colorScheme: "dark",
+                                                }}
+                                                type="date"
+                                                max={(() => {
+                                                    // max = today minus 18 years
+                                                    const d = new Date();
+                                                    d.setFullYear(d.getFullYear() - 18);
+                                                    return d.toISOString().split("T")[0];
+                                                })()}
+                                                value={su.dob}
+                                                onChange={e => setSuField("dob", e.target.value)}
+                                            />
+                                            <p style={{
+                                                fontSize: "0.7rem",
+                                                color: su.dob && calculateAge(su.dob) >= 18 ? "#10b981" : "var(--text-muted)",
+                                                margin: "0.25rem 0 0",
+                                                fontWeight: su.dob && calculateAge(su.dob) >= 18 ? "700" : "400",
+                                                transition: "color 0.3s ease"
+                                            }}>
+                                                {su.dob && calculateAge(su.dob) >= 18
+                                                    ? `✓ Age ${calculateAge(su.dob)} (Eligible to register)`
+                                                    : "You must be 18 years or older to register."
+                                                }
                                             </p>
                                         </Field>
 
