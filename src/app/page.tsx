@@ -392,7 +392,7 @@ export default function Home() {
                 {/* Email (optional) */}
                 <div>
                   <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", fontSize: "0.9rem" }}>📧 Email <span style={{ color: "var(--text-muted)", fontWeight: "400", fontSize: "0.8rem" }}>(optional — for status notifications)</span></label>
-                  <input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                  <input type="email" placeholder="your@email.com" autoComplete="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                 </div>
 
                 {/* Subject */}

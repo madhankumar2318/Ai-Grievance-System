@@ -777,14 +777,14 @@ export default function LoginPage() {
                         <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
                             <div>
                                 <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: "600", fontSize: "0.875rem" }}>{t("login_email")}</label>
-                                <input type="email" required
+                                <input type="email" required autoComplete="username"
                                     placeholder={DEMO_MODE ? `e.g. ${cfg.hint.split(" / ")[0]}` : "Enter your email"}
                                     value={email} onChange={e => setEmail(e.target.value)} />
                             </div>
                             <div>
                                 <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: "600", fontSize: "0.875rem" }}>{t("login_password")}</label>
                                 <div style={{ position: "relative" }}>
-                                    <input type={showPassword ? "text" : "password"} required placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} style={{ paddingRight: "3rem" }} />
+                                    <input type={showPassword ? "text" : "password"} required autoComplete="current-password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} style={{ paddingRight: "3rem" }} />
                                     <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "1rem", color: "var(--text-muted)", padding: "0.25rem" }}>
                                         {showPassword ? "🙈" : "👁️"}
                                     </button>
@@ -889,7 +889,7 @@ export default function LoginPage() {
                                         </Field>
                                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                                             <Field label="Email Address" icon="📧" error={suErrors.email}>
-                                                <input style={inputStyle(!!suErrors.email)} type="email" placeholder="you@example.com" value={su.email} onChange={e => setSuField("email", e.target.value)} />
+                                                <input style={inputStyle(!!suErrors.email)} type="email" placeholder="you@example.com" autoComplete="email" value={su.email} onChange={e => setSuField("email", e.target.value)} />
                                             </Field>
                                             <Field label="Phone Number" icon="📱" error={suErrors.phone}>
                                                 <input style={inputStyle(!!suErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={su.phone} onChange={e => setSuField("phone", e.target.value.replace(/\D/g, ""))} />
@@ -1031,7 +1031,7 @@ export default function LoginPage() {
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
                                         <Field label="Password" icon="🔑" error={suErrors.password}>
                                             <div style={{ position: "relative" }}>
-                                                <input style={{ ...inputStyle(!!suErrors.password), paddingRight: "3rem" }} type={showSuPw ? "text" : "password"} placeholder="Min. 8 chars • Uppercase • Special char" value={su.password} onChange={e => setSuField("password", e.target.value)} />
+                                                <input style={{ ...inputStyle(!!suErrors.password), paddingRight: "3rem" }} type={showSuPw ? "text" : "password"} autoComplete="new-password" placeholder="Min. 8 chars • Uppercase • Special char" value={su.password} onChange={e => setSuField("password", e.target.value)} />
                                                 <button type="button" onClick={() => setShowSuPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
                                                     {showSuPw ? "🙈" : "👁️"}
                                                 </button>
@@ -1059,7 +1059,7 @@ export default function LoginPage() {
                                             )}
                                         </Field>
                                         <Field label="Confirm Password" icon="🔒" error={suErrors.confirm}>
-                                            <input style={{ ...inputStyle(!!suErrors.confirm), borderColor: su.confirm && su.confirm !== su.password ? "#ef4444" : undefined }} type="password" placeholder="Re-enter your password" value={su.confirm} onChange={e => setSuField("confirm", e.target.value)} />
+                                            <input style={{ ...inputStyle(!!suErrors.confirm), borderColor: su.confirm && su.confirm !== su.password ? "#ef4444" : undefined }} type="password" autoComplete="new-password" placeholder="Re-enter your password" value={su.confirm} onChange={e => setSuField("confirm", e.target.value)} />
                                         </Field>
                                     </div>
                                 </div>
@@ -1124,7 +1124,7 @@ export default function LoginPage() {
                                         </Field>
                                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                                             <Field label="Email Address" icon="📧" error={auErrors.email}>
-                                                <input style={inputStyle(!!auErrors.email)} type="email" placeholder="officer@gov.in" value={au.email} onChange={e => setAuField("email", e.target.value)} />
+                                                <input style={inputStyle(!!auErrors.email)} type="email" placeholder="officer@gov.in" autoComplete="email" value={au.email} onChange={e => setAuField("email", e.target.value)} />
                                             </Field>
                                             <Field label="Phone Number" icon="📱" error={auErrors.phone}>
                                                 <input style={inputStyle(!!auErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={au.phone} onChange={e => setAuField("phone", e.target.value.replace(/\D/g, ""))} />
@@ -1222,6 +1222,7 @@ export default function LoginPage() {
                                                 <input
                                                     style={{ ...inputStyle(!!auErrors.password), paddingRight: "3rem" }}
                                                     type={showAuPw ? "text" : "password"}
+                                                    autoComplete="new-password"
                                                     placeholder="Min. 8 chars • Uppercase • Special char"
                                                     value={au.password}
                                                     onChange={e => setAuField("password", e.target.value)}
@@ -1254,6 +1255,7 @@ export default function LoginPage() {
                                             <input
                                                 style={{ ...inputStyle(!!auErrors.confirm), borderColor: au.confirm && au.confirm !== au.password ? "#ef4444" : undefined }}
                                                 type="password"
+                                                autoComplete="new-password"
                                                 placeholder="Re-enter your password"
                                                 value={au.confirm}
                                                 onChange={e => setAuField("confirm", e.target.value)}
@@ -1325,7 +1327,7 @@ export default function LoginPage() {
                                         </Field>
                                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                                             <Field label="Email Address" icon="📧" error={chErrors.email}>
-                                                <input style={inputStyle(!!chErrors.email)} type="email" placeholder="chief@gov.in" value={ch.email} onChange={e => setChField("email", e.target.value)} />
+                                                <input style={inputStyle(!!chErrors.email)} type="email" placeholder="chief@gov.in" autoComplete="email" value={ch.email} onChange={e => setChField("email", e.target.value)} />
                                             </Field>
                                             <Field label="Phone Number" icon="📱" error={chErrors.phone}>
                                                 <input style={inputStyle(!!chErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={ch.phone} onChange={e => setChField("phone", e.target.value.replace(/\D/g, ""))} />
@@ -1361,6 +1363,7 @@ export default function LoginPage() {
                                                 <input
                                                     style={{ ...inputStyle(!!chErrors.password), paddingRight: "3rem" }}
                                                     type={showChPw ? "text" : "password"}
+                                                    autoComplete="new-password"
                                                     placeholder="Min. 8 chars • Uppercase • Special char"
                                                     value={ch.password}
                                                     onChange={e => setChField("password", e.target.value)}
@@ -1393,6 +1396,7 @@ export default function LoginPage() {
                                             <input
                                                 style={{ ...inputStyle(!!chErrors.confirm), borderColor: ch.confirm && ch.confirm !== ch.password ? "#ef4444" : undefined }}
                                                 type="password"
+                                                autoComplete="new-password"
                                                 placeholder="Re-enter your password"
                                                 value={ch.confirm}
                                                 onChange={e => setChField("confirm", e.target.value)}
@@ -1449,7 +1453,7 @@ export default function LoginPage() {
                                     <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>📧 Email Verification</div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
                                         <Field label="Email Address" icon="📧" error={reset.errors.email}>
-                                            <input style={inputStyle(!!reset.errors.email)} type="email" placeholder="you@example.com" value={reset.email} onChange={e => setResetField("email", e.target.value)} disabled={reset.otpVerified} />
+                                            <input style={inputStyle(!!reset.errors.email)} type="email" placeholder="you@example.com" autoComplete="username" value={reset.email} onChange={e => setResetField("email", e.target.value)} disabled={reset.otpVerified} />
                                         </Field>
 
                                         {/* OTP Box */}
@@ -1499,7 +1503,7 @@ export default function LoginPage() {
                                         
                                         <Field label="New Password" icon="🔑" error={reset.errors.password}>
                                             <div style={{ position: "relative" }}>
-                                                <input style={{ ...inputStyle(!!reset.errors.password), paddingRight: "3rem" }} type={showResetPw ? "text" : "password"} placeholder="Min. 8 chars • Uppercase • Special char" value={reset.password} onChange={e => setResetField("password", e.target.value)} />
+                                                <input style={{ ...inputStyle(!!reset.errors.password), paddingRight: "3rem" }} type={showResetPw ? "text" : "password"} autoComplete="new-password" placeholder="Min. 8 chars • Uppercase • Special char" value={reset.password} onChange={e => setResetField("password", e.target.value)} />
                                                 <button type="button" onClick={() => setShowResetPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
                                                     {showResetPw ? "🙈" : "👁️"}
                                                 </button>
@@ -1524,7 +1528,7 @@ export default function LoginPage() {
                                         </Field>
 
                                         <Field label="Confirm New Password" icon="🔒" error={reset.errors.confirm}>
-                                            <input style={{ ...inputStyle(!!reset.errors.confirm), borderColor: reset.confirm && reset.confirm !== reset.password ? "#ef4444" : undefined }} type="password" placeholder="Re-enter your new password" value={reset.confirm} onChange={e => setResetField("confirm", e.target.value)} />
+                                            <input style={{ ...inputStyle(!!reset.errors.confirm), borderColor: reset.confirm && reset.confirm !== reset.password ? "#ef4444" : undefined }} type="password" autoComplete="new-password" placeholder="Re-enter your new password" value={reset.confirm} onChange={e => setResetField("confirm", e.target.value)} />
                                         </Field>
                                     </div>
                                 )}
