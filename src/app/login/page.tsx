@@ -195,7 +195,7 @@ export default function LoginPage() {
     const [loginLoading, setLoginLoading] = useState(false);
 
     /* ── Mode ── */
-    const [mode, setMode] = useState<"login" | "signup" | "auth-signup" | "chief-signup">("login");
+    const [mode, setMode] = useState<"login" | "signup" | "auth-signup" | "chief-signup" | "forgot-password">("login");
 
     /* ── Sign-up state ── */
     const [su, setSu] = useState({
@@ -243,6 +243,158 @@ export default function LoginPage() {
     const setChField = (key: string, value: string) => {
         setCh(prev => ({ ...prev, [key]: value }));
         if (chErrors[key]) setChErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
+    };
+
+    /* ── Password Reset state ── */
+    const [reset, setReset] = useState({
+        email: "",
+        otpValue: "",
+        otpSent: false,
+        otpVerified: false,
+        otpLoading: false,
+        otpCooldown: 0,
+        otpError: "",
+        otpToken: "",
+        password: "",
+        confirm: "",
+        errors: {} as Record<string, string>,
+        loading: false,
+        success: false,
+    });
+    const [showResetPw, setShowResetPw] = useState(false);
+
+    const setResetField = (key: string, value: any) => {
+        setReset(prev => {
+            const next = { ...prev, [key]: value };
+            if (key === "email") {
+                next.otpToken = "";
+                next.otpVerified = false;
+                next.otpSent = false;
+                next.otpValue = "";
+                next.otpError = "";
+            }
+            return next;
+        });
+        setReset(prev => {
+            const nextErrors = { ...prev.errors };
+            delete nextErrors[key];
+            return { ...prev, errors: nextErrors };
+        });
+    };
+
+    const sendResetOtp = async () => {
+        const normalizedEmail = reset.email.toLowerCase().trim();
+        if (!normalizedEmail.includes("@")) {
+            setReset(prev => ({ ...prev, otpError: "Enter a valid email first." }));
+            return;
+        }
+        setReset(prev => ({ ...prev, otpLoading: true, otpError: "" }));
+        try {
+            const res = await fetch("/api/auth/otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: normalizedEmail, action: "send", purpose: "reset" }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setReset(prev => ({ ...prev, otpSent: true, otpCooldown: 60 }));
+                if (data.devMode && data.otp) {
+                    setReset(prev => ({ ...prev, otpValue: data.otp, otpError: `Dev mode: OTP pre-filled (${data.otp}).` }));
+                }
+                let t = 60;
+                const interval = setInterval(() => {
+                    t--;
+                    setReset(prev => {
+                        if (t <= 0) clearInterval(interval);
+                        return { ...prev, otpCooldown: Math.max(0, t) };
+                    });
+                }, 1000);
+            } else {
+                setReset(prev => ({ ...prev, otpError: data.error || "Failed to send OTP." }));
+            }
+        } catch {
+            setReset(prev => ({ ...prev, otpError: "Connection error. Try again." }));
+        }
+        setReset(prev => ({ ...prev, otpLoading: false }));
+    };
+
+    const verifyResetOtp = async () => {
+        if (!reset.otpValue.trim()) {
+            setReset(prev => ({ ...prev, otpError: "Please enter the OTP." }));
+            return;
+        }
+        setReset(prev => ({ ...prev, otpLoading: true, otpError: "" }));
+        try {
+            const res = await fetch("/api/auth/otp", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: reset.email.toLowerCase().trim(), otp: reset.otpValue.trim() }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setReset(prev => ({
+                    ...prev,
+                    otpVerified: true,
+                    otpError: "",
+                    otpToken: data.verificationToken || ""
+                }));
+            } else {
+                setReset(prev => ({ ...prev, otpError: data.error || "Invalid OTP." }));
+            }
+        } catch {
+            setReset(prev => ({ ...prev, otpError: "Connection error. Try again." }));
+        }
+        setReset(prev => ({ ...prev, otpLoading: false }));
+    };
+
+    const validateResetPassword = (): boolean => {
+        const errs: Record<string, string> = {};
+        if (reset.password.length < 8) errs.password = "Password must be at least 8 characters.";
+        else if (!/[A-Z]/.test(reset.password)) errs.password = "Password must contain at least one uppercase letter.";
+        else if (!/[^A-Za-z0-9]/.test(reset.password)) errs.password = "Password must contain at least one special character.";
+        if (reset.password !== reset.confirm) errs.confirm = "Passwords do not match.";
+        setReset(prev => ({ ...prev, errors: errs }));
+        return Object.keys(errs).length === 0;
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!reset.otpVerified) {
+            setReset(prev => ({ ...prev, errors: { otp: "Please verify your email first." } }));
+            return;
+        }
+        if (!validateResetPassword()) return;
+        setReset(prev => ({ ...prev, loading: true }));
+        try {
+            const normalizedEmail = reset.email.toLowerCase().trim();
+            const res = await fetch("/api/auth/reset-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: normalizedEmail,
+                    password: reset.password,
+                    otpToken: reset.otpToken,
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setReset(prev => ({ ...prev, success: true }));
+                setTimeout(() => {
+                    setMode("login");
+                    setSelectedRole("user");
+                    setEmail(normalizedEmail);
+                    setPassword("");
+                    setReset({
+                        email: "", otpValue: "", otpSent: false, otpVerified: false, otpLoading: false, otpCooldown: 0, otpError: "", otpToken: "", password: "", confirm: "", errors: {}, loading: false, success: false
+                    });
+                }, 1800);
+            } else {
+                setReset(prev => ({ ...prev, errors: { global: data.error || "Failed to reset password." } }));
+            }
+        } catch {
+            setReset(prev => ({ ...prev, errors: { global: "Connection error. Please try again." } }));
+        }
+        setReset(prev => ({ ...prev, loading: false }));
     };
 
     /* ── Login handler — calls server API (bcrypt compare) ── */
@@ -527,8 +679,9 @@ export default function LoginPage() {
         setChLoading(false);
     };
 
-    const switchMode = (m: "login" | "signup" | "auth-signup" | "chief-signup") => {
+    const switchMode = (m: "login" | "signup" | "auth-signup" | "chief-signup" | "forgot-password") => {
         setMode(m); setLoginError(""); setSuErrors({}); setSuSuccess(false); setAuErrors({}); setAuSuccess(false); setChErrors({}); setChSuccess(false);
+        setReset(prev => ({ ...prev, errors: {}, otpError: "" }));
     };
 
     const cfg = selectedRole ? ROLE_CONFIG[selectedRole] : null;
@@ -634,6 +787,13 @@ export default function LoginPage() {
                                         {showPassword ? "🙈" : "👁️"}
                                     </button>
                                 </div>
+                                <button type="button" onClick={() => {
+                                    switchMode("forgot-password");
+                                    setResetField("email", email);
+                                }}
+                                    style={{ fontSize: "0.8rem", color: cfg.color, background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", textUnderlineOffset: "2px", fontWeight: "600", float: "right", marginTop: "0.4rem" }}
+                                >Forgot Password?</button>
+                                <div style={{ clear: "both" }} />
                             </div>
                             {loginError && <div className="animate-fade-in" style={{ padding: "0.75rem 1rem", borderRadius: "0.625rem", background: "#ef444418", border: "1px solid #ef444440", color: "#ef4444", fontSize: "0.875rem" }}>⚠️ {loginError}</div>}
                             <button type="submit" disabled={loginLoading} className="btn btn-primary"
@@ -1251,6 +1411,133 @@ export default function LoginPage() {
                                         style={{ background: "transparent", border: "none", color: "#ec4899", fontWeight: "700", fontSize: "0.875rem", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}
                                     >← Back to Login</button>
                                 </div>
+                            </form>
+                        )}
+                    </div>
+                )}
+
+                {/* ══════════ FORGOT PASSWORD FORM ══════════ */}
+                {mode === "forgot-password" && (
+                    <div className="glass animate-slide-up" style={{ padding: "2rem", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)" }}>
+                        {/* Header */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.5rem" }}>
+                            <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "linear-gradient(135deg, #ef4444, #f59e0b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", boxShadow: "0 4px 12px rgba(239,68,68,0.3)", color: "white" }}>🔑</div>
+                            <div>
+                                <div style={{ fontWeight: "700", fontSize: "0.95rem" }}>Reset Password</div>
+                                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>Verify your email ownership with OTP to continue</div>
+                            </div>
+                        </div>
+
+                        {reset.success ? (
+                            <div className="animate-fade-in" style={{ padding: "2rem", textAlign: "center" }}>
+                                <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🎉</div>
+                                <div style={{ fontWeight: "800", fontSize: "1.2rem", color: "#10b981", marginBottom: "0.4rem" }}>Password Reset Complete!</div>
+                                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Redirecting to login with your new credentials...</p>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleResetPassword} noValidate style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                
+                                {/* ── Step 1: Email ── */}
+                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.12)" }}>
+                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>📧 Email Verification</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                        <Field label="Email Address" icon="📧" error={reset.errors.email}>
+                                            <input style={inputStyle(!!reset.errors.email)} type="email" placeholder="you@example.com" value={reset.email} onChange={e => setResetField("email", e.target.value)} disabled={reset.otpVerified} />
+                                        </Field>
+
+                                        {/* OTP Box */}
+                                        <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: reset.otpVerified ? "rgba(16,185,129,0.08)" : "rgba(99,102,241,0.06)", border: `1px solid ${reset.otpVerified ? "#10b98130" : "rgba(99,102,241,0.2)"}`, transition: "all 0.3s ease" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: reset.otpVerified ? "#10b981" : "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+                                                {reset.otpVerified ? "✅ Verified" : "🔐 Verify Code"}
+                                            </div>
+
+                                            {reset.otpVerified ? (
+                                                <div style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: "600" }}>
+                                                    ✓ Ownership of {reset.email} has been confirmed.
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                                                        <button type="button" onClick={sendResetOtp} disabled={reset.otpLoading || reset.otpCooldown > 0}
+                                                            style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: reset.otpCooldown > 0 ? "var(--bg-card)" : "linear-gradient(135deg,#6366f1,#8b5cf6)", color: reset.otpCooldown > 0 ? "var(--text-muted)" : "white", border: "none", cursor: reset.otpCooldown > 0 ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "var(--transition)" }}>
+                                                            {reset.otpLoading ? "Sending…" : reset.otpCooldown > 0 ? `Resend in ${reset.otpCooldown}s` : reset.otpSent ? "Resend OTP" : "Send OTP"}
+                                                        </button>
+                                                        {reset.otpSent && (
+                                                            <input
+                                                                style={{ ...inputStyle(false), flex: 1, fontFamily: "monospace", letterSpacing: "0.2em", textAlign: "center", fontSize: "1rem" }}
+                                                                type="text" placeholder="6-digit OTP" maxLength={6}
+                                                                value={reset.otpValue} onChange={e => setResetField("otpValue", e.target.value.replace(/\D/g, ""))}
+                                                            />
+                                                        )}
+                                                        {reset.otpSent && (
+                                                            <button type="button" onClick={verifyResetOtp} disabled={reset.otpLoading || reset.otpValue.length !== 6}
+                                                                style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: reset.otpValue.length === 6 ? "linear-gradient(135deg,#10b981,#06b6d4)" : "var(--bg-card)", color: reset.otpValue.length === 6 ? "white" : "var(--text-muted)", border: "none", cursor: reset.otpValue.length === 6 ? "pointer" : "not-allowed", whiteSpace: "nowrap", transition: "var(--transition)" }}>
+                                                                {reset.otpLoading ? "…" : "Verify"}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {reset.otpError && <p style={{ fontSize: "0.72rem", color: reset.otpError.includes("Dev mode") ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: "600" }}>{reset.otpError}</p>}
+                                                    {reset.errors.otp && !reset.otpSent && <p style={{ fontSize: "0.72rem", color: "#ef4444", margin: 0, fontWeight: "600" }}>⚠️ {reset.errors.otp}</p>}
+                                                    {!reset.otpSent && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: 0 }}>We will verify this email exists before sending the OTP.</p>}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ── Step 2: New Passwords (only visible after verification) ── */}
+                                {reset.otpVerified && (
+                                    <div className="animate-fade-in" style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)", display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                        <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.4rem" }}>🔒 Create New Password</div>
+                                        
+                                        <Field label="New Password" icon="🔑" error={reset.errors.password}>
+                                            <div style={{ position: "relative" }}>
+                                                <input style={{ ...inputStyle(!!reset.errors.password), paddingRight: "3rem" }} type={showResetPw ? "text" : "password"} placeholder="Min. 8 chars • Uppercase • Special char" value={reset.password} onChange={e => setResetField("password", e.target.value)} />
+                                                <button type="button" onClick={() => setShowResetPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
+                                                    {showResetPw ? "🙈" : "👁️"}
+                                                </button>
+                                            </div>
+                                            {reset.password.length > 0 && (
+                                                <div style={{ marginTop: "0.6rem" }}>
+                                                    {/* Live rule checklist */}
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                                        {[
+                                                            { ok: reset.password.length >= 8, label: "At least 8 characters" },
+                                                            { ok: /[A-Z]/.test(reset.password), label: "One uppercase letter (A–Z)" },
+                                                            { ok: /[^A-Za-z0-9]/.test(reset.password), label: "One special character (!@#$%…)" },
+                                                        ].map(rule => (
+                                                            <div key={rule.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                                <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{rule.ok ? "✅" : "❌"}</span>
+                                                                <span style={{ fontSize: "0.7rem", fontWeight: "600", color: rule.ok ? "#10b981" : "#94a3b8" }}>{rule.label}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </Field>
+
+                                        <Field label="Confirm New Password" icon="🔒" error={reset.errors.confirm}>
+                                            <input style={{ ...inputStyle(!!reset.errors.confirm), borderColor: reset.confirm && reset.confirm !== reset.password ? "#ef4444" : undefined }} type="password" placeholder="Re-enter your new password" value={reset.confirm} onChange={e => setResetField("confirm", e.target.value)} />
+                                        </Field>
+                                    </div>
+                                )}
+
+                                {reset.errors.global && <div className="animate-fade-in" style={{ padding: "0.75rem 1rem", borderRadius: "0.625rem", background: "#ef444418", border: "1px solid #ef444440", color: "#ef4444", fontSize: "0.875rem" }}>⚠️ {reset.errors.global}</div>}
+
+                                {/* Reset Submit Button */}
+                                <button type="submit" disabled={reset.loading || !reset.otpVerified} className="btn btn-primary"
+                                    style={{ fontSize: "1rem", cursor: reset.loading || !reset.otpVerified ? "not-allowed" : "pointer", background: reset.loading ? "var(--text-faint)" : !reset.otpVerified ? "var(--text-faint)" : undefined, opacity: !reset.otpVerified ? 0.6 : 1, gap: "0.5rem", marginTop: "0.25rem" }}
+                                >
+                                    {reset.loading ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span> Saving Password…</> : "🔒 Reset Password"}
+                                </button>
+
+                                {/* Back to login */}
+                                <div style={{ textAlign: "center", paddingTop: "0.5rem", borderTop: "1px solid var(--border)" }}>
+                                    <button type="button" onClick={() => switchMode("login")}
+                                        style={{ background: "transparent", border: "none", color: "#6366f1", fontWeight: "700", fontSize: "0.875rem", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: "3px" }}
+                                    >← Back to Login</button>
+                                </div>
+
                             </form>
                         )}
                     </div>

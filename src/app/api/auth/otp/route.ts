@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { signVerificationToken } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -17,7 +18,7 @@ function generateOTP(): string {
 /* ── Send OTP ─────────────────────────────────────────────────────────────── */
 export async function POST(req: Request) {
     try {
-        const { email: rawEmail, action } = await req.json();
+        const { email: rawEmail, action, purpose } = await req.json();
         const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
 
         if (!email || !email.includes("@")) {
@@ -25,6 +26,27 @@ export async function POST(req: Request) {
         }
 
         if (action === "send") {
+            if (purpose === "reset" || purpose === "register") {
+                const { data: existingUser, error: emailError } = await supabase
+                    .from("users")
+                    .select("email")
+                    .eq("email", email)
+                    .maybeSingle();
+
+                if (emailError) {
+                    console.error("Database query error in OTP route:", emailError);
+                    return NextResponse.json({ success: false, error: "Database error." }, { status: 500 });
+                }
+
+                if (purpose === "reset" && !existingUser) {
+                    return NextResponse.json({ success: false, error: "No account found with this email address." }, { status: 404 });
+                }
+
+                if (purpose === "register" && existingUser) {
+                    return NextResponse.json({ success: false, error: "Email already registered." }, { status: 409 });
+                }
+            }
+
             // Rate limit: don't resend if OTP was sent < 60s ago
             const existing = otpStore.get(email);
             if (existing && existing.expiresAt - 9 * 60 * 1000 > Date.now()) {
