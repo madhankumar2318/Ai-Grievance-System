@@ -193,6 +193,7 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [loginError, setLoginError] = useState("");
     const [loginLoading, setLoginLoading] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
 
     /* ── Mode ── */
     const [mode, setMode] = useState<"login" | "signup" | "auth-signup" | "chief-signup" | "forgot-password">("login");
@@ -410,6 +411,7 @@ export default function LoginPage() {
                     email: email.toLowerCase().trim(),
                     password,
                     role: selectedRole,
+                    rememberMe,
                 }),
             });
             const data = await res.json();
@@ -787,13 +789,18 @@ export default function LoginPage() {
                                         {showPassword ? "🙈" : "👁️"}
                                     </button>
                                 </div>
-                                <button type="button" onClick={() => {
-                                    switchMode("forgot-password");
-                                    setResetField("email", email);
-                                }}
-                                    style={{ fontSize: "0.8rem", color: cfg.color, background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", textUnderlineOffset: "2px", fontWeight: "600", float: "right", marginTop: "0.4rem" }}
-                                >Forgot Password?</button>
-                                <div style={{ clear: "both" }} />
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.6rem" }}>
+                                    <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", color: "var(--text-muted)", cursor: "pointer", userSelect: "none" }}>
+                                        <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ width: "auto", margin: 0, cursor: "pointer" }} />
+                                        Remember Me
+                                    </label>
+                                    <button type="button" onClick={() => {
+                                        switchMode("forgot-password");
+                                        setResetField("email", email);
+                                    }}
+                                        style={{ fontSize: "0.8rem", color: cfg.color, background: "transparent", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", textUnderlineOffset: "2px", fontWeight: "600" }}
+                                    >Forgot Password?</button>
+                                </div>
                             </div>
                             {loginError && <div className="animate-fade-in" style={{ padding: "0.75rem 1rem", borderRadius: "0.625rem", background: "#ef444418", border: "1px solid #ef444440", color: "#ef4444", fontSize: "0.875rem" }}>⚠️ {loginError}</div>}
                             <button type="submit" disabled={loginLoading} className="btn btn-primary"

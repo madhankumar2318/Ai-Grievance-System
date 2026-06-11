@@ -22,10 +22,11 @@ const DEMO_PASSWORDS: Record<string, string> = {
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { email: rawEmail, password, role } = body as {
+        const { email: rawEmail, password, role, rememberMe } = body as {
             email: string;
             password: string;
             role: string;
+            rememberMe?: boolean;
         };
 
         const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
@@ -51,12 +52,13 @@ export async function POST(req: Request) {
             }
             const demoPlain = DEMO_PASSWORDS[email];
             if (password === demoPlain) {
+                const sessionDuration = rememberMe ? 30 * 86400 : 86400;
                 // Generate JWT token
                 const token = signJWT({
                     email,
                     username: demoEntry.username,
                     role: demoEntry.role,
-                });
+                }, sessionDuration);
 
                 // Set HttpOnly cookie
                 const cookieStore = await cookies();
@@ -64,7 +66,7 @@ export async function POST(req: Request) {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
                     sameSite: "strict",
-                    maxAge: 86400, // 24 hours
+                    maxAge: sessionDuration,
                     path: "/",
                 });
 
@@ -100,12 +102,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, error: "Invalid credentials" });
         }
 
+        const sessionDuration = rememberMe ? 30 * 86400 : 86400;
         // Generate JWT token
         const token = signJWT({
             email: stored.email,
             username: stored.username,
             role: stored.role,
-        });
+        }, sessionDuration);
 
         // Set HttpOnly cookie
         const cookieStore = await cookies();
@@ -113,7 +116,7 @@ export async function POST(req: Request) {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "strict",
-            maxAge: 86400, // 24 hours
+            maxAge: sessionDuration,
             path: "/",
         });
 
