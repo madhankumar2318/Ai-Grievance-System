@@ -6,6 +6,27 @@ import { useLang } from "@/context/LanguageContext";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import AIAdvocateCard from "@/components/AIAdvocateCard";
 
+export interface TimelineStep {
+    stage: string;
+    time: string;
+    done: boolean;
+    note: string;
+}
+
+export interface Complaint {
+    id: string;
+    subject: string;
+    description: string;
+    status: string;
+    priority: string;
+    category: string;
+    location: string;
+    date: string;
+    user: string;
+    ai_reasoning?: string;
+    timeline: TimelineStep[];
+}
+
 /* ── Constants ──────────────────────────────────────────────────────────── */
 const PRIORITY_COLORS: Record<string, string> = {
     Critical: "#ef4444",
@@ -100,7 +121,7 @@ export default function TrackPage() {
     const [query, setQuery] = useState("");
     const [searched, setSearched] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [complaint, setComplaint] = useState<Record<string, any> | null>(null);
+    const [complaint, setComplaint] = useState<Complaint | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
 
     /* ── Search handler ─────────────────────────────────────────────────── */
@@ -155,7 +176,7 @@ export default function TrackPage() {
     };
 
     const timeline = complaint?.timeline ?? [];
-    const doneCount = timeline.filter((s: Record<string, boolean>) => s.done).length;
+    const doneCount = timeline.filter((s: TimelineStep) => s.done).length;
     const progress = timeline.length > 0 ? Math.round((doneCount / timeline.length) * 100) : 0;
 
     return (
@@ -325,7 +346,7 @@ export default function TrackPage() {
                                 transition: "background 1s ease",
                             }} />
                             <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
-                                {timeline.map((step: Record<string, any>, i: number) => {
+                                {timeline.map((step: TimelineStep, i: number) => {
                                     const isActive = !step.done && i === doneCount;
                                     const icon = STAGE_ICONS[step.stage] ?? "📌";
                                     return (

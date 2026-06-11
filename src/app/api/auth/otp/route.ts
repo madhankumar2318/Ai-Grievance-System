@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         }
 
         if (action === "verify") {
-            const { otp } = await req.json().catch(() => ({ otp: "" }));
+            await req.json().catch(() => ({}));
             // otp comes from the same body as email and action
             return NextResponse.json({ success: false, error: "Use the verify endpoint separately." });
         }

@@ -26,7 +26,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const stored = localStorage.getItem("grievance_user");
         if (stored) {
             try {
-                setUser(JSON.parse(stored));
+                const parsed = JSON.parse(stored);
+                setTimeout(() => {
+                    setUser(parsed);
+                }, 0);
             } catch {
                 localStorage.removeItem("grievance_user");
             }

@@ -57,10 +57,14 @@ export default function ChatbotAssistant() {
 
     useEffect(() => {
         if (isOpen && messages.length === 0) {
-            setMessages([{ role: "bot", text: t("chat_greeting") }]);
+            setTimeout(() => {
+                setMessages([{ role: "bot", text: t("chat_greeting") }]);
+            }, 0);
         }
         if (isOpen) {
-            setHasNew(false);
+            setTimeout(() => {
+                setHasNew(false);
+            }, 0);
             setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [isOpen, messages.length, t]);

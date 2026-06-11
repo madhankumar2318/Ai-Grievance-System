@@ -182,12 +182,26 @@ export default function BeforeAfterSlider({
     const [pos, setPos] = useState(50);
     const [dragging, setDragging] = useState(false);
     const [revealed, setRevealed] = useState(false);
+    const [width, setWidth] = useState(800);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Animate initial reveal
+    // Hydrate width and animate initial reveal
     useEffect(() => {
+        if (containerRef.current) {
+            setWidth(containerRef.current.offsetWidth);
+        }
+        const handleResize = () => {
+            if (containerRef.current) {
+                setWidth(containerRef.current.offsetWidth);
+            }
+        };
+        window.addEventListener("resize", handleResize);
         const t = setTimeout(() => setRevealed(true), 400);
-        return () => clearTimeout(t);
+
+        return () => {
+            window.removeEventListener("resize", handleResize);
+            clearTimeout(t);
+        };
     }, []);
 
     const calcPos = useCallback((clientX: number) => {
@@ -240,7 +254,7 @@ export default function BeforeAfterSlider({
                     overflow: "hidden",
                     transition: dragging ? "none" : "width 0.05s linear",
                 }}>
-                    <div style={{ width: containerRef.current ? `${containerRef.current.offsetWidth}px` : "800px", height: "100%" }}>
+                    <div style={{ width: `${width}px`, height: "100%" }}>
                         <BeforeSVG category={complaintCategory} />
                     </div>
                 </div>

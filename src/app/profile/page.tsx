@@ -47,7 +47,9 @@ export default function ProfilePage() {
         try {
             const stored = JSON.parse(localStorage.getItem("grievance_complaints") || "[]");
             const mine = stored.filter((c: { userEmail: string }) => (c.userEmail || "").toLowerCase() === (user?.email || "").toLowerCase());
-            setComplaints(mine.slice(-5).reverse());
+            setTimeout(() => {
+                setComplaints(mine.slice(-5).reverse());
+            }, 0);
         } catch { /* ignore */ }
     }, [user?.email]);
 

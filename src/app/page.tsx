@@ -121,7 +121,12 @@ function GpsCameraModal({
     }
   }, []);
 
-  useEffect(() => { start(); return () => stopCamera(); }, [start, stopCamera]);
+  useEffect(() => {
+    setTimeout(() => {
+      start();
+    }, 0);
+    return () => stopCamera();
+  }, [start, stopCamera]);
 
   const buildAddress = (g: GpsCoords | null) => g ? `${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}` : "";
 
@@ -165,7 +170,7 @@ function GpsCameraModal({
   };
   const close = () => { stopCamera(); onClose(); };
 
-  const GpsChip = () => (
+  const gpsChip = (
     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.4rem 0.9rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: "700", background: gpsStatus === "ok" ? "#22c55e20" : gpsStatus === "fetching" ? "#f59e0b20" : "#ef444420", color: gpsStatus === "ok" ? "#22c55e" : gpsStatus === "fetching" ? "#f59e0b" : "#ef4444", border: `1px solid ${gpsStatus === "ok" ? "#22c55e44" : gpsStatus === "fetching" ? "#f59e0b44" : "#ef444444"}` }}>
       <span style={{ fontSize: "0.6rem", width: 8, height: 8, borderRadius: "50%", background: "currentColor", display: "inline-block", animation: gpsStatus === "fetching" ? "pulse 1s infinite" : "none" }} />
       {gpsStatus === "ok" && gps ? `📍 ${gps.lat.toFixed(4)}, ${gps.lng.toFixed(4)}` : gpsStatus === "fetching" ? "Acquiring GPS…" : "GPS unavailable"}
@@ -178,7 +183,7 @@ function GpsCameraModal({
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontWeight: "700" }}><span>📍📷</span> GPS Camera</div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <GpsChip />
+            {gpsChip}
             <button onClick={close} style={{ background: "transparent", border: "none", fontSize: "1.2rem", cursor: "pointer", color: "var(--text-muted)", lineHeight: 1 }}>✕</button>
           </div>
         </div>

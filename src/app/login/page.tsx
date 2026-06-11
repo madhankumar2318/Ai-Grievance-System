@@ -5,25 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useLang } from "@/context/LanguageContext";
 
-/* ── Types ──────────────────────────────────────────────────────────────── */
-interface RegisteredUser {
-    email: string;
-    passwordHash: string;  // ← bcrypt hash, NEVER plain text
-    username: string;
-    role: UserRole;
-    phone?: string;
-    state?: string;
-    district?: string;
-    pincode?: string;
-    idType?: string;
-    idHash?: string;       // ← SHA-256 hash of idNumber, NEVER plain text
-    dob?: string;          // ← Date of Birth (YYYY-MM-DD)
-    /* authority fields */
-    authorityRole?: string;
-    serviceId?: string;
-}
 
-const DEMO_EMAILS = ["user@demo.com", "authority@demo.com", "chief@demo.com"];
 
 /* ── Age calculation helper ─────────────────────────────────────────────── */
 function calculateAge(dob: string): number {
@@ -91,7 +73,7 @@ const VERHOEFF_P = [
     [8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,6,8,7,0],[4,2,8,6,5,7,3,9,0,1],
     [2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8],
 ];
-const VERHOEFF_INV = [0,4,3,2,1,9,8,7,6,5];
+
 function verhoeffCheck(num: string): boolean {
     let c = 0;
     const digits = num.split("").reverse().map(Number);
@@ -150,14 +132,7 @@ export default function LoginPage() {
         }
     }, [isLoggedIn, user, router]);
 
-    if (isLoggedIn && user) {
-        return (
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: "70vh", color: "var(--text-muted)", fontSize: "1.1rem", gap: "1rem" }}>
-                <span style={{ display: "inline-block", animation: "spin 1.5s linear infinite", fontSize: "2rem" }}>⏳</span>
-                <span>Redirecting to your dashboard...</span>
-            </div>
-        );
-    }
+
 
     const ROLE_CONFIG = {
         user: {
@@ -264,7 +239,7 @@ export default function LoginPage() {
     });
     const [showResetPw, setShowResetPw] = useState(false);
 
-    const setResetField = (key: string, value: any) => {
+    const setResetField = (key: string, value: string | boolean | number | Record<string, string>) => {
         setReset(prev => {
             const next = { ...prev, [key]: value };
             if (key === "email") {
@@ -724,7 +699,14 @@ export default function LoginPage() {
     const chPwStrength = ch.password.length === 0 ? null : chPwScore === 1 ? "Weak" : chPwScore === 2 ? "Good" : "Strong";
     const chPwColor = chPwStrength === "Weak" ? "#ef4444" : chPwStrength === "Good" ? "#f59e0b" : "#10b981";
 
-
+    if (isLoggedIn && user) {
+        return (
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: "70vh", color: "var(--text-muted)", fontSize: "1.1rem", gap: "1rem" }}>
+                <span style={{ display: "inline-block", animation: "spin 1.5s linear infinite", fontSize: "2rem" }}>⏳</span>
+                <span>Redirecting to your dashboard...</span>
+            </div>
+        );
+    }
 
     /* ════════════════════════════════════════════════════════ JSX ══ */
     return (

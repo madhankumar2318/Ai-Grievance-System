@@ -140,7 +140,7 @@ export async function POST(req: Request) {
         const passwordHash = await bcrypt.hash(password, 12);
 
         // ── Build the user record – NEVER include plain idNumber ──
-        const userRecord: Record<string, any> = {
+        const userRecord: Record<string, string | null | undefined> = {
             email,
             password_hash: passwordHash,   // bcrypt hash, never plain text
             username,

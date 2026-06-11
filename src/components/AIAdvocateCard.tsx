@@ -142,7 +142,6 @@ export default function AIAdvocateCard({ complaintId, subject, category, rejecti
     const [phase, setPhase] = useState<"scanning" | "ready" | "requested">("scanning");
     const [typedText, setTypedText] = useState("");
     const [showArgs, setShowArgs] = useState(false);
-    const [requested, setRequested] = useState(false);
 
     const args = LEGAL_ARGS[category] ?? LEGAL_ARGS.default;
     const avgStrength = Math.round(args.reduce((s, a) => s + a.strength, 0) / args.length);
@@ -294,7 +293,7 @@ export default function AIAdvocateCard({ complaintId, subject, category, rejecti
                     {/* CTA Button */}
                     {phase !== "requested" ? (
                         <button
-                            onClick={() => { setRequested(true); setPhase("requested"); }}
+                            onClick={() => { setPhase("requested"); }}
                             style={{
                                 width: "100%", padding: "1rem 1.5rem",
                                 background: "linear-gradient(135deg, #7c3aed, #dc2626)",

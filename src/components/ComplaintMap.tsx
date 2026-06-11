@@ -15,14 +15,6 @@ interface ComplaintPin {
     user: string;
 }
 
-const COMPLAINT_PINS: ComplaintPin[] = [
-    { id: "GRV-12044", subject: "Street Light Failure", category: "Infrastructure", priority: "Medium", status: "Pending", location: "Sector 12", lat: 28.6139, lng: 77.2090, date: "2026-02-18", user: "John Doe" },
-    { id: "GRV-88291", subject: "Potable Water Contamination", category: "Environment", priority: "Critical", status: "In Progress", location: "Ward 7", lat: 28.6200, lng: 77.2150, date: "2026-02-19", user: "Jane Smith" },
-    { id: "GRV-33102", subject: "Illegal Parking in Zone B", category: "Safety", priority: "Low", status: "Resolved", location: "Zone B", lat: 28.6080, lng: 77.2010, date: "2026-02-15", user: "Robert Brown" },
-    { id: "GRV-40019", subject: "Public Hospital Staff Shortage", category: "Public Health", priority: "High", status: "Pending", location: "City Hospital", lat: 28.6250, lng: 77.2200, date: "2026-02-20", user: "Alice Green" },
-    { id: "GRV-55678", subject: "Road Pothole Danger", category: "Infrastructure", priority: "High", status: "In Progress", location: "NH-48", lat: 28.6050, lng: 77.2300, date: "2026-02-17", user: "Ravi Kumar" },
-    { id: "GRV-72190", subject: "Air Pollution from Factory", category: "Environment", priority: "Critical", status: "Pending", location: "Industrial Area", lat: 28.6320, lng: 77.1980, date: "2026-02-21", user: "Meena Patel" },
-];
 
 const PRIORITY_COLORS: Record<string, string> = {
     Critical: "#ef4444",
@@ -56,7 +48,7 @@ export default function ComplaintMap({ title = "🗺️ Live Complaint Map", sub
                 const { supabase } = await import("@/lib/supabase");
                 const { data } = await supabase.from("complaints").select("*");
                 if (data) {
-                    const parsed = data.map((c: any) => {
+                    const parsed = data.map((c: { id: string; subject: string; category: string; priority: string; status: string; location: string | null; created_at: string; user_email: string | null }) => {
                         let lat = 28.6139;
                         let lng = 77.2090;
                         const coords = c.location ? c.location.split(",") : [];

@@ -18,7 +18,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         const stored = localStorage.getItem("grievance_theme") as Theme | null;
         const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         const initial = stored ?? preferred;
-        setTheme(initial);
+        setTimeout(() => {
+            setTheme(initial);
+        }, 0);
         document.documentElement.setAttribute("data-theme", initial);
     }, []);
 

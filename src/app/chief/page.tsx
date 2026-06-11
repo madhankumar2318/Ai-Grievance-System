@@ -81,13 +81,22 @@ function StatCard({ icon, label, value, color, sub }: {
     );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{
+        name: string;
+        value: number;
+        color: string;
+    }>;
+    label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (!active || !payload?.length) return null;
     return (
         <div style={TOOLTIP_STYLE}>
             <div style={{ fontWeight: "700", marginBottom: "0.3rem", color: "#a5b4fc" }}>{label}</div>
-            {payload.map((p: { name: string; value: number; color: string }) => (
+            {payload.map((p) => (
                 <div key={p.name} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <span style={{ width: 8, height: 8, borderRadius: "50%", background: p.color, display: "inline-block" }} />
                     <span style={{ color: "#94a3b8" }}>{p.name}:</span>
@@ -110,11 +119,35 @@ function SkeletonCard() {
 }
 
 /* ── Main Component ───────────────────────────────────────────────────────── */
+export interface ChiefComplaint {
+    id: string;
+    subject: string;
+    category: string;
+    priority: string;
+    status: string;
+    user: string;
+    location: string;
+    date: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface DbChiefComplaint {
+    id: string;
+    subject: string;
+    category?: string;
+    priority?: string;
+    status?: string;
+    user_email?: string;
+    location?: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export default function ChiefDashboard() {
     const { t } = useLang();
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [complaints, setComplaints] = useState<any[]>([]);
+    const [complaints, setComplaints] = useState<ChiefComplaint[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
@@ -126,8 +159,7 @@ export default function ChiefDashboard() {
             const data = await res.json();
 
             if (data.success && data.complaints) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                setComplaints(data.complaints.map((c: any) => ({
+                setComplaints(data.complaints.map((c: DbChiefComplaint) => ({
                     id: c.id,
                     subject: c.subject,
                     category: c.category || "Other",

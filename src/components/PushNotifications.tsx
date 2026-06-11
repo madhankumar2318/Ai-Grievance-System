@@ -9,7 +9,9 @@ export function usePushNotifications() {
 
     useEffect(() => {
         if (typeof window !== "undefined" && "Notification" in window) {
-            setPermission(Notification.permission);
+            setTimeout(() => {
+                setPermission(Notification.permission);
+            }, 0);
         }
         // Register service worker
         if ("serviceWorker" in navigator) {

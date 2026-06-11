@@ -4,43 +4,6 @@ import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 
-const MOCK_COMPLAINTS = [
-    {
-        id: "GRV-12044", subject: "Street Light Failure", category: "Infrastructure", priority: "Medium",
-        status: "Pending", user: "John Doe", attachments: 2, userEmail: "",
-        description: "Multiple street lights on MG Road between sectors 4–6 have been non-functional for over 10 days, creating a safety hazard for pedestrians and vehicles at night.",
-        location: "MG Road, Sector 5", date: "2025-02-15",
-        aiNote: "Auto-assigned to Municipal Electrical Dept. Est. resolution: 3–7 days. Similar reports: 3 in last 30 days.",
-    },
-    {
-        id: "GRV-88291", subject: "Potable Water Contamination", category: "Environment", priority: "Critical",
-        status: "In Progress", user: "Jane Smith", attachments: 3, userEmail: "",
-        description: "Tap water in Block C has turned brownish-yellow with a foul odour since 12th Feb. Multiple families affected. Lab testing recommended immediately.",
-        location: "Block C, Green Colony", date: "2025-02-14",
-        aiNote: "Escalated to Public Health dept. Lab test dispatch scheduled. Priority raised to CRITICAL due to health risk.",
-    },
-    {
-        id: "GRV-33102", subject: "Illegal Parking in Zone B", category: "Safety", priority: "Low",
-        status: "Resolved", user: "Robert Brown", attachments: 0, userEmail: "",
-        description: "Vehicles parked illegally on the footpath in front of City Mall, blocking emergency access routes regularly.",
-        location: "City Mall, Zone B", date: "2025-02-10",
-        aiNote: "Resolved — towing authority notified. 4 vehicles cleared. Signage updated.",
-    },
-    {
-        id: "GRV-40019", subject: "Public Hospital Staff Shortage", category: "Public Health", priority: "High",
-        status: "Pending", user: "Alice Green", attachments: 1, userEmail: "",
-        description: "District hospital has been operating with 40% less staff for 3 weeks. OPD wait times have crossed 4 hours. Urgent staff deployment needed.",
-        location: "District General Hospital", date: "2025-02-16",
-        aiNote: "Forwarded to Health Director's office. Temporary staff deployment request raised. Awaiting approval.",
-    },
-    {
-        id: "GRV-55678", subject: "Road Pothole Danger", category: "Infrastructure", priority: "High",
-        status: "In Progress", user: "Ravi Kumar", attachments: 4, userEmail: "",
-        description: "A large 2-foot deep pothole on NH48 near the Flyover junction has caused 2 accidents this week. Immediate repair is critical for road safety.",
-        location: "NH48, Flyover Junction", date: "2025-02-17",
-        aiNote: "Assigned to NHAI road repair team. Temporary barricading done. Patch repair scheduled for Feb 20.",
-    },
-];
 
 const PRIORITY_CONFIG: Record<string, { color: string; icon: string }> = {
     Critical: { color: "#ef4444", icon: "🚨" },
@@ -63,9 +26,38 @@ const CATEGORY_ICONS: Record<string, string> = {
     "Public Health": "🏥",
 };
 
+export interface AdminComplaint {
+    id: string;
+    subject: string;
+    category: string;
+    priority: string;
+    status: string;
+    user: string;
+    attachments: number;
+    userEmail: string;
+    description: string;
+    location: string;
+    date: string;
+    aiNote: string;
+}
+
+export interface DbAdminComplaint {
+    id: string;
+    subject: string;
+    category: string;
+    priority: string;
+    status: string;
+    user_email: string | null;
+    attachment_count: number | null;
+    description: string;
+    location: string | null;
+    created_at: string;
+    ai_reasoning: string | null;
+}
+
 export default function AdminDashboard() {
     const { t } = useLang();
-    const [complaints, setComplaints] = useState<any[]>([]);
+    const [complaints, setComplaints] = useState<AdminComplaint[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("All");
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -77,7 +69,7 @@ export default function AdminDashboard() {
             const res = await fetch("/api/admin/complaints");
             const data = await res.json();
             if (data.success && data.complaints) {
-                const mapped = data.complaints.map((c: any) => ({
+                const mapped = data.complaints.map((c: DbAdminComplaint) => ({
                     id: c.id,
                     subject: c.subject,
                     category: c.category,

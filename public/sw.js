@@ -1,7 +1,7 @@
 // Service Worker for Browser Push Notifications
 // Placed in /public/sw.js — Next.js will serve it from root
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
     self.skipWaiting();
 });
 
