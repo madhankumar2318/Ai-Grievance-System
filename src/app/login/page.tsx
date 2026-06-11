@@ -466,9 +466,25 @@ export default function LoginPage() {
         if (!su.dob) errs.dob = "Date of birth is required.";
         else if (calculateAge(su.dob) < 18)
             errs.dob = "You must be 18 years or older to register.";
-        /* ── Aadhaar (only accepted ID) ── */
-        if (su.idNumber.trim() === "") errs.idNumber = "Aadhaar number is required.";
-        else { const idErr = validateAadhaar(su.idNumber); if (idErr) errs.idNumber = idErr; }
+        /* ── Government ID (Optional validation if filled) ── */
+        if (su.idNumber.trim() !== "") {
+            if (su.idType === "aadhaar") {
+                const idErr = validateAadhaar(su.idNumber);
+                if (idErr) errs.idNumber = idErr;
+            } else if (su.idType === "PAN") {
+                if (!/^[A-Z]{5}\d{4}[A-Z]$/i.test(su.idNumber.trim())) {
+                    errs.idNumber = "PAN must be in format ABCDE1234F.";
+                }
+            } else if (su.idType === "VoterID") {
+                if (su.idNumber.trim().length < 8) {
+                    errs.idNumber = "Voter ID must be at least 8 characters.";
+                }
+            } else if (su.idType === "DL") {
+                if (su.idNumber.trim().length < 10) {
+                    errs.idNumber = "Driving License must be at least 10 characters.";
+                }
+            }
+        }
         if (!su.state) errs.state = "Please select your state.";
         if (!su.district.trim()) errs.district = "District name is required.";
         if (!/^\d{6}$/.test(su.pincode)) errs.pincode = "Enter a valid 6-digit pincode.";
@@ -966,30 +982,54 @@ export default function LoginPage() {
                                     </div>
                                 </div>
 
-                                {/* ── Section 2: Aadhaar Verification ── */}
+                                {/* ── Section 2: ID Verification (Optional) ── */}
                                 <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>🪪 Aadhaar Verification</div>
+                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>🪪 Identity Verification (Optional)</div>
                                     <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "0 0 0.875rem", lineHeight: 1.5 }}>
-                                        We use Aadhaar's built-in Verhoeff checksum algorithm — the same used by UIDAI — to verify your number is genuine before registration.
+                                        Providing a government ID is optional. To protect your privacy, we hash (SHA-256) your ID locally — the original number is never saved or sent to the server.
                                     </p>
 
-                                    <Field label="Aadhaar Number" icon="🪪" error={suErrors.idNumber}>
-                                        <input
-                                            style={{ ...inputStyle(!!suErrors.idNumber), fontFamily: "monospace", letterSpacing: "0.15em", fontSize: "1rem" }}
-                                            type="text"
-                                            inputMode="numeric"
-                                            placeholder="Enter 12-digit Aadhaar number"
-                                            value={su.idNumber}
-                                            maxLength={12}
-                                            onChange={e => setSuField("idNumber", e.target.value.replace(/\D/g, ""))}
-                                        />
-                                        {su.idNumber.length === 12 && !validateAadhaar(su.idNumber) && (
-                                            <p style={{ fontSize: "0.72rem", color: "#10b981", margin: "0.3rem 0 0", fontWeight: "700" }}>✅ Valid Aadhaar (checksum passed)</p>
-                                        )}
-                                        <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: "0.25rem 0 0" }}>
-                                            Your Aadhaar number is hashed (SHA-256) before storage — it is never saved in plain text.
-                                        </p>
-                                    </Field>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                        <Field label="Government ID Type" icon="📋" error={suErrors.idType}>
+                                            <select
+                                                value={su.idType}
+                                                onChange={e => { setSuField("idType", e.target.value); setSuField("idNumber", ""); }}
+                                                style={{ ...inputStyle(!!suErrors.idType), appearance: "none", cursor: "pointer" }}
+                                            >
+                                                <option value="aadhaar">Aadhaar Card</option>
+                                                <option value="VoterID">Voter ID Card</option>
+                                                <option value="PAN">PAN Card</option>
+                                                <option value="DL">Driving License</option>
+                                            </select>
+                                        </Field>
+
+                                        <Field
+                                            label={su.idType === "aadhaar" ? "Aadhaar Number (Optional)" : su.idType === "PAN" ? "PAN Card (Optional)" : su.idType === "VoterID" ? "Voter ID Card (Optional)" : "Driving License (Optional)"}
+                                            icon="🪪"
+                                            error={suErrors.idNumber}
+                                        >
+                                            <input
+                                                style={{ ...inputStyle(!!suErrors.idNumber), fontFamily: "monospace", letterSpacing: su.idType === "aadhaar" ? "0.15em" : "0.05em", fontSize: "1rem" }}
+                                                type="text"
+                                                placeholder={
+                                                    su.idType === "aadhaar" ? "Enter 12-digit Aadhaar number" :
+                                                    su.idType === "PAN" ? "e.g. ABCDE1234F" :
+                                                    su.idType === "VoterID" ? "e.g. ABC1234567" :
+                                                    "Enter Driving License number"
+                                                }
+                                                maxLength={su.idType === "aadhaar" ? 12 : su.idType === "PAN" ? 10 : 25}
+                                                value={su.idNumber}
+                                                onChange={e => {
+                                                    let val = e.target.value;
+                                                    if (su.idType === "aadhaar") val = val.replace(/\D/g, "");
+                                                    setSuField("idNumber", val);
+                                                }}
+                                            />
+                                            {su.idType === "aadhaar" && su.idNumber.length === 12 && !validateAadhaar(su.idNumber) && (
+                                                <p style={{ fontSize: "0.72rem", color: "#10b981", margin: "0.3rem 0 0", fontWeight: "700" }}>✅ Valid Aadhaar (checksum passed)</p>
+                                            )}
+                                        </Field>
+                                    </div>
                                 </div>
 
                                 {/* ── Section 3: Location ── */}

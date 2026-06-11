@@ -127,7 +127,7 @@ export async function POST(req: Request) {
                     return NextResponse.json(
                         {
                             success: false,
-                            error: `This Aadhaar Card is already registered with another account.`,
+                            error: `This ${idType || "Government ID"} is already registered with another account.`,
                             field: "idNumber",
                         },
                         { status: 409 }
