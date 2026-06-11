@@ -2,7 +2,7 @@
 
 import { useAuth, UserRole } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLang } from "@/context/LanguageContext";
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
@@ -138,9 +138,26 @@ function Field({ label, icon, error, children }: { label: string; icon: string; 
    Main Component
 ═══════════════════════════════════════════════════════════════════════════ */
 export default function LoginPage() {
-    const { login } = useAuth();
+    const { login, isLoggedIn, user } = useAuth();
     const router = useRouter();
     const { t } = useLang();
+
+    useEffect(() => {
+        if (isLoggedIn && user) {
+            if (user.role === "user") router.replace("/");
+            else if (user.role === "authority") router.replace("/admin");
+            else if (user.role === "chief") router.replace("/chief");
+        }
+    }, [isLoggedIn, user, router]);
+
+    if (isLoggedIn && user) {
+        return (
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", minHeight: "70vh", color: "var(--text-muted)", fontSize: "1.1rem", gap: "1rem" }}>
+                <span style={{ display: "inline-block", animation: "spin 1.5s linear infinite", fontSize: "2rem" }}>⏳</span>
+                <span>Redirecting to your dashboard...</span>
+            </div>
+        );
+    }
 
     const ROLE_CONFIG = {
         user: {
