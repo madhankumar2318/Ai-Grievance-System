@@ -72,7 +72,7 @@ async function verifyJWTEdge(token: string, secret: string): Promise<JWTPayload 
     }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     const isAdminRoute = pathname.startsWith("/admin");
