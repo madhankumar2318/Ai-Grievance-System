@@ -477,9 +477,7 @@ export default function LoginPage() {
         if (!su.dob) errs.dob = "Date of birth is required.";
         else if (calculateAge(su.dob) < 18)
             errs.dob = "You must be 18 years or older to register.";
-        if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
-        
-        if (errs.name || errs.email || errs.phone || errs.dob || errs.otp) {
+        if (errs.name || errs.email || errs.phone || errs.dob) {
             setSuStep(1);
             setSuErrors(errs);
             return false;
@@ -537,8 +535,7 @@ export default function LoginPage() {
         if (!au.name.trim()) errs.name = "Full name is required.";
         if (!au.email.includes("@")) errs.email = "Enter a valid email address.";
         if (!/^\d{10}$/.test(au.phone)) errs.phone = "Enter a valid 10-digit phone number.";
-        if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
-        if (errs.name || errs.email || errs.phone || errs.otp) {
+        if (errs.name || errs.email || errs.phone) {
             setAuStep(1);
             setAuErrors(errs);
             return false;
@@ -639,7 +636,6 @@ export default function LoginPage() {
     /* ── Citizen Sign-up — requires email OTP first ── */
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!otpVerified) { setSuErrors({ otp: "Please verify your email with the OTP before registering." }); return; }
         if (!validateSignup()) return;
         setSuLoading(true);
         try {
@@ -655,7 +651,6 @@ export default function LoginPage() {
                     idType: su.idType,
                     idNumber: su.idNumber.trim().toUpperCase(), // server hashes & discards plain text
                     dob: su.dob,
-                    otpToken: su.otpToken,
                 }),
             });
             const data = await res.json();
@@ -691,7 +686,6 @@ export default function LoginPage() {
 
     const handleAuthSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!otpVerified) { setAuErrors({ otp: "Please verify your email with the OTP before registering." }); return; }
         if (!validateAuthSignup()) return;
         setAuLoading(true);
         try {
@@ -708,7 +702,6 @@ export default function LoginPage() {
                     authorityRole: au.authorityRole,
                     serviceId: au.serviceId.trim(),
                     passcode: au.passcode,
-                    otpToken: au.otpToken,
                 }),
             });
             const data = await res.json();
@@ -745,8 +738,7 @@ export default function LoginPage() {
         if (!ch.name.trim()) errs.name = "Full name is required.";
         if (!ch.email.includes("@")) errs.email = "Enter a valid email address.";
         if (!/^\d{10}$/.test(ch.phone)) errs.phone = "Enter a valid 10-digit phone number.";
-        if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
-        if (errs.name || errs.email || errs.phone || errs.otp) {
+        if (errs.name || errs.email || errs.phone) {
             setChStep(1);
             setChErrors(errs);
             return false;
@@ -776,7 +768,6 @@ export default function LoginPage() {
 
     const handleChiefSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!otpVerified) { setChErrors({ otp: "Please verify your email with the OTP before registering." }); return; }
         if (!validateChiefSignup()) return;
         setChLoading(true);
         try {
@@ -792,7 +783,6 @@ export default function LoginPage() {
                     phone: ch.phone,
                     serviceId: ch.officerId.trim().toUpperCase(),
                     passcode: ch.passcode,
-                    otpToken: ch.otpToken,
                 }),
             });
             const data = await res.json();
@@ -846,7 +836,7 @@ export default function LoginPage() {
             if (!/^\d{10}$/.test(su.phone)) errs.phone = "Enter a valid 10-digit mobile number.";
             if (!su.dob) errs.dob = "Date of birth is required.";
             else if (calculateAge(su.dob) < 18) errs.dob = "You must be 18 years or older to register.";
-            if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
+            // OTP verification removed
         } else if (step === 2) {
             if (su.idNumber.trim() !== "") {
                 if (su.idType === "aadhaar") {
@@ -886,7 +876,7 @@ export default function LoginPage() {
             if (!au.name.trim()) errs.name = "Full name is required.";
             if (!au.email.includes("@")) errs.email = "Enter a valid email address.";
             if (!/^\d{10}$/.test(au.phone)) errs.phone = "Enter a valid 10-digit phone number.";
-            if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
+            // OTP verification removed
         } else if (step === 2) {
             if (!au.authorityRole) errs.authorityRole = "Please select your authority role.";
             if (!au.serviceId.trim()) errs.serviceId = "Service Card ID is required.";
@@ -911,7 +901,7 @@ export default function LoginPage() {
             if (!ch.name.trim()) errs.name = "Full name is required.";
             if (!ch.email.includes("@")) errs.email = "Enter a valid email address.";
             if (!/^\d{10}$/.test(ch.phone)) errs.phone = "Enter a valid 10-digit phone number.";
-            if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
+            // OTP verification removed
         } else if (step === 2) {
             if (!ch.officerId.trim()) errs.officerId = "Officer ID is required.";
             else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9\-]{6,20}$/.test(ch.officerId.trim()))
@@ -1201,42 +1191,7 @@ export default function LoginPage() {
                                                     </p>
                                                 </Field>
 
-                                                {/* ── Email OTP Verification ── */}
-                                                <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: otpVerified ? "rgba(16,185,129,0.08)" : "rgba(99,102,241,0.06)", border: `1px solid ${otpVerified ? "#10b98130" : "rgba(99,102,241,0.2)"}`, transition: "all 0.3s ease" }}>
-                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: otpVerified ? "#10b981" : "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
-                                                        {otpVerified ? "✅ Email Verified" : "🔐 Verify Your Email"}
-                                                    </div>
-                                                    {otpVerified ? (
-                                                        <div style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: "600" }}>
-                                                            ✓ {su.email} has been verified successfully.
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                                                                <button type="button" onClick={sendOtp} disabled={otpLoading || otpCooldown > 0}
-                                                                    style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpCooldown > 0 ? "var(--bg-card)" : "linear-gradient(135deg,#6366f1,#8b5cf6)", color: otpCooldown > 0 ? "var(--text-muted)" : "white", border: "none", cursor: otpCooldown > 0 ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                                    {otpLoading ? "Sending…" : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSent ? "Resend OTP" : "Send OTP"}
-                                                                </button>
-                                                                {otpSent && (
-                                                                    <input
-                                                                        style={{ ...inputStyle(false), flex: 1, fontFamily: "monospace", letterSpacing: "0.2em", textAlign: "center", fontSize: "1rem" }}
-                                                                        type="text" placeholder="6-digit OTP" maxLength={6}
-                                                                        value={otpValue} onChange={e => { setOtpValue(e.target.value.replace(/\D/g, "")); setOtpError(""); }}
-                                                                    />
-                                                                )}
-                                                                {otpSent && (
-                                                                    <button type="button" onClick={verifyOtp} disabled={otpLoading || otpValue.length !== 6}
-                                                                        style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpValue.length === 6 ? "linear-gradient(135deg,#10b981,#06b6d4)" : "var(--bg-card)", color: otpValue.length === 6 ? "white" : "var(--text-muted)", border: "none", cursor: otpValue.length === 6 ? "pointer" : "not-allowed", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                                        {otpLoading ? "…" : "Verify"}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                            {otpError && <p style={{ fontSize: "0.72rem", color: otpError.includes("Dev mode") ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: "600" }}>{otpError}</p>}
-                                                            {suErrors.otp && !otpSent && <p style={{ fontSize: "0.72rem", color: "#ef4444", margin: 0, fontWeight: "600" }}>⚠️ {suErrors.otp}</p>}
-                                                            {!otpSent && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: 0 }}>A 6-digit OTP will be sent to your email to verify ownership.</p>}
-                                                        </>
-                                                    )}
-                                                </div>
+                                                {/* Email OTP Verification removed */}
                                             </div>
                                         </div>
                                     </div>
@@ -1480,42 +1435,7 @@ export default function LoginPage() {
                                                     </Field>
                                                 </div>
 
-                                                {/* ── Email OTP Verification ── */}
-                                                <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: otpVerified ? "rgba(16,185,129,0.08)" : "rgba(249,115,22,0.06)", border: `1px solid ${otpVerified ? "#10b98130" : "rgba(249,115,22,0.2)"}`, transition: "all 0.3s ease" }}>
-                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: otpVerified ? "#10b981" : "#f97316", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
-                                                        {otpVerified ? "✅ Email Verified" : "🔐 Verify Your Email"}
-                                                    </div>
-                                                    {otpVerified ? (
-                                                        <div style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: "600" }}>
-                                                            ✓ {au.email} has been verified successfully.
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                                                                <button type="button" onClick={sendOtp} disabled={otpLoading || otpCooldown > 0}
-                                                                    style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpCooldown > 0 ? "var(--bg-card)" : "linear-gradient(135deg,#f97316,#fb923c)", color: otpCooldown > 0 ? "var(--text-muted)" : "white", border: "none", cursor: otpCooldown > 0 ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                                    {otpLoading ? "Sending…" : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSent ? "Resend OTP" : "Send OTP"}
-                                                                </button>
-                                                                {otpSent && (
-                                                                    <input
-                                                                        style={{ ...inputStyle(false), flex: 1, fontFamily: "monospace", letterSpacing: "0.2em", textAlign: "center", fontSize: "1rem" }}
-                                                                        type="text" placeholder="6-digit OTP" maxLength={6}
-                                                                        value={otpValue} onChange={e => { setOtpValue(e.target.value.replace(/\D/g, "")); setOtpError(""); }}
-                                                                    />
-                                                                )}
-                                                                {otpSent && (
-                                                                    <button type="button" onClick={verifyOtp} disabled={otpLoading || otpValue.length !== 6}
-                                                                        style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpValue.length === 6 ? "linear-gradient(135deg,#10b981,#06b6d4)" : "var(--bg-card)", color: otpValue.length === 6 ? "white" : "var(--text-muted)", border: "none", cursor: otpValue.length === 6 ? "pointer" : "not-allowed", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                                        {otpLoading ? "…" : "Verify"}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                            {otpError && <p style={{ fontSize: "0.72rem", color: otpError.includes("Dev mode") ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: "600" }}>{otpError}</p>}
-                                                            {auErrors.otp && !otpSent && <p style={{ fontSize: "0.72rem", color: "#ef4444", margin: 0, fontWeight: "600" }}>⚠️ {auErrors.otp}</p>}
-                                                            {!otpSent && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: 0 }}>A 6-digit OTP will be sent to your email to verify ownership.</p>}
-                                                        </>
-                                                    )}
-                                                </div>
+                                                {/* Email OTP Verification removed */}
                                             </div>
                                         </div>
                                     </div>
@@ -1778,42 +1698,7 @@ export default function LoginPage() {
                                                     </Field>
                                                 </div>
 
-                                                {/* ── Email OTP Verification ── */}
-                                                <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: otpVerified ? "rgba(16,185,129,0.08)" : "rgba(236,72,153,0.06)", border: `1px solid ${otpVerified ? "#10b98130" : "rgba(236,72,153,0.2)"}`, transition: "all 0.3s ease" }}>
-                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: otpVerified ? "#10b981" : "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
-                                                        {otpVerified ? "✅ Email Verified" : "🔐 Verify Your Email"}
-                                                    </div>
-                                                    {otpVerified ? (
-                                                        <div style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: "600" }}>
-                                                            ✓ {ch.email} has been verified successfully.
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                                                                <button type="button" onClick={sendOtp} disabled={otpLoading || otpCooldown > 0}
-                                                                    style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpCooldown > 0 ? "var(--bg-card)" : "linear-gradient(135deg,#ec4899,#f43f5e)", color: otpCooldown > 0 ? "var(--text-muted)" : "white", border: "none", cursor: otpCooldown > 0 ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                                    {otpLoading ? "Sending…" : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSent ? "Resend OTP" : "Send OTP"}
-                                                                </button>
-                                                                {otpSent && (
-                                                                    <input
-                                                                        style={{ ...inputStyle(false), flex: 1, fontFamily: "monospace", letterSpacing: "0.2em", textAlign: "center", fontSize: "1rem" }}
-                                                                        type="text" placeholder="6-digit OTP" maxLength={6}
-                                                                        value={otpValue} onChange={e => { setOtpValue(e.target.value.replace(/\D/g, "")); setOtpError(""); }}
-                                                                    />
-                                                                )}
-                                                                {otpSent && (
-                                                                    <button type="button" onClick={verifyOtp} disabled={otpLoading || otpValue.length !== 6}
-                                                                        style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpValue.length === 6 ? "linear-gradient(135deg,#10b981,#06b6d4)" : "var(--bg-card)", color: otpValue.length === 6 ? "white" : "var(--text-muted)", border: "none", cursor: otpValue.length === 6 ? "pointer" : "not-allowed", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                                        {otpLoading ? "…" : "Verify"}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                            {otpError && <p style={{ fontSize: "0.72rem", color: otpError.includes("Dev mode") ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: "600" }}>{otpError}</p>}
-                                                            {chErrors.otp && !otpSent && <p style={{ fontSize: "0.72rem", color: "#ef4444", margin: 0, fontWeight: "600" }}>⚠️ {chErrors.otp}</p>}
-                                                            {!otpSent && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: 0 }}>A 6-digit OTP will be sent to your email to verify ownership.</p>}
-                                                        </>
-                                                    )}
-                                                </div>
+                                                {/* Email OTP Verification removed */}
                                             </div>
                                         </div>
                                     </div>
