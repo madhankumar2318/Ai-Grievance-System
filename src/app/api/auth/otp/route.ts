@@ -62,6 +62,10 @@ export async function POST(req: Request) {
 
             // If Resend not configured, log and return success (dev mode)
             if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === "your_resend_api_key") {
+                if (process.env.NODE_ENV === "production") {
+                    console.error("Resend API key is missing in production environment.");
+                    return NextResponse.json({ success: false, error: "Email service is temporarily unavailable. Please try again later." }, { status: 500 });
+                }
                 console.log(`[OTP DEV MODE] OTP for ${email}: ${otp}`);
                 return NextResponse.json({ success: true, devMode: true, otp }); // expose OTP only in dev
             }
