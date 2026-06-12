@@ -15,6 +15,7 @@ export async function POST(req: Request) {
         const categories = ["Infrastructure", "Public Health", "Safety", "Administrative", "Environment"];
         let detectedCategory = categories[Math.floor(Math.random() * categories.length)];
         let detectedPriority = "Medium";
+        let reasoning = "Keyword-based automatic triage matched patterns in your description.";
 
         const lowerDesc = description.toLowerCase();
         if (lowerDesc.includes("accident") || lowerDesc.includes("danger") || lowerDesc.includes("hurt")) {
@@ -27,10 +28,83 @@ export async function POST(req: Request) {
             detectedCategory = "Public Health"; detectedPriority = "High";
         }
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (apiKey && apiKey !== "your_gemini_api_key_here") {
+            try {
+                const systemPrompt = `You are an expert AI Triage Assistant for an Indian Government Grievance Portal.
+Analyze the following complaint:
+Subject: "${subject}"
+Description: "${description}"
+Location: "${location || "Not specified"}"
+
+Classify it into exactly one Category and one Priority.
+
+Category options:
+- "Infrastructure": Road damage, streetlights, building hazards, water pipes, potholes.
+- "Public Health": Disease control, hygiene, sanitation, medical facilities.
+- "Safety": Exposed wires, open manholes, crime, fire, road danger, active hazards.
+- "Environment": Garbage dumps, air/water pollution, sound pollution, unauthorized tree cutting.
+- "Administrative": Bribe requests, officer misconduct, major delay in certificates/passports.
+- "Other": Anything not fitting the above.
+
+Priority options:
+- "Critical": Life-threatening situations, active hazards, severe safety issues.
+- "High": Major blockages, severe sewer leaks, large scale disruptions.
+- "Medium": Standard, non-emergency service requests.
+- "Low": Muted suggestions, general requests.
+
+Write a single brief sentence of professional reasoning (no references to prompts or system rules).
+
+Respond with a JSON object matching this schema:
+{
+  "category": "Infrastructure" | "Public Health" | "Safety" | "Administrative" | "Environment" | "Other",
+  "priority": "Critical" | "High" | "Medium" | "Low",
+  "reasoning": "Brief summary sentence"
+}`;
+
+                const apiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: systemPrompt }] }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    category: { type: "STRING", enum: ["Infrastructure", "Public Health", "Safety", "Administrative", "Environment", "Other"] },
+                                    priority: { type: "STRING", enum: ["Critical", "High", "Medium", "Low"] },
+                                    reasoning: { type: "STRING" }
+                                },
+                                required: ["category", "priority", "reasoning"]
+                            }
+                        }
+                    })
+                });
+
+                if (apiResponse.ok) {
+                    const data = await apiResponse.json();
+                    const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (jsonText) {
+                        const parsed = JSON.parse(jsonText.trim());
+                        if (parsed.category && parsed.priority && parsed.reasoning) {
+                            detectedCategory = parsed.category;
+                            detectedPriority = parsed.priority;
+                            reasoning = `AI Classification: ${parsed.reasoning}`;
+                        }
+                    }
+                } else {
+                    console.warn("Gemini API returned status:", apiResponse.status);
+                }
+            } catch (err) {
+                console.error("Gemini API call failed, falling back to local triage:", err);
+            }
+        } else {
+            // Simulated network delay if fallback is used
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
 
         const complaintId = `GRV-${Math.floor(Math.random() * 90000) + 10000}`;
-        const reasoning = "Keyword-based automatic triage matched patterns in your description.";
 
         // ── Save to Supabase ───────────────────────────────────────
         if (isSupabaseConfigured) {
