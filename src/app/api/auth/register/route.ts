@@ -122,17 +122,17 @@ export async function POST(req: Request) {
             }
         }
 
+        // ── Verify email OTP cryptographically on server ───────────────
+        if (!otpToken || !verifyVerificationToken(otpToken, email)) {
+            return NextResponse.json(
+                { success: false, error: "Please verify your email address with the OTP code first.", field: "email" },
+                { status: 400 }
+            );
+        }
+
         // ── Citizen-only validations ───────────────────────────────────
         let idHash: string | undefined;
         if (role === "user") {
-            // 0️⃣ Verify email OTP cryptographically on server
-            if (!otpToken || !verifyVerificationToken(otpToken, email)) {
-                return NextResponse.json(
-                    { success: false, error: "Please verify your email address with the OTP code first.", field: "email" },
-                    { status: 400 }
-                );
-            }
-
             // 1️⃣  DOB + Age 18+ check
             if (!dob) {
                 return NextResponse.json(
