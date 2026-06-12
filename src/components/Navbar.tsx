@@ -249,9 +249,27 @@ export default function Navbar() {
                             )}
                         </div>
                     ) : (
-                        <Link href="/login" className="btn btn-primary" style={{ padding: "0.5rem 1.25rem", fontSize: "0.9rem", textDecoration: "none" }}>
-                            {t("nav_login")}
-                        </Link>
+                        (() => {
+                            const isAuthRoute = pathname === "/login" || pathname === "/admin-login" || pathname === "/secure-admin-access";
+                            return isAuthRoute ? (
+                                <Link href="/" style={{
+                                    padding: "0.5rem 1.25rem", borderRadius: "0.5rem",
+                                    fontWeight: "700", fontSize: "0.85rem", textDecoration: "none",
+                                    border: "1px solid var(--border)", background: "var(--bg-card)",
+                                    color: "var(--text-main)", transition: "var(--transition)",
+                                    boxShadow: "var(--shadow-sm)"
+                                }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
+                                >
+                                    🏠 Grievance Desk
+                                </Link>
+                            ) : (
+                                <Link href="/login" className="btn btn-primary" style={{ padding: "0.5rem 1.25rem", fontSize: "0.9rem", textDecoration: "none" }}>
+                                    {t("nav_login")}
+                                </Link>
+                            );
+                        })()
                     )}
                 </div>
             </div>

@@ -101,6 +101,15 @@ const inputStyle = (error?: boolean): React.CSSProperties => ({
     boxSizing: "border-box",
 });
 
+const selectStyle = (error?: boolean): React.CSSProperties => ({
+    ...inputStyle(error),
+    appearance: "none",
+    cursor: "pointer",
+    background: `var(--bg-card) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") no-repeat right 1rem center`,
+    backgroundSize: "1.1rem",
+    paddingRight: "2.5rem",
+});
+
 /* ── Aadhaar is the only accepted ID (strongest govt-grade validation) ──── */
 
 /* ── Reusable field wrapper (defined OUTSIDE component to prevent remount) ─ */
@@ -174,6 +183,7 @@ export default function LoginPage() {
     const [mode, setMode] = useState<"login" | "signup" | "auth-signup" | "chief-signup" | "forgot-password">("login");
 
     /* ── Sign-up state ── */
+    const [suStep, setSuStep] = useState(1);
     const [su, setSu] = useState({
         name: "", email: "", phone: "",
         dob: "",                              // Date of Birth
@@ -195,6 +205,7 @@ export default function LoginPage() {
     const [otpCooldown, setOtpCooldown] = useState(0);
 
     /* ── Authority sign-up state ── */
+    const [auStep, setAuStep] = useState(1);
     const [au, setAu] = useState({
         name: "", email: "", phone: "",
         authorityRole: "", serviceId: "",
@@ -207,6 +218,7 @@ export default function LoginPage() {
     const [auSuccess, setAuSuccess] = useState(false);
 
     /* ── Chief sign-up state ── */
+    const [chStep, setChStep] = useState(1);
     const [ch, setCh] = useState({
         name: "", email: "", phone: "",
         officerId: "",
@@ -675,6 +687,95 @@ export default function LoginPage() {
     const switchMode = (m: "login" | "signup" | "auth-signup" | "chief-signup" | "forgot-password") => {
         setMode(m); setLoginError(""); setSuErrors({}); setSuSuccess(false); setAuErrors({}); setAuSuccess(false); setChErrors({}); setChSuccess(false);
         setReset(prev => ({ ...prev, errors: {}, otpError: "" }));
+        setSuStep(1);
+        setAuStep(1);
+        setChStep(1);
+    };
+
+    /* ── Step-level Validations ── */
+    const validateSuStep = (step: number): boolean => {
+        const errs: Record<string, string> = {};
+        if (step === 1) {
+            if (!su.name.trim()) errs.name = "Full name is required.";
+            if (!su.email.includes("@")) errs.email = "Enter a valid email address.";
+            if (!/^\d{10}$/.test(su.phone)) errs.phone = "Enter a valid 10-digit mobile number.";
+            if (!su.dob) errs.dob = "Date of birth is required.";
+            else if (calculateAge(su.dob) < 18) errs.dob = "You must be 18 years or older to register.";
+            if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
+        } else if (step === 2) {
+            if (su.idNumber.trim() !== "") {
+                if (su.idType === "aadhaar") {
+                    const idErr = validateAadhaar(su.idNumber);
+                    if (idErr) errs.idNumber = idErr;
+                } else if (su.idType === "PAN") {
+                    if (!/^[A-Z]{5}\d{4}[A-Z]$/i.test(su.idNumber.trim())) {
+                        errs.idNumber = "PAN must be in format ABCDE1234F.";
+                    }
+                } else if (su.idType === "VoterID") {
+                    if (su.idNumber.trim().length < 8) {
+                        errs.idNumber = "Voter ID must be at least 8 characters.";
+                    }
+                } else if (su.idType === "DL") {
+                    if (su.idNumber.trim().length < 10) {
+                        errs.idNumber = "Driving License must be at least 10 characters.";
+                    }
+                }
+            }
+        } else if (step === 3) {
+            if (!su.state) errs.state = "Please select your state.";
+            if (!su.district.trim()) errs.district = "District name is required.";
+            if (!/^\d{6}$/.test(su.pincode)) errs.pincode = "Enter a valid 6-digit pincode.";
+        } else if (step === 4) {
+            if (su.password.length < 8) errs.password = "Password must be at least 8 characters.";
+            else if (!/[A-Z]/.test(su.password)) errs.password = "Password must contain at least one uppercase letter.";
+            else if (!/[^A-Za-z0-9]/.test(su.password)) errs.password = "Password must contain at least one special character.";
+            if (su.password !== su.confirm) errs.confirm = "Passwords do not match.";
+        }
+        setSuErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
+
+    const validateAuStep = (step: number): boolean => {
+        const errs: Record<string, string> = {};
+        if (step === 1) {
+            if (!au.name.trim()) errs.name = "Full name is required.";
+            if (!au.email.includes("@")) errs.email = "Enter a valid email address.";
+            if (!/^\d{10}$/.test(au.phone)) errs.phone = "Enter a valid 10-digit phone number.";
+        } else if (step === 2) {
+            if (!au.authorityRole) errs.authorityRole = "Please select your authority role.";
+            if (!au.serviceId.trim()) errs.serviceId = "Service Card ID is required.";
+            else if (au.serviceId.trim().length < 5) errs.serviceId = "Service Card ID must be at least 5 characters.";
+            if (!au.workingPlace.trim()) errs.workingPlace = "Working place / office name is required.";
+            if (!au.state) errs.state = "Please select your state.";
+            if (!au.district.trim()) errs.district = "District name is required.";
+        } else if (step === 3) {
+            if (au.password.length < 8) errs.password = "Password must be at least 8 characters.";
+            else if (!/[A-Z]/.test(au.password)) errs.password = "Password must contain at least one uppercase letter.";
+            else if (!/[^A-Za-z0-9]/.test(au.password)) errs.password = "Password must contain at least one special character.";
+            if (au.password !== au.confirm) errs.confirm = "Passwords do not match.";
+        }
+        setAuErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
+
+    const validateChStep = (step: number): boolean => {
+        const errs: Record<string, string> = {};
+        if (step === 1) {
+            if (!ch.name.trim()) errs.name = "Full name is required.";
+            if (!ch.email.includes("@")) errs.email = "Enter a valid email address.";
+            if (!/^\d{10}$/.test(ch.phone)) errs.phone = "Enter a valid 10-digit phone number.";
+        } else if (step === 2) {
+            if (!ch.officerId.trim()) errs.officerId = "Officer ID is required.";
+            else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9\-]{6,20}$/.test(ch.officerId.trim()))
+                errs.officerId = "Must be 6–20 chars with both letters and digits (e.g. CHIEF-2024-001).";
+        } else if (step === 3) {
+            if (ch.password.length < 8) errs.password = "Password must be at least 8 characters.";
+            else if (!/[A-Z]/.test(ch.password)) errs.password = "Password must contain at least one uppercase letter.";
+            else if (!/[^A-Za-z0-9]/.test(ch.password)) errs.password = "Password must contain at least one special character.";
+            if (ch.password !== ch.confirm) errs.confirm = "Passwords do not match.";
+        }
+        setChErrors(errs);
+        return Object.keys(errs).length === 0;
     };
 
     const cfg = selectedRole ? ROLE_CONFIG[selectedRole] : null;
@@ -861,12 +962,30 @@ export default function LoginPage() {
 
                         {/* Step progress indicator */}
                         <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.75rem" }}>
-                            {["Personal", "ID Proof", "Location", "Security"].map((step, i) => (
-                                <div key={step} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                                    <div style={{ height: "4px", width: "100%", borderRadius: "99px", background: "linear-gradient(90deg, #6366f1, #8b5cf6)" }} />
-                                    <span style={{ fontSize: "0.58rem", color: "var(--text-muted)", fontWeight: "600" }}>{`${i + 1}. ${step}`}</span>
-                                </div>
-                            ))}
+                            {["Personal", "ID Proof", "Location", "Security"].map((step, i) => {
+                                const stepNum = i + 1;
+                                const isActive = stepNum === suStep;
+                                const isCompleted = stepNum < suStep;
+                                return (
+                                    <div key={step} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                                        <div style={{ 
+                                            height: "4px", 
+                                            width: "100%", 
+                                            borderRadius: "99px", 
+                                            background: (isActive || isCompleted) ? "linear-gradient(90deg, #6366f1, #8b5cf6)" : "var(--border)",
+                                            transition: "background 0.3s ease"
+                                        }} />
+                                        <span style={{ 
+                                            fontSize: "0.58rem", 
+                                            color: isActive ? "#6366f1" : isCompleted ? "#10b981" : "var(--text-muted)", 
+                                            fontWeight: (isActive || isCompleted) ? "700" : "600",
+                                            transition: "color 0.3s ease"
+                                        }}>
+                                            {isCompleted ? `✓ ${step}` : `${stepNum}. ${step}`}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {suSuccess ? (
@@ -878,220 +997,252 @@ export default function LoginPage() {
                         ) : (
                             <form onSubmit={handleSignup} noValidate style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-                                {/* ── Section 1: Personal ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>👤 Personal Information</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="Full Name" icon="📛" error={suErrors.name}>
-                                            <input style={inputStyle(!!suErrors.name)} type="text" placeholder="e.g. Rahul Kumar Sharma" value={su.name} onChange={e => setSuField("name", e.target.value)} />
-                                        </Field>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                                            <Field label="Email Address" icon="📧" error={suErrors.email}>
-                                                <input style={inputStyle(!!suErrors.email)} type="email" placeholder="you@example.com" autoComplete="email" value={su.email} onChange={e => setSuField("email", e.target.value)} />
-                                            </Field>
-                                            <Field label="Phone Number" icon="📱" error={suErrors.phone}>
-                                                <input style={inputStyle(!!suErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={su.phone} onChange={e => setSuField("phone", e.target.value.replace(/\D/g, ""))} />
-                                            </Field>
-                                        </div>
-
-                                        {/* ── Date of Birth ── */}
-                                        <Field label="Date of Birth" icon="🎂" error={suErrors.dob}>
-                                            <input
-                                                style={{
-                                                    ...inputStyle(!!suErrors.dob),
-                                                    colorScheme: "dark",
-                                                }}
-                                                type="date"
-                                                max={(() => {
-                                                    // max = today minus 18 years
-                                                    const d = new Date();
-                                                    d.setFullYear(d.getFullYear() - 18);
-                                                    return d.toISOString().split("T")[0];
-                                                })()}
-                                                value={su.dob}
-                                                onChange={e => setSuField("dob", e.target.value)}
-                                            />
-                                            <p style={{
-                                                fontSize: "0.7rem",
-                                                color: su.dob && calculateAge(su.dob) >= 18 ? "#10b981" : "var(--text-muted)",
-                                                margin: "0.25rem 0 0",
-                                                fontWeight: su.dob && calculateAge(su.dob) >= 18 ? "700" : "400",
-                                                transition: "color 0.3s ease"
-                                            }}>
-                                                {su.dob && calculateAge(su.dob) >= 18
-                                                    ? `✓ Age ${calculateAge(su.dob)} (Eligible to register)`
-                                                    : "You must be 18 years or older to register."
-                                                }
-                                            </p>
-                                        </Field>
-
-                                        {/* ── Email OTP Verification ── */}
-                                        <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: otpVerified ? "rgba(16,185,129,0.08)" : "rgba(99,102,241,0.06)", border: `1px solid ${otpVerified ? "#10b98130" : "rgba(99,102,241,0.2)"}`, transition: "all 0.3s ease" }}>
-                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: otpVerified ? "#10b981" : "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
-                                                {otpVerified ? "✅ Email Verified" : "🔐 Verify Your Email"}
-                                            </div>
-                                            {otpVerified ? (
-                                                <div style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: "600" }}>
-                                                    ✓ {su.email} has been verified successfully.
+                                {/* ── Step 1: Personal ── */}
+                                {suStep === 1 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>👤 Personal Information</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="Full Name" icon="📛" error={suErrors.name}>
+                                                    <input style={inputStyle(!!suErrors.name)} type="text" placeholder="e.g. Rahul Kumar Sharma" value={su.name} onChange={e => setSuField("name", e.target.value)} />
+                                                </Field>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                                    <Field label="Email Address" icon="📧" error={suErrors.email}>
+                                                        <input style={inputStyle(!!suErrors.email)} type="email" placeholder="you@example.com" autoComplete="email" value={su.email} onChange={e => setSuField("email", e.target.value)} />
+                                                    </Field>
+                                                    <Field label="Phone Number" icon="📱" error={suErrors.phone}>
+                                                        <input style={inputStyle(!!suErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={su.phone} onChange={e => setSuField("phone", e.target.value.replace(/\D/g, ""))} />
+                                                    </Field>
                                                 </div>
-                                            ) : (
-                                                <>
-                                                    <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                                                        <button type="button" onClick={sendOtp} disabled={otpLoading || otpCooldown > 0}
-                                                            style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpCooldown > 0 ? "var(--bg-card)" : "linear-gradient(135deg,#6366f1,#8b5cf6)", color: otpCooldown > 0 ? "var(--text-muted)" : "white", border: "none", cursor: otpCooldown > 0 ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                            {otpLoading ? "Sending…" : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSent ? "Resend OTP" : "Send OTP"}
-                                                        </button>
-                                                        {otpSent && (
-                                                            <input
-                                                                style={{ ...inputStyle(false), flex: 1, fontFamily: "monospace", letterSpacing: "0.2em", textAlign: "center", fontSize: "1rem" }}
-                                                                type="text" placeholder="6-digit OTP" maxLength={6}
-                                                                value={otpValue} onChange={e => { setOtpValue(e.target.value.replace(/\D/g, "")); setOtpError(""); }}
-                                                            />
-                                                        )}
-                                                        {otpSent && (
-                                                            <button type="button" onClick={verifyOtp} disabled={otpLoading || otpValue.length !== 6}
-                                                                style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpValue.length === 6 ? "linear-gradient(135deg,#10b981,#06b6d4)" : "var(--bg-card)", color: otpValue.length === 6 ? "white" : "var(--text-muted)", border: "none", cursor: otpValue.length === 6 ? "pointer" : "not-allowed", whiteSpace: "nowrap", transition: "var(--transition)" }}>
-                                                                {otpLoading ? "…" : "Verify"}
-                                                            </button>
-                                                        )}
+
+                                                {/* ── Date of Birth ── */}
+                                                <Field label="Date of Birth" icon="🎂" error={suErrors.dob}>
+                                                    <input
+                                                        style={{
+                                                            ...inputStyle(!!suErrors.dob),
+                                                            colorScheme: "dark",
+                                                        }}
+                                                        type="date"
+                                                        max={(() => {
+                                                            const d = new Date();
+                                                            d.setFullYear(d.getFullYear() - 18);
+                                                            return d.toISOString().split("T")[0];
+                                                        })()}
+                                                        value={su.dob}
+                                                        onChange={e => setSuField("dob", e.target.value)}
+                                                    />
+                                                    <p style={{
+                                                        fontSize: "0.7rem",
+                                                        color: su.dob && calculateAge(su.dob) >= 18 ? "#10b981" : "var(--text-muted)",
+                                                        margin: "0.25rem 0 0",
+                                                        fontWeight: su.dob && calculateAge(su.dob) >= 18 ? "700" : "400",
+                                                        transition: "color 0.3s ease"
+                                                    }}>
+                                                        {su.dob && calculateAge(su.dob) >= 18
+                                                            ? `✓ Age ${calculateAge(su.dob)} (Eligible to register)`
+                                                            : "You must be 18 years or older to register."
+                                                        }
+                                                    </p>
+                                                </Field>
+
+                                                {/* ── Email OTP Verification ── */}
+                                                <div style={{ padding: "0.875rem", borderRadius: "0.75rem", background: otpVerified ? "rgba(16,185,129,0.08)" : "rgba(99,102,241,0.06)", border: `1px solid ${otpVerified ? "#10b98130" : "rgba(99,102,241,0.2)"}`, transition: "all 0.3s ease" }}>
+                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: otpVerified ? "#10b981" : "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>
+                                                        {otpVerified ? "✅ Email Verified" : "🔐 Verify Your Email"}
                                                     </div>
-                                                    {otpError && <p style={{ fontSize: "0.72rem", color: otpError.includes("Dev mode") ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: "600" }}>{otpError}</p>}
-                                                    {suErrors.otp && !otpSent && <p style={{ fontSize: "0.72rem", color: "#ef4444", margin: 0, fontWeight: "600" }}>⚠️ {suErrors.otp}</p>}
-                                                    {!otpSent && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: 0 }}>A 6-digit OTP will be sent to your email to verify ownership.</p>}
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* ── Section 2: ID Verification (Optional) ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>🪪 Identity Verification (Optional)</div>
-                                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "0 0 0.875rem", lineHeight: 1.5 }}>
-                                        Providing a government ID is optional. To protect your privacy, we hash (SHA-256) your ID locally — the original number is never saved or sent to the server.
-                                    </p>
-
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="Government ID Type" icon="📋" error={suErrors.idType}>
-                                            <select
-                                                value={su.idType}
-                                                onChange={e => { setSuField("idType", e.target.value); setSuField("idNumber", ""); }}
-                                                style={{ ...inputStyle(!!suErrors.idType), appearance: "none", cursor: "pointer" }}
-                                            >
-                                                <option value="aadhaar">Aadhaar Card</option>
-                                                <option value="VoterID">Voter ID Card</option>
-                                                <option value="PAN">PAN Card</option>
-                                                <option value="DL">Driving License</option>
-                                            </select>
-                                        </Field>
-
-                                        <Field
-                                            label={su.idType === "aadhaar" ? "Aadhaar Number (Optional)" : su.idType === "PAN" ? "PAN Card (Optional)" : su.idType === "VoterID" ? "Voter ID Card (Optional)" : "Driving License (Optional)"}
-                                            icon="🪪"
-                                            error={suErrors.idNumber}
-                                        >
-                                            <input
-                                                style={{ ...inputStyle(!!suErrors.idNumber), fontFamily: "monospace", letterSpacing: su.idType === "aadhaar" ? "0.15em" : "0.05em", fontSize: "1rem" }}
-                                                type="text"
-                                                placeholder={
-                                                    su.idType === "aadhaar" ? "Enter 12-digit Aadhaar number" :
-                                                    su.idType === "PAN" ? "e.g. ABCDE1234F" :
-                                                    su.idType === "VoterID" ? "e.g. ABC1234567" :
-                                                    "Enter Driving License number"
-                                                }
-                                                maxLength={su.idType === "aadhaar" ? 12 : su.idType === "PAN" ? 10 : 25}
-                                                value={su.idNumber}
-                                                onChange={e => {
-                                                    let val = e.target.value;
-                                                    if (su.idType === "aadhaar") val = val.replace(/\D/g, "");
-                                                    setSuField("idNumber", val);
-                                                }}
-                                            />
-                                            {su.idType === "aadhaar" && su.idNumber.length === 12 && !validateAadhaar(su.idNumber) && (
-                                                <p style={{ fontSize: "0.72rem", color: "#10b981", margin: "0.3rem 0 0", fontWeight: "700" }}>✅ Valid Aadhaar (checksum passed)</p>
-                                            )}
-                                        </Field>
-                                    </div>
-                                </div>
-
-                                {/* ── Section 3: Location ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#10b981", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>📍 Location Details</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="State" icon="🗺️" error={suErrors.state}>
-                                            <select
-                                                value={su.state}
-                                                onChange={e => { setSuField("state", e.target.value); setSuField("district", ""); }}
-                                                style={{ ...inputStyle(!!suErrors.state), appearance: "none", cursor: "pointer" }}
-                                            >
-                                                <option value="">— Select State / UT —</option>
-                                                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                        </Field>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                                            <Field label="District" icon="🏘️" error={suErrors.district}>
-                                                <select
-                                                    value={su.district}
-                                                    onChange={e => setSuField("district", e.target.value)}
-                                                    style={{ ...inputStyle(!!suErrors.district), appearance: "none", cursor: su.state ? "pointer" : "not-allowed", opacity: su.state ? 1 : 0.5 }}
-                                                    disabled={!su.state}
-                                                >
-                                                    <option value="">{su.state ? "— Select District —" : "— Select State first —"}</option>
-                                                    {(DISTRICTS_BY_STATE[su.state] || []).map(d => <option key={d} value={d}>{d}</option>)}
-                                                </select>
-                                            </Field>
-                                            <Field label="Pincode" icon="📮" error={suErrors.pincode}>
-                                                <input style={inputStyle(!!suErrors.pincode)} type="text" placeholder="6-digit pincode" maxLength={6} value={su.pincode} onChange={e => setSuField("pincode", e.target.value.replace(/\D/g, ""))} />
-                                            </Field>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* ── Section 4: Password ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🔒 Account Security</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="Password" icon="🔑" error={suErrors.password}>
-                                            <div style={{ position: "relative" }}>
-                                                <input style={{ ...inputStyle(!!suErrors.password), paddingRight: "3rem" }} type={showSuPw ? "text" : "password"} autoComplete="new-password" placeholder="Min. 8 chars • Uppercase • Special char" value={su.password} onChange={e => setSuField("password", e.target.value)} />
-                                                <button type="button" onClick={() => setShowSuPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
-                                                    {showSuPw ? "🙈" : "👁️"}
-                                                </button>
-                                            </div>
-                                            {su.password.length > 0 && (
-                                                <div style={{ marginTop: "0.6rem" }}>
-                                                    {/* Strength bar */}
-                                                    <div style={{ height: "4px", borderRadius: "99px", background: "var(--border)", overflow: "hidden", marginBottom: "0.5rem" }}>
-                                                        <div style={{ height: "100%", borderRadius: "99px", transition: "width 0.4s ease, background 0.4s ease", width: pwScore === 1 ? "33%" : pwScore === 2 ? "66%" : "100%", background: pwColor }} />
-                                                    </div>
-                                                    {/* Live rule checklist */}
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                                                        {[
-                                                            { ok: pwHasLen, label: "At least 8 characters" },
-                                                            { ok: pwHasUpper, label: "One uppercase letter (A–Z)" },
-                                                            { ok: pwHasSpecial, label: "One special character (!@#$%…)" },
-                                                        ].map(rule => (
-                                                            <div key={rule.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                                                                <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{rule.ok ? "✅" : "❌"}</span>
-                                                                <span style={{ fontSize: "0.7rem", fontWeight: "600", color: rule.ok ? "#10b981" : "#94a3b8", transition: "color 0.2s" }}>{rule.label}</span>
+                                                    {otpVerified ? (
+                                                        <div style={{ fontSize: "0.82rem", color: "#10b981", fontWeight: "600" }}>
+                                                            ✓ {su.email} has been verified successfully.
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                                                                <button type="button" onClick={sendOtp} disabled={otpLoading || otpCooldown > 0}
+                                                                    style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpCooldown > 0 ? "var(--bg-card)" : "linear-gradient(135deg,#6366f1,#8b5cf6)", color: otpCooldown > 0 ? "var(--text-muted)" : "white", border: "none", cursor: otpCooldown > 0 ? "not-allowed" : "pointer", whiteSpace: "nowrap", transition: "var(--transition)" }}>
+                                                                    {otpLoading ? "Sending…" : otpCooldown > 0 ? `Resend in ${otpCooldown}s` : otpSent ? "Resend OTP" : "Send OTP"}
+                                                                </button>
+                                                                {otpSent && (
+                                                                    <input
+                                                                        style={{ ...inputStyle(false), flex: 1, fontFamily: "monospace", letterSpacing: "0.2em", textAlign: "center", fontSize: "1rem" }}
+                                                                        type="text" placeholder="6-digit OTP" maxLength={6}
+                                                                        value={otpValue} onChange={e => { setOtpValue(e.target.value.replace(/\D/g, "")); setOtpError(""); }}
+                                                                    />
+                                                                )}
+                                                                {otpSent && (
+                                                                    <button type="button" onClick={verifyOtp} disabled={otpLoading || otpValue.length !== 6}
+                                                                        style={{ padding: "0.55rem 1rem", borderRadius: "0.625rem", fontSize: "0.78rem", fontWeight: "700", background: otpValue.length === 6 ? "linear-gradient(135deg,#10b981,#06b6d4)" : "var(--bg-card)", color: otpValue.length === 6 ? "white" : "var(--text-muted)", border: "none", cursor: otpValue.length === 6 ? "pointer" : "not-allowed", whiteSpace: "nowrap", transition: "var(--transition)" }}>
+                                                                        {otpLoading ? "…" : "Verify"}
+                                                                    </button>
+                                                                )}
                                                             </div>
-                                                        ))}
-                                                    </div>
+                                                            {otpError && <p style={{ fontSize: "0.72rem", color: otpError.includes("Dev mode") ? "#f59e0b" : "#ef4444", margin: 0, fontWeight: "600" }}>{otpError}</p>}
+                                                            {suErrors.otp && !otpSent && <p style={{ fontSize: "0.72rem", color: "#ef4444", margin: 0, fontWeight: "600" }}>⚠️ {suErrors.otp}</p>}
+                                                            {!otpSent && <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", margin: 0 }}>A 6-digit OTP will be sent to your email to verify ownership.</p>}
+                                                        </>
+                                                    )}
                                                 </div>
-                                            )}
-                                        </Field>
-                                        <Field label="Confirm Password" icon="🔒" error={suErrors.confirm}>
-                                            <input style={{ ...inputStyle(!!suErrors.confirm), borderColor: su.confirm && su.confirm !== su.password ? "#ef4444" : undefined }} type="password" autoComplete="new-password" placeholder="Re-enter your password" value={su.confirm} onChange={e => setSuField("confirm", e.target.value)} />
-                                        </Field>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Submit */}
-                                <button type="submit" disabled={suLoading} className="btn btn-primary"
-                                    style={{ fontSize: "1rem", cursor: suLoading ? "wait" : "pointer", background: suLoading ? "var(--text-faint)" : undefined, gap: "0.5rem", marginTop: "0.25rem" }}
-                                >
-                                    {suLoading ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span> Creating Account…</> : "✨ Create My Account"}
-                                </button>
+                                {/* ── Step 2: ID Verification ── */}
+                                {suStep === 2 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>🪪 Identity Verification (Optional)</div>
+                                            <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "0 0 0.875rem", lineHeight: 1.5 }}>
+                                                Providing a government ID is optional. To protect your privacy, we hash (SHA-256) your ID locally — the original number is never saved or sent to the server.
+                                            </p>
+
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="Government ID Type" icon="📋" error={suErrors.idType}>
+                                                    <select
+                                                        value={su.idType}
+                                                        onChange={e => { setSuField("idType", e.target.value); setSuField("idNumber", ""); }}
+                                                        style={selectStyle(!!suErrors.idType)}
+                                                    >
+                                                        <option value="aadhaar">Aadhaar Card</option>
+                                                        <option value="VoterID">Voter ID Card</option>
+                                                        <option value="PAN">PAN Card</option>
+                                                        <option value="DL">Driving License</option>
+                                                    </select>
+                                                </Field>
+
+                                                <Field
+                                                    label={su.idType === "aadhaar" ? "Aadhaar Number (Optional)" : su.idType === "PAN" ? "PAN Card (Optional)" : su.idType === "VoterID" ? "Voter ID Card (Optional)" : "Driving License (Optional)"}
+                                                    icon="🪪"
+                                                    error={suErrors.idNumber}
+                                                >
+                                                    <input
+                                                        style={{ ...inputStyle(!!suErrors.idNumber), fontFamily: "monospace", letterSpacing: su.idType === "aadhaar" ? "0.15em" : "0.05em", fontSize: "1rem" }}
+                                                        type="text"
+                                                        placeholder={
+                                                            su.idType === "aadhaar" ? "Enter 12-digit Aadhaar number" :
+                                                            su.idType === "PAN" ? "e.g. ABCDE1234F" :
+                                                            su.idType === "VoterID" ? "e.g. ABC1234567" :
+                                                            "Enter Driving License number"
+                                                        }
+                                                        maxLength={su.idType === "aadhaar" ? 12 : su.idType === "PAN" ? 10 : 25}
+                                                        value={su.idNumber}
+                                                        onChange={e => {
+                                                            let val = e.target.value;
+                                                            if (su.idType === "aadhaar") val = val.replace(/\D/g, "");
+                                                            setSuField("idNumber", val);
+                                                        }}
+                                                    />
+                                                    {su.idType === "aadhaar" && su.idNumber.length === 12 && !validateAadhaar(su.idNumber) && (
+                                                        <p style={{ fontSize: "0.72rem", color: "#10b981", margin: "0.3rem 0 0", fontWeight: "700" }}>✅ Valid Aadhaar (checksum passed)</p>
+                                                    )}
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Step 3: Location ── */}
+                                {suStep === 3 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#10b981", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>📍 Location Details</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="State" icon="🗺️" error={suErrors.state}>
+                                                    <select
+                                                        value={su.state}
+                                                        onChange={e => { setSuField("state", e.target.value); setSuField("district", ""); }}
+                                                        style={selectStyle(!!suErrors.state)}
+                                                    >
+                                                        <option value="">— Select State / UT —</option>
+                                                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    </select>
+                                                </Field>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                                    <Field label="District" icon="🏘️" error={suErrors.district}>
+                                                        <select
+                                                            value={su.district}
+                                                            onChange={e => setSuField("district", e.target.value)}
+                                                            style={selectStyle(!!suErrors.district)}
+                                                            disabled={!su.state}
+                                                        >
+                                                            <option value="">{su.state ? "— Select District —" : "— Select State first —"}</option>
+                                                            {(DISTRICTS_BY_STATE[su.state] || []).map(d => <option key={d} value={d}>{d}</option>)}
+                                                        </select>
+                                                    </Field>
+                                                    <Field label="Pincode" icon="📮" error={suErrors.pincode}>
+                                                        <input style={inputStyle(!!suErrors.pincode)} type="text" placeholder="6-digit pincode" maxLength={6} value={su.pincode} onChange={e => setSuField("pincode", e.target.value.replace(/\D/g, ""))} />
+                                                    </Field>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Step 4: Password ── */}
+                                {suStep === 4 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🔒 Account Security</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="Password" icon="🔑" error={suErrors.password}>
+                                                    <div style={{ position: "relative" }}>
+                                                        <input style={{ ...inputStyle(!!suErrors.password), paddingRight: "3rem" }} type={showSuPw ? "text" : "password"} autoComplete="new-password" placeholder="Min. 8 chars • Uppercase • Special char" value={su.password} onChange={e => setSuField("password", e.target.value)} />
+                                                        <button type="button" onClick={() => setShowSuPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
+                                                            {showSuPw ? "🙈" : "👁️"}
+                                                        </button>
+                                                    </div>
+                                                    {su.password.length > 0 && (
+                                                        <div style={{ marginTop: "0.6rem" }}>
+                                                            {/* Strength bar */}
+                                                            <div style={{ height: "4px", borderRadius: "99px", background: "var(--border)", overflow: "hidden", marginBottom: "0.5rem" }}>
+                                                                <div style={{ height: "100%", borderRadius: "99px", transition: "width 0.4s ease, background 0.4s ease", width: pwScore === 1 ? "33%" : pwScore === 2 ? "66%" : "100%", background: pwColor }} />
+                                                            </div>
+                                                            {/* Live rule checklist */}
+                                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                                                {[
+                                                                    { ok: pwHasLen, label: "At least 8 characters" },
+                                                                    { ok: pwHasUpper, label: "One uppercase letter (A–Z)" },
+                                                                    { ok: pwHasSpecial, label: "One special character (!@#$%…)" },
+                                                                ].map(rule => (
+                                                                    <div key={rule.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                                        <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{rule.ok ? "✅" : "❌"}</span>
+                                                                        <span style={{ fontSize: "0.7rem", fontWeight: "600", color: rule.ok ? "#10b981" : "#94a3b8", transition: "color 0.2s" }}>{rule.label}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </Field>
+                                                <Field label="Confirm Password" icon="🔒" error={suErrors.confirm}>
+                                                    <input style={{ ...inputStyle(!!suErrors.confirm), borderColor: su.confirm && su.confirm !== su.password ? "#ef4444" : undefined }} type="password" autoComplete="new-password" placeholder="Re-enter your password" value={su.confirm} onChange={e => setSuField("confirm", e.target.value)} />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step navigation controls */}
+                                <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+                                    {suStep > 1 && (
+                                        <button type="button" onClick={() => setSuStep(prev => prev - 1)} className="btn"
+                                            style={{ flex: 1, padding: "0.75rem", borderRadius: "var(--radius)", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
+                                        >
+                                            ⬅ Back
+                                        </button>
+                                    )}
+                                    {suStep < 4 ? (
+                                        <button type="button" onClick={() => { if (validateSuStep(suStep)) setSuStep(prev => prev + 1); }} className="btn btn-primary"
+                                            style={{ flex: 2, padding: "0.75rem", borderRadius: "var(--radius)", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
+                                        >
+                                            Next Step ➔
+                                        </button>
+                                    ) : (
+                                        <button type="submit" disabled={suLoading} className="btn btn-primary"
+                                            style={{ flex: 2, fontSize: "1rem", cursor: suLoading ? "wait" : "pointer", background: suLoading ? "var(--text-faint)" : undefined, gap: "0.5rem" }}
+                                        >
+                                            {suLoading ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span> Creating Account…</> : "✨ Create My Account"}
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Back to login */}
                                 <div style={{ textAlign: "center", paddingTop: "0.5rem", borderTop: "1px solid var(--border)" }}>
@@ -1120,12 +1271,30 @@ export default function LoginPage() {
 
                         {/* Step progress */}
                         <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.75rem" }}>
-                            {["Personal", "Authority Details", "Security"].map((step, i) => (
-                                <div key={step} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                                    <div style={{ height: "4px", width: "100%", borderRadius: "99px", background: "linear-gradient(90deg, #f97316, #fb923c)" }} />
-                                    <span style={{ fontSize: "0.58rem", color: "var(--text-muted)", fontWeight: "600" }}>{`${i + 1}. ${step}`}</span>
-                                </div>
-                            ))}
+                            {["Personal", "Authority Details", "Security"].map((step, i) => {
+                                const stepNum = i + 1;
+                                const isActive = stepNum === auStep;
+                                const isCompleted = stepNum < auStep;
+                                return (
+                                    <div key={step} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                                        <div style={{ 
+                                            height: "4px", 
+                                            width: "100%", 
+                                            borderRadius: "99px", 
+                                            background: (isActive || isCompleted) ? "linear-gradient(90deg, #f97316, #fb923c)" : "var(--border)",
+                                            transition: "background 0.3s ease"
+                                        }} />
+                                        <span style={{ 
+                                            fontSize: "0.58rem", 
+                                            color: isActive ? "#f97316" : isCompleted ? "#10b981" : "var(--text-muted)", 
+                                            fontWeight: (isActive || isCompleted) ? "700" : "600",
+                                            transition: "color 0.3s ease"
+                                        }}>
+                                            {isCompleted ? `✓ ${step}` : `${stepNum}. ${step}`}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {auSuccess ? (
@@ -1137,164 +1306,193 @@ export default function LoginPage() {
                         ) : (
                             <form onSubmit={handleAuthSignup} noValidate style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-                                {/* ── Section 1: Personal Info ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f97316", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>👤 Personal Information</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="Full Name" icon="📛" error={auErrors.name}>
-                                            <input style={inputStyle(!!auErrors.name)} type="text" placeholder="e.g. Officer Rajesh Kumar" value={au.name} onChange={e => setAuField("name", e.target.value)} />
-                                        </Field>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                                            <Field label="Email Address" icon="📧" error={auErrors.email}>
-                                                <input style={inputStyle(!!auErrors.email)} type="email" placeholder="officer@gov.in" autoComplete="email" value={au.email} onChange={e => setAuField("email", e.target.value)} />
-                                            </Field>
-                                            <Field label="Phone Number" icon="📱" error={auErrors.phone}>
-                                                <input style={inputStyle(!!auErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={au.phone} onChange={e => setAuField("phone", e.target.value.replace(/\D/g, ""))} />
-                                            </Field>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* ── Section 2: Authority Details ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🏛️ Authority Details</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-
-                                        {/* Authority Role */}
-                                        <Field label="Authority Role" icon="🎖️" error={auErrors.authorityRole}>
-                                            <select
-                                                value={au.authorityRole}
-                                                onChange={e => setAuField("authorityRole", e.target.value)}
-                                                style={{ ...inputStyle(!!auErrors.authorityRole), appearance: "none", cursor: "pointer" }}
-                                            >
-                                                <option value="">— Select Your Authority Role —</option>
-                                                <option value="Municipal Corporation Officer">🏙️ Municipal Corporation Officer</option>
-                                                <option value="Health & Sanitation Inspector">🏥 Health &amp; Sanitation Inspector</option>
-                                                <option value="Environment Protection Officer">🌿 Environment Protection Officer</option>
-                                                <option value="Traffic Management Officer">🚦 Traffic Management Officer</option>
-                                                <option value="Infrastructure & PWD Engineer">🏗️ Infrastructure &amp; PWD Engineer</option>
-                                                <option value="Revenue Department Officer">💼 Revenue Department Officer</option>
-                                                <option value="Police Administrative Officer">👮 Police Administrative Officer</option>
-                                                <option value="Education Department Officer">📚 Education Department Officer</option>
-                                                <option value="Water Supply & Sewerage Officer">💧 Water Supply &amp; Sewerage Officer</option>
-                                                <option value="Electricity Board Officer">⚡ Electricity Board Officer</option>
-                                            </select>
-                                        </Field>
-
-                                        {/* Service Card ID + Working Place */}
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                                            <Field label="Service Card ID" icon="🪪" error={auErrors.serviceId}>
-                                                <input
-                                                    style={{ ...inputStyle(!!auErrors.serviceId), fontFamily: "monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}
-                                                    type="text"
-                                                    placeholder="e.g. GOV/MH/2024/00123"
-                                                    value={au.serviceId}
-                                                    maxLength={20}
-                                                    onChange={e => setAuField("serviceId", e.target.value)}
-                                                />
-                                            </Field>
-                                            <Field label="Working Place / Office" icon="🏢" error={auErrors.workingPlace}>
-                                                <input
-                                                    style={inputStyle(!!auErrors.workingPlace)}
-                                                    type="text"
-                                                    placeholder="e.g. Municipal Corp, Ward 5"
-                                                    value={au.workingPlace}
-                                                    onChange={e => setAuField("workingPlace", e.target.value)}
-                                                />
-                                            </Field>
-                                        </div>
-
-                                        {/* State + District */}
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                                            <Field label="State" icon="🗺️" error={auErrors.state}>
-                                                <select
-                                                    value={au.state}
-                                                    onChange={e => { setAuField("state", e.target.value); setAuField("district", ""); }}
-                                                    style={{ ...inputStyle(!!auErrors.state), appearance: "none", cursor: "pointer" }}
-                                                >
-                                                    <option value="">— Select State —</option>
-                                                    {Object.keys(DISTRICTS_BY_STATE).sort().map(s => (
-                                                        <option key={s} value={s}>{s}</option>
-                                                    ))}
-                                                </select>
-                                            </Field>
-                                            <Field label="District" icon="📍" error={auErrors.district}>
-                                                <select
-                                                    value={au.district}
-                                                    onChange={e => setAuField("district", e.target.value)}
-                                                    disabled={!au.state}
-                                                    style={{ ...inputStyle(!!auErrors.district), appearance: "none", cursor: au.state ? "pointer" : "not-allowed", opacity: au.state ? 1 : 0.5 }}
-                                                >
-                                                    <option value="">{au.state ? "— Select District —" : "Select state first"}</option>
-                                                    {(DISTRICTS_BY_STATE[au.state] || []).map((d: string) => (
-                                                        <option key={d} value={d}>{d}</option>
-                                                    ))}
-                                                </select>
-                                            </Field>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* ── Section 3: Security ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🔒 Account Security</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="Password" icon="🔑" error={auErrors.password}>
-                                            <div style={{ position: "relative" }}>
-                                                <input
-                                                    style={{ ...inputStyle(!!auErrors.password), paddingRight: "3rem" }}
-                                                    type={showAuPw ? "text" : "password"}
-                                                    autoComplete="new-password"
-                                                    placeholder="Min. 8 chars • Uppercase • Special char"
-                                                    value={au.password}
-                                                    onChange={e => setAuField("password", e.target.value)}
-                                                />
-                                                <button type="button" onClick={() => setShowAuPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
-                                                    {showAuPw ? "🙈" : "👁️"}
-                                                </button>
-                                            </div>
-                                            {au.password.length > 0 && (
-                                                <div style={{ marginTop: "0.6rem" }}>
-                                                    <div style={{ height: "4px", borderRadius: "99px", background: "var(--border)", overflow: "hidden", marginBottom: "0.5rem" }}>
-                                                        <div style={{ height: "100%", borderRadius: "99px", transition: "width 0.4s ease, background 0.4s ease", width: auPwScore === 1 ? "33%" : auPwScore === 2 ? "66%" : "100%", background: auPwColor }} />
-                                                    </div>
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                                                        {[
-                                                            { ok: auPwHasLen, label: "At least 8 characters" },
-                                                            { ok: auPwHasUpper, label: "One uppercase letter (A–Z)" },
-                                                            { ok: auPwHasSpecial, label: "One special character (!@#$%…)" },
-                                                        ].map(rule => (
-                                                            <div key={rule.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                                                                <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{rule.ok ? "✅" : "❌"}</span>
-                                                                <span style={{ fontSize: "0.7rem", fontWeight: "600", color: rule.ok ? "#10b981" : "#94a3b8", transition: "color 0.2s" }}>{rule.label}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                {/* ── Step 1: Personal Info ── */}
+                                {auStep === 1 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f97316", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>👤 Personal Information</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="Full Name" icon="📛" error={auErrors.name}>
+                                                    <input style={inputStyle(!!auErrors.name)} type="text" placeholder="e.g. Officer Rajesh Kumar" value={au.name} onChange={e => setAuField("name", e.target.value)} />
+                                                </Field>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                                    <Field label="Email Address" icon="📧" error={auErrors.email}>
+                                                        <input style={inputStyle(!!auErrors.email)} type="email" placeholder="officer@gov.in" autoComplete="email" value={au.email} onChange={e => setAuField("email", e.target.value)} />
+                                                    </Field>
+                                                    <Field label="Phone Number" icon="📱" error={auErrors.phone}>
+                                                        <input style={inputStyle(!!auErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={au.phone} onChange={e => setAuField("phone", e.target.value.replace(/\D/g, ""))} />
+                                                    </Field>
                                                 </div>
-                                            )}
-                                        </Field>
-                                        <Field label="Confirm Password" icon="🔒" error={auErrors.confirm}>
-                                            <input
-                                                style={{ ...inputStyle(!!auErrors.confirm), borderColor: au.confirm && au.confirm !== au.password ? "#ef4444" : undefined }}
-                                                type="password"
-                                                autoComplete="new-password"
-                                                placeholder="Re-enter your password"
-                                                value={au.confirm}
-                                                onChange={e => setAuField("confirm", e.target.value)}
-                                            />
-                                        </Field>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Submit */}
-                                <button
-                                    type="submit"
-                                    disabled={auLoading}
-                                    className="btn"
-                                    style={{ fontSize: "1rem", cursor: auLoading ? "wait" : "pointer", background: auLoading ? "var(--text-faint)" : "linear-gradient(135deg, #f97316, #fb923c)", color: "white", boxShadow: auLoading ? "none" : "0 4px 20px rgba(249,115,22,0.4)", gap: "0.5rem", marginTop: "0.25rem" }}
-                                >
-                                    {auLoading ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span> Creating Account…</> : "🏛️ Create Authority Account"}
-                                </button>
+                                {/* ── Step 2: Authority Details ── */}
+                                {auStep === 2 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🏛️ Authority Details</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+
+                                                {/* Authority Role */}
+                                                <Field label="Authority Role" icon="🎖️" error={auErrors.authorityRole}>
+                                                    <select
+                                                        value={au.authorityRole}
+                                                        onChange={e => setAuField("authorityRole", e.target.value)}
+                                                        style={selectStyle(!!auErrors.authorityRole)}
+                                                    >
+                                                        <option value="">— Select Your Authority Role —</option>
+                                                        <option value="Municipal Corporation Officer">🏙️ Municipal Corporation Officer</option>
+                                                        <option value="Health & Sanitation Inspector">🏥 Health &amp; Sanitation Inspector</option>
+                                                        <option value="Environment Protection Officer">🌿 Environment Protection Officer</option>
+                                                        <option value="Traffic Management Officer">🚦 Traffic Management Officer</option>
+                                                        <option value="Infrastructure & PWD Engineer">🏗️ Infrastructure &amp; PWD Engineer</option>
+                                                        <option value="Revenue Department Officer">💼 Revenue Department Officer</option>
+                                                        <option value="Police Administrative Officer">👮 Police Administrative Officer</option>
+                                                        <option value="Education Department Officer">📚 Education Department Officer</option>
+                                                        <option value="Water Supply & Sewerage Officer">💧 Water Supply &amp; Sewerage Officer</option>
+                                                        <option value="Electricity Board Officer">⚡ Electricity Board Officer</option>
+                                                    </select>
+                                                </Field>
+
+                                                {/* Service Card ID + Working Place */}
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                                    <Field label="Service Card ID" icon="🪪" error={auErrors.serviceId}>
+                                                        <input
+                                                            style={{ ...inputStyle(!!auErrors.serviceId), fontFamily: "monospace", letterSpacing: "0.06em", textTransform: "uppercase" }}
+                                                            type="text"
+                                                            placeholder="e.g. GOV/MH/2024/00123"
+                                                            value={au.serviceId}
+                                                            maxLength={20}
+                                                            onChange={e => setAuField("serviceId", e.target.value)}
+                                                        />
+                                                    </Field>
+                                                    <Field label="Working Place / Office" icon="🏢" error={auErrors.workingPlace}>
+                                                        <input
+                                                            style={inputStyle(!!auErrors.workingPlace)}
+                                                            type="text"
+                                                            placeholder="e.g. Municipal Corp, Ward 5"
+                                                            value={au.workingPlace}
+                                                            onChange={e => setAuField("workingPlace", e.target.value)}
+                                                        />
+                                                    </Field>
+                                                </div>
+
+                                                {/* State + District */}
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                                    <Field label="State" icon="🗺️" error={auErrors.state}>
+                                                        <select
+                                                            value={au.state}
+                                                            onChange={e => { setAuField("state", e.target.value); setAuField("district", ""); }}
+                                                            style={selectStyle(!!auErrors.state)}
+                                                        >
+                                                            <option value="">— Select State —</option>
+                                                            {Object.keys(DISTRICTS_BY_STATE).sort().map(s => (
+                                                                <option key={s} value={s}>{s}</option>
+                                                            ))}
+                                                        </select>
+                                                    </Field>
+                                                    <Field label="District" icon="📍" error={auErrors.district}>
+                                                        <select
+                                                            value={au.district}
+                                                            onChange={e => setAuField("district", e.target.value)}
+                                                            disabled={!au.state}
+                                                            style={selectStyle(!!auErrors.district)}
+                                                        >
+                                                            <option value="">{au.state ? "— Select District —" : "Select state first"}</option>
+                                                            {(DISTRICTS_BY_STATE[au.state] || []).map((d: string) => (
+                                                                <option key={d} value={d}>{d}</option>
+                                                            ))}
+                                                        </select>
+                                                    </Field>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Step 3: Security ── */}
+                                {auStep === 3 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🔒 Account Security</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="Password" icon="🔑" error={auErrors.password}>
+                                                    <div style={{ position: "relative" }}>
+                                                        <input
+                                                            style={{ ...inputStyle(!!auErrors.password), paddingRight: "3rem" }}
+                                                            type={showAuPw ? "text" : "password"}
+                                                            autoComplete="new-password"
+                                                            placeholder="Min. 8 chars • Uppercase • Special char"
+                                                            value={au.password}
+                                                            onChange={e => setAuField("password", e.target.value)}
+                                                        />
+                                                        <button type="button" onClick={() => setShowAuPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
+                                                            {showAuPw ? "🙈" : "👁️"}
+                                                        </button>
+                                                    </div>
+                                                    {au.password.length > 0 && (
+                                                        <div style={{ marginTop: "0.6rem" }}>
+                                                            <div style={{ height: "4px", borderRadius: "99px", background: "var(--border)", overflow: "hidden", marginBottom: "0.5rem" }}>
+                                                                <div style={{ height: "100%", borderRadius: "99px", transition: "width 0.4s ease, background 0.4s ease", width: auPwScore === 1 ? "33%" : auPwScore === 2 ? "66%" : "100%", background: auPwColor }} />
+                                                            </div>
+                                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                                                {[
+                                                                    { ok: auPwHasLen, label: "At least 8 characters" },
+                                                                    { ok: auPwHasUpper, label: "One uppercase letter (A–Z)" },
+                                                                    { ok: auPwHasSpecial, label: "One special character (!@#$%…)" },
+                                                                ].map(rule => (
+                                                                    <div key={rule.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                                        <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{rule.ok ? "✅" : "❌"}</span>
+                                                                        <span style={{ fontSize: "0.7rem", fontWeight: "600", color: rule.ok ? "#10b981" : "#94a3b8", transition: "color 0.2s" }}>{rule.label}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </Field>
+                                                <Field label="Confirm Password" icon="🔒" error={auErrors.confirm}>
+                                                    <input
+                                                        style={{ ...inputStyle(!!auErrors.confirm), borderColor: au.confirm && au.confirm !== au.password ? "#ef4444" : undefined }}
+                                                        type="password"
+                                                        autoComplete="new-password"
+                                                        placeholder="Re-enter your password"
+                                                        value={au.confirm}
+                                                        onChange={e => setAuField("confirm", e.target.value)}
+                                                    />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Step navigation controls */}
+                                <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+                                    {auStep > 1 && (
+                                        <button type="button" onClick={() => setAuStep(prev => prev - 1)} className="btn"
+                                            style={{ flex: 1, padding: "0.75rem", borderRadius: "var(--radius)", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
+                                        >
+                                            ⬅ Back
+                                        </button>
+                                    )}
+                                    {auStep < 3 ? (
+                                        <button type="button" onClick={() => { if (validateAuStep(auStep)) setAuStep(prev => prev + 1); }} className="btn"
+                                            style={{ flex: 2, padding: "0.75rem", borderRadius: "var(--radius)", background: "linear-gradient(135deg, #f97316, #fb923c)", color: "white", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem", border: "none", boxShadow: "0 4px 20px rgba(249,115,22,0.3)" }}
+                                        >
+                                            Next Step ➔
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="submit"
+                                            disabled={auLoading}
+                                            className="btn"
+                                            style={{ flex: 2, fontSize: "1rem", cursor: auLoading ? "wait" : "pointer", background: auLoading ? "var(--text-faint)" : "linear-gradient(135deg, #f97316, #fb923c)", color: "white", boxShadow: auLoading ? "none" : "0 4px 20px rgba(249,115,22,0.4)", gap: "0.5rem" }}
+                                        >
+                                            {auLoading ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span> Creating Account…</> : "🏛️ Create Authority Account"}
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Back to login */}
                                 <div style={{ textAlign: "center", paddingTop: "0.5rem", borderTop: "1px solid var(--border)" }}>
@@ -1321,14 +1519,32 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        {/* Step bar */}
+                        {/* Step progress */}
                         <div style={{ display: "flex", gap: "0.35rem", marginBottom: "1.75rem" }}>
-                            {["Personal", "Officer ID", "Security"].map((step, i) => (
-                                <div key={step} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
-                                    <div style={{ height: "4px", width: "100%", borderRadius: "99px", background: "linear-gradient(90deg, #ec4899, #f43f5e)" }} />
-                                    <span style={{ fontSize: "0.58rem", color: "var(--text-muted)", fontWeight: "600" }}>{`${i + 1}. ${step}`}</span>
-                                </div>
-                            ))}
+                            {["Personal", "Officer ID", "Security"].map((step, i) => {
+                                const stepNum = i + 1;
+                                const isActive = stepNum === chStep;
+                                const isCompleted = stepNum < chStep;
+                                return (
+                                    <div key={step} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.3rem" }}>
+                                        <div style={{ 
+                                            height: "4px", 
+                                            width: "100%", 
+                                            borderRadius: "99px", 
+                                            background: (isActive || isCompleted) ? "linear-gradient(90deg, #ec4899, #f43f5e)" : "var(--border)",
+                                            transition: "background 0.3s ease"
+                                        }} />
+                                        <span style={{ 
+                                            fontSize: "0.58rem", 
+                                            color: isActive ? "#ec4899" : isCompleted ? "#10b981" : "var(--text-muted)", 
+                                            fontWeight: (isActive || isCompleted) ? "700" : "600",
+                                            transition: "color 0.3s ease"
+                                        }}>
+                                            {isCompleted ? `✓ ${step}` : `${stepNum}. ${step}`}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {chSuccess ? (
@@ -1340,102 +1556,131 @@ export default function LoginPage() {
                         ) : (
                             <form onSubmit={handleChiefSignup} noValidate style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-                                {/* ── Section 1: Personal Info ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>👤 Personal Information</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="Full Name" icon="📛" error={chErrors.name}>
-                                            <input style={inputStyle(!!chErrors.name)} type="text" placeholder="e.g. Chief Commissioner Arvind" value={ch.name} onChange={e => setChField("name", e.target.value)} />
-                                        </Field>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                                            <Field label="Email Address" icon="📧" error={chErrors.email}>
-                                                <input style={inputStyle(!!chErrors.email)} type="email" placeholder="chief@gov.in" autoComplete="email" value={ch.email} onChange={e => setChField("email", e.target.value)} />
-                                            </Field>
-                                            <Field label="Phone Number" icon="📱" error={chErrors.phone}>
-                                                <input style={inputStyle(!!chErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={ch.phone} onChange={e => setChField("phone", e.target.value.replace(/\D/g, ""))} />
+                                {/* ── Step 1: Personal Info ── */}
+                                {chStep === 1 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(236,72,153,0.05)", border: "1px solid rgba(236,72,153,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#ec4899", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>👤 Personal Information</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="Full Name" icon="📛" error={chErrors.name}>
+                                                    <input style={inputStyle(!!chErrors.name)} type="text" placeholder="e.g. Chief Commissioner Arvind" value={ch.name} onChange={e => setChField("name", e.target.value)} />
+                                                </Field>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                                    <Field label="Email Address" icon="📧" error={chErrors.email}>
+                                                        <input style={inputStyle(!!chErrors.email)} type="email" placeholder="chief@gov.in" autoComplete="email" value={ch.email} onChange={e => setChField("email", e.target.value)} />
+                                                    </Field>
+                                                    <Field label="Phone Number" icon="📱" error={chErrors.phone}>
+                                                        <input style={inputStyle(!!chErrors.phone)} type="tel" placeholder="10-digit mobile" maxLength={10} value={ch.phone} onChange={e => setChField("phone", e.target.value.replace(/\D/g, ""))} />
+                                                    </Field>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* ── Step 2: Officer ID ── */}
+                                {chStep === 2 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f43f5e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🪪 Officer Identification</div>
+                                            <Field label="Officer ID" icon="⭐" error={chErrors.officerId}>
+                                                <input
+                                                    style={{ ...inputStyle(!!chErrors.officerId), fontFamily: "monospace", letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "1rem", fontWeight: "700" }}
+                                                    type="text"
+                                                    placeholder="e.g. CHIEF-2024-001"
+                                                    maxLength={20}
+                                                    value={ch.officerId}
+                                                    onChange={e => setChField("officerId", e.target.value)}
+                                                />
+                                                <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
+                                                    📌 Must be <strong>6–20 characters</strong> containing both <strong>letters &amp; digits</strong>. Example: <code style={{ background: "rgba(236,72,153,0.12)", padding: "0.1rem 0.35rem", borderRadius: "4px", fontFamily: "monospace" }}>CHIEF-2024-001</code>
+                                                </p>
                                             </Field>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* ── Section 2: Officer ID ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f43f5e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🪪 Officer Identification</div>
-                                    <Field label="Officer ID" icon="⭐" error={chErrors.officerId}>
-                                        <input
-                                            style={{ ...inputStyle(!!chErrors.officerId), fontFamily: "monospace", letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "1rem", fontWeight: "700" }}
-                                            type="text"
-                                            placeholder="e.g. CHIEF-2024-001"
-                                            maxLength={20}
-                                            value={ch.officerId}
-                                            onChange={e => setChField("officerId", e.target.value)}
-                                        />
-                                        <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
-                                            📌 Must be <strong>6–20 characters</strong> containing both <strong>letters &amp; digits</strong>. Example: <code style={{ background: "rgba(236,72,153,0.12)", padding: "0.1rem 0.35rem", borderRadius: "4px", fontFamily: "monospace" }}>CHIEF-2024-001</code>
-                                        </p>
-                                    </Field>
-                                </div>
-
-                                {/* ── Section 3: Security ── */}
-                                <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}>
-                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🔒 Account Security</div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                        <Field label="Password" icon="🔑" error={chErrors.password}>
-                                            <div style={{ position: "relative" }}>
-                                                <input
-                                                    style={{ ...inputStyle(!!chErrors.password), paddingRight: "3rem" }}
-                                                    type={showChPw ? "text" : "password"}
-                                                    autoComplete="new-password"
-                                                    placeholder="Min. 8 chars • Uppercase • Special char"
-                                                    value={ch.password}
-                                                    onChange={e => setChField("password", e.target.value)}
-                                                />
-                                                <button type="button" onClick={() => setShowChPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
-                                                    {showChPw ? "🙈" : "👁️"}
-                                                </button>
-                                            </div>
-                                            {ch.password.length > 0 && (
-                                                <div style={{ marginTop: "0.6rem" }}>
-                                                    <div style={{ height: "4px", borderRadius: "99px", background: "var(--border)", overflow: "hidden", marginBottom: "0.5rem" }}>
-                                                        <div style={{ height: "100%", borderRadius: "99px", transition: "width 0.4s ease, background 0.4s ease", width: chPwScore === 1 ? "33%" : chPwScore === 2 ? "66%" : "100%", background: chPwColor }} />
+                                {/* ── Step 3: Security ── */}
+                                {chStep === 3 && (
+                                    <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                        <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.12)" }}>
+                                            <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🔒 Account Security</div>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                <Field label="Password" icon="🔑" error={chErrors.password}>
+                                                    <div style={{ position: "relative" }}>
+                                                        <input
+                                                            style={{ ...inputStyle(!!chErrors.password), paddingRight: "3rem" }}
+                                                            type={showChPw ? "text" : "password"}
+                                                            autoComplete="new-password"
+                                                            placeholder="Min. 8 chars • Uppercase • Special char"
+                                                            value={ch.password}
+                                                            onChange={e => setChField("password", e.target.value)}
+                                                        />
+                                                        <button type="button" onClick={() => setShowChPw(p => !p)} style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", fontSize: "0.95rem", color: "var(--text-muted)", padding: "0.2rem" }}>
+                                                            {showChPw ? "🙈" : "👁️"}
+                                                        </button>
                                                     </div>
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                                                        {[
-                                                            { ok: chPwHasLen, label: "At least 8 characters" },
-                                                            { ok: chPwHasUpper, label: "One uppercase letter (A–Z)" },
-                                                            { ok: chPwHasSpecial, label: "One special character (!@#$%…)" },
-                                                        ].map(rule => (
-                                                            <div key={rule.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                                                                <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{rule.ok ? "✅" : "❌"}</span>
-                                                                <span style={{ fontSize: "0.7rem", fontWeight: "600", color: rule.ok ? "#10b981" : "#94a3b8", transition: "color 0.2s" }}>{rule.label}</span>
+                                                    {ch.password.length > 0 && (
+                                                        <div style={{ marginTop: "0.6rem" }}>
+                                                            <div style={{ height: "4px", borderRadius: "99px", background: "var(--border)", overflow: "hidden", marginBottom: "0.5rem" }}>
+                                                                <div style={{ height: "100%", borderRadius: "99px", transition: "width 0.4s ease, background 0.4s ease", width: chPwScore === 1 ? "33%" : chPwScore === 2 ? "66%" : "100%", background: chPwColor }} />
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </Field>
-                                        <Field label="Confirm Password" icon="🔒" error={chErrors.confirm}>
-                                            <input
-                                                style={{ ...inputStyle(!!chErrors.confirm), borderColor: ch.confirm && ch.confirm !== ch.password ? "#ef4444" : undefined }}
-                                                type="password"
-                                                autoComplete="new-password"
-                                                placeholder="Re-enter your password"
-                                                value={ch.confirm}
-                                                onChange={e => setChField("confirm", e.target.value)}
-                                            />
-                                        </Field>
+                                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                                                                {[
+                                                                    { ok: chPwHasLen, label: "At least 8 characters" },
+                                                                    { ok: chPwHasUpper, label: "One uppercase letter (A–Z)" },
+                                                                    { ok: chPwHasSpecial, label: "One special character (!@#$%…)" },
+                                                                ].map(rule => (
+                                                                    <div key={rule.label} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                                        <span style={{ fontSize: "0.75rem", lineHeight: 1 }}>{rule.ok ? "✅" : "❌"}</span>
+                                                                        <span style={{ fontSize: "0.7rem", fontWeight: "600", color: rule.ok ? "#10b981" : "#94a3b8", transition: "color 0.2s" }}>{rule.label}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </Field>
+                                                <Field label="Confirm Password" icon="🔒" error={chErrors.confirm}>
+                                                    <input
+                                                        style={{ ...inputStyle(!!chErrors.confirm), borderColor: ch.confirm && ch.confirm !== ch.password ? "#ef4444" : undefined }}
+                                                        type="password"
+                                                        autoComplete="new-password"
+                                                        placeholder="Re-enter your password"
+                                                        value={ch.confirm}
+                                                        onChange={e => setChField("confirm", e.target.value)}
+                                                    />
+                                                </Field>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Submit */}
-                                <button
-                                    type="submit"
-                                    disabled={chLoading}
-                                    className="btn"
-                                    style={{ fontSize: "1rem", cursor: chLoading ? "wait" : "pointer", background: chLoading ? "var(--text-faint)" : "linear-gradient(135deg, #ec4899, #f43f5e)", color: "white", boxShadow: chLoading ? "none" : "0 4px 20px rgba(236,72,153,0.4)", gap: "0.5rem", marginTop: "0.25rem" }}
-                                >
-                                    {chLoading ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span> Creating Account…</> : "⭐ Create Chief Account"}
-                                </button>
+                                {/* Step navigation controls */}
+                                <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+                                    {chStep > 1 && (
+                                        <button type="button" onClick={() => setChStep(prev => prev - 1)} className="btn"
+                                            style={{ flex: 1, padding: "0.75rem", borderRadius: "var(--radius)", background: "var(--bg-card)", color: "var(--text-main)", border: "1px solid var(--border)", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem" }}
+                                        >
+                                            ⬅ Back
+                                        </button>
+                                    )}
+                                    {chStep < 3 ? (
+                                        <button type="button" onClick={() => { if (validateChStep(chStep)) setChStep(prev => prev + 1); }} className="btn"
+                                            style={{ flex: 2, padding: "0.75rem", borderRadius: "var(--radius)", background: "linear-gradient(135deg, #ec4899, #f43f5e)", color: "white", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.25rem", border: "none", boxShadow: "0 4px 20px rgba(236,72,153,0.3)" }}
+                                        >
+                                            Next Step ➔
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="submit"
+                                            disabled={chLoading}
+                                            className="btn"
+                                            style={{ flex: 2, fontSize: "1rem", cursor: chLoading ? "wait" : "pointer", background: chLoading ? "var(--text-faint)" : "linear-gradient(135deg, #ec4899, #f43f5e)", color: "white", boxShadow: chLoading ? "none" : "0 4px 20px rgba(236,72,153,0.4)", gap: "0.5rem", marginTop: "0.25rem" }}
+                                        >
+                                            {chLoading ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span> Creating Account…</> : "⭐ Create Chief Account"}
+                                        </button>
+                                    )}
+                                </div>
 
                                 {/* Back to login */}
                                 <div style={{ textAlign: "center", paddingTop: "0.5rem", borderTop: "1px solid var(--border)" }}>
