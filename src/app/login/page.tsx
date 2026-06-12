@@ -211,6 +211,7 @@ export default function LoginPage() {
         authorityRole: "", serviceId: "",
         workingPlace: "", state: "", district: "",
         password: "", confirm: "",
+        passcode: "",
     });
     const [showAuPw, setShowAuPw] = useState(false);
     const [auErrors, setAuErrors] = useState<Record<string, string>>({});
@@ -223,6 +224,7 @@ export default function LoginPage() {
         name: "", email: "", phone: "",
         officerId: "",
         password: "", confirm: "",
+        passcode: "",
     });
     const [showChPw, setShowChPw] = useState(false);
     const [chErrors, setChErrors] = useState<Record<string, string>>({});
@@ -495,6 +497,7 @@ export default function LoginPage() {
         if (!au.workingPlace.trim()) errs.workingPlace = "Working place / office name is required.";
         if (!au.state) errs.state = "Please select your state.";
         if (!au.district.trim()) errs.district = "District name is required.";
+        if (!au.passcode.trim()) errs.passcode = "Department security passcode is required.";
         if (au.password.length < 8) errs.password = "Password must be at least 8 characters.";
         else if (!/[A-Z]/.test(au.password)) errs.password = "Password must contain at least one uppercase letter.";
         else if (!/[^A-Za-z0-9]/.test(au.password)) errs.password = "Password must contain at least one special character.";
@@ -613,6 +616,7 @@ export default function LoginPage() {
                     phone: au.phone,
                     authorityRole: au.authorityRole,
                     serviceId: au.serviceId.trim(),
+                    passcode: au.passcode,
                 }),
             });
             const data = await res.json();
@@ -620,11 +624,16 @@ export default function LoginPage() {
                 setAuSuccess(true);
                 setTimeout(() => {
                     setMode("login"); setSelectedRole("authority"); setEmail(normalizedEmail); setPassword("");
-                    setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "" });
+                    setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "", passcode: "" });
                     setAuErrors({}); setAuSuccess(false);
                 }, 1800);
             } else {
-                setAuErrors({ email: data.error || "Registration failed. Please try again." });
+                // If it's a passcode error, map it to the passcode field
+                if (data.field === "passcode") {
+                    setAuErrors({ passcode: data.error });
+                } else {
+                    setAuErrors({ email: data.error || "Registration failed. Please try again." });
+                }
             }
         } catch {
             setAuErrors({ email: "Connection error. Please try again." });
@@ -641,6 +650,7 @@ export default function LoginPage() {
         if (!ch.officerId.trim()) errs.officerId = "Officer ID is required.";
         else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9\-]{6,20}$/.test(ch.officerId.trim()))
             errs.officerId = "Must be 6\u201320 chars with both letters and digits (e.g. CHIEF-2024-001).";
+        if (!ch.passcode.trim()) errs.passcode = "Chief Administrator security passcode is required.";
         if (ch.password.length < 8) errs.password = "Password must be at least 8 characters.";
         else if (!/[A-Z]/.test(ch.password)) errs.password = "Password must contain at least one uppercase letter.";
         else if (!/[^A-Za-z0-9]/.test(ch.password)) errs.password = "Password must contain at least one special character.";
@@ -665,6 +675,7 @@ export default function LoginPage() {
                     role: "chief",
                     phone: ch.phone,
                     serviceId: ch.officerId.trim().toUpperCase(),
+                    passcode: ch.passcode,
                 }),
             });
             const data = await res.json();
@@ -672,11 +683,16 @@ export default function LoginPage() {
                 setChSuccess(true);
                 setTimeout(() => {
                     setMode("login"); setSelectedRole("chief"); setEmail(normalizedEmail); setPassword("");
-                    setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "" });
+                    setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "", passcode: "" });
                     setChErrors({}); setChSuccess(false);
                 }, 1800);
             } else {
-                setChErrors({ email: data.error || "Registration failed. Please try again." });
+                // If it's a passcode error, map it to the passcode field
+                if (data.field === "passcode") {
+                    setChErrors({ passcode: data.error });
+                } else {
+                    setChErrors({ email: data.error || "Registration failed. Please try again." });
+                }
             }
         } catch {
             setChErrors({ email: "Connection error. Please try again." });
@@ -748,6 +764,7 @@ export default function LoginPage() {
             if (!au.workingPlace.trim()) errs.workingPlace = "Working place / office name is required.";
             if (!au.state) errs.state = "Please select your state.";
             if (!au.district.trim()) errs.district = "District name is required.";
+            if (!au.passcode.trim()) errs.passcode = "Department security passcode is required.";
         } else if (step === 3) {
             if (au.password.length < 8) errs.password = "Password must be at least 8 characters.";
             else if (!/[A-Z]/.test(au.password)) errs.password = "Password must contain at least one uppercase letter.";
@@ -768,6 +785,7 @@ export default function LoginPage() {
             if (!ch.officerId.trim()) errs.officerId = "Officer ID is required.";
             else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9\-]{6,20}$/.test(ch.officerId.trim()))
                 errs.officerId = "Must be 6–20 chars with both letters and digits (e.g. CHIEF-2024-001).";
+            if (!ch.passcode.trim()) errs.passcode = "Chief Administrator security passcode is required.";
         } else if (step === 3) {
             if (ch.password.length < 8) errs.password = "Password must be at least 8 characters.";
             else if (!/[A-Z]/.test(ch.password)) errs.password = "Password must contain at least one uppercase letter.";
@@ -837,7 +855,14 @@ export default function LoginPage() {
                         const isSelected = selectedRole === role;
                         return (
                             <button key={role} type="button"
-                                onClick={() => { setSelectedRole(role); setEmail(""); setPassword(""); setLoginError(""); setShowPassword(false); if (mode === "signup" && role !== "user") setMode("login"); }}
+                                onClick={() => {
+                                    setSelectedRole(role);
+                                    setEmail("");
+                                    setPassword("");
+                                    setLoginError("");
+                                    setShowPassword(false);
+                                    switchMode("login");
+                                }}
                                 className="glass animate-fade-in"
                                 style={{ padding: "1.25rem 0.6rem", borderRadius: "var(--radius)", border: isSelected ? `2px solid ${config.color}` : "2px solid transparent", cursor: "pointer", textAlign: "center", background: isSelected ? `${config.color}15` : undefined, transition: "var(--transition)", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", boxShadow: isSelected ? `0 0 0 4px ${config.color}25, var(--shadow-md)` : "var(--shadow-sm)", transform: isSelected ? "translateY(-3px) scale(1.03)" : "translateY(0) scale(1)" }}
                             >
@@ -1407,6 +1432,17 @@ export default function LoginPage() {
                                                         </select>
                                                     </Field>
                                                 </div>
+                                                <div style={{ marginTop: "0.875rem" }}>
+                                                    <Field label="Department Security Passcode" icon="🔐" error={auErrors.passcode}>
+                                                        <input
+                                                            style={inputStyle(!!auErrors.passcode)}
+                                                            type="password"
+                                                            placeholder="Enter Department Security Passcode"
+                                                            value={au.passcode}
+                                                            onChange={e => setAuField("passcode", e.target.value)}
+                                                        />
+                                                    </Field>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1596,6 +1632,17 @@ export default function LoginPage() {
                                                     📌 Must be <strong>6–20 characters</strong> containing both <strong>letters &amp; digits</strong>. Example: <code style={{ background: "rgba(236,72,153,0.12)", padding: "0.1rem 0.35rem", borderRadius: "4px", fontFamily: "monospace" }}>CHIEF-2024-001</code>
                                                 </p>
                                             </Field>
+                                            <div style={{ marginTop: "0.875rem" }}>
+                                                <Field label="Chief Administrator Security Passcode" icon="🔐" error={chErrors.passcode}>
+                                                    <input
+                                                        style={inputStyle(!!chErrors.passcode)}
+                                                        type="password"
+                                                        placeholder="Enter Chief Security Passcode"
+                                                        value={ch.passcode}
+                                                        onChange={e => setChField("passcode", e.target.value)}
+                                                    />
+                                                </Field>
+                                            </div>
                                         </div>
                                     </div>
                                 )}

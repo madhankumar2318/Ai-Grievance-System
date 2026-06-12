@@ -41,6 +41,7 @@ export async function POST(req: Request) {
             authorityRole,
             serviceId,
             otpToken,   // signed token verifying email ownership
+            passcode,   // security gate passcode
         } = body;
 
         const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
@@ -51,6 +52,25 @@ export async function POST(req: Request) {
                 { success: false, error: "Missing required fields" },
                 { status: 400 }
             );
+        }
+
+        // ── Admin passcode gate security ──────────────────────────────
+        if (role === "authority") {
+            const expected = process.env.AUTHORITY_PASSPHRASE || "auth_secure_pass_2026";
+            if (!passcode || passcode.trim() !== expected.trim()) {
+                return NextResponse.json(
+                    { success: false, error: "Access Denied: Invalid Authority security passcode.", field: "passcode" },
+                    { status: 403 }
+                );
+            }
+        } else if (role === "chief") {
+            const expected = process.env.CHIEF_PASSPHRASE || "chief_secure_pass_2026";
+            if (!passcode || passcode.trim() !== expected.trim()) {
+                return NextResponse.json(
+                    { success: false, error: "Access Denied: Invalid Chief Administrator security passcode.", field: "passcode" },
+                    { status: 403 }
+                );
+            }
         }
 
         // ── Block demo email reuse ─────────────────────────────────────
