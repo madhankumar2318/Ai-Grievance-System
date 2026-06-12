@@ -100,6 +100,28 @@ export async function POST(req: Request) {
             );
         }
 
+        // ── Check if phone already taken in Supabase (if provided) ──────
+        if (phone) {
+            const formattedPhone = phone.trim();
+            const { data: existingPhone, error: phoneError } = await supabase
+                .from("users")
+                .select("phone")
+                .eq("phone", formattedPhone)
+                .maybeSingle();
+
+            if (phoneError) {
+                console.error("Database phone check error:", phoneError);
+                return NextResponse.json({ success: false, error: "Database error." }, { status: 500 });
+            }
+
+            if (existingPhone) {
+                return NextResponse.json(
+                    { success: false, error: "Phone number already registered.", field: "phone" },
+                    { status: 409 }
+                );
+            }
+        }
+
         // ── Citizen-only validations ───────────────────────────────────
         let idHash: string | undefined;
         if (role === "user") {

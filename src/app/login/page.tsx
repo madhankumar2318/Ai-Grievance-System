@@ -455,6 +455,14 @@ export default function LoginPage() {
         if (!su.dob) errs.dob = "Date of birth is required.";
         else if (calculateAge(su.dob) < 18)
             errs.dob = "You must be 18 years or older to register.";
+        if (!otpVerified) errs.otp = "Please verify your email with the OTP code first.";
+        
+        if (errs.name || errs.email || errs.phone || errs.dob || errs.otp) {
+            setSuStep(1);
+            setSuErrors(errs);
+            return false;
+        }
+
         /* ── Government ID (Optional validation if filled) ── */
         if (su.idNumber.trim() !== "") {
             if (su.idType === "aadhaar") {
@@ -474,13 +482,29 @@ export default function LoginPage() {
                 }
             }
         }
+        if (Object.keys(errs).length > 0) {
+            setSuStep(2);
+            setSuErrors(errs);
+            return false;
+        }
+
         if (!su.state) errs.state = "Please select your state.";
         if (!su.district.trim()) errs.district = "District name is required.";
         if (!/^\d{6}$/.test(su.pincode)) errs.pincode = "Enter a valid 6-digit pincode.";
+        if (Object.keys(errs).length > 0) {
+            setSuStep(3);
+            setSuErrors(errs);
+            return false;
+        }
+
         if (su.password.length < 8) errs.password = "Password must be at least 8 characters.";
         else if (!/[A-Z]/.test(su.password)) errs.password = "Password must contain at least one uppercase letter.";
         else if (!/[^A-Za-z0-9]/.test(su.password)) errs.password = "Password must contain at least one special character (!@#$…).";
         if (su.password !== su.confirm) errs.confirm = "Passwords do not match.";
+        
+        if (Object.keys(errs).length > 0) {
+            setSuStep(4);
+        }
         setSuErrors(errs);
         return Object.keys(errs).length === 0;
     };
@@ -491,6 +515,12 @@ export default function LoginPage() {
         if (!au.name.trim()) errs.name = "Full name is required.";
         if (!au.email.includes("@")) errs.email = "Enter a valid email address.";
         if (!/^\d{10}$/.test(au.phone)) errs.phone = "Enter a valid 10-digit phone number.";
+        if (errs.name || errs.email || errs.phone) {
+            setAuStep(1);
+            setAuErrors(errs);
+            return false;
+        }
+
         if (!au.authorityRole) errs.authorityRole = "Please select your authority role.";
         if (!au.serviceId.trim()) errs.serviceId = "Service Card ID is required.";
         else if (au.serviceId.trim().length < 5) errs.serviceId = "Service Card ID must be at least 5 characters.";
@@ -498,10 +528,20 @@ export default function LoginPage() {
         if (!au.state) errs.state = "Please select your state.";
         if (!au.district.trim()) errs.district = "District name is required.";
         if (!au.passcode.trim()) errs.passcode = "Department security passcode is required.";
+        if (Object.keys(errs).length > 0) {
+            setAuStep(2);
+            setAuErrors(errs);
+            return false;
+        }
+
         if (au.password.length < 8) errs.password = "Password must be at least 8 characters.";
         else if (!/[A-Z]/.test(au.password)) errs.password = "Password must contain at least one uppercase letter.";
         else if (!/[^A-Za-z0-9]/.test(au.password)) errs.password = "Password must contain at least one special character.";
         if (au.password !== au.confirm) errs.confirm = "Passwords do not match.";
+        
+        if (Object.keys(errs).length > 0) {
+            setAuStep(3);
+        }
         setAuErrors(errs);
         return Object.keys(errs).length === 0;
     };
@@ -588,12 +628,23 @@ export default function LoginPage() {
                     setSuErrors({}); setSuSuccess(false);
                 }, 1800);
             } else {
-                // Map server field-specific errors to the correct form field
-                if (data.field === "dob") setSuErrors({ dob: data.error });
-                else if (data.field === "idNumber") setSuErrors({ idNumber: data.error });
-                else setSuErrors({ email: data.error || "Registration failed. Please try again." });
+                // Map server field-specific errors to the correct form field and step
+                if (data.field === "dob") {
+                    setSuStep(1);
+                    setSuErrors({ dob: data.error });
+                } else if (data.field === "idNumber") {
+                    setSuStep(2);
+                    setSuErrors({ idNumber: data.error });
+                } else if (data.field === "phone") {
+                    setSuStep(1);
+                    setSuErrors({ phone: data.error });
+                } else {
+                    setSuStep(1);
+                    setSuErrors({ email: data.error || "Registration failed. Please try again." });
+                }
             }
         } catch {
+            setSuStep(1);
             setSuErrors({ email: "Connection error. Please try again." });
         }
         setSuLoading(false);
@@ -628,14 +679,20 @@ export default function LoginPage() {
                     setAuErrors({}); setAuSuccess(false);
                 }, 1800);
             } else {
-                // If it's a passcode error, map it to the passcode field
+                // If it's a passcode error, map it to the passcode field and step
                 if (data.field === "passcode") {
+                    setAuStep(2);
                     setAuErrors({ passcode: data.error });
+                } else if (data.field === "phone") {
+                    setAuStep(1);
+                    setAuErrors({ phone: data.error });
                 } else {
+                    setAuStep(1);
                     setAuErrors({ email: data.error || "Registration failed. Please try again." });
                 }
             }
         } catch {
+            setAuStep(1);
             setAuErrors({ email: "Connection error. Please try again." });
         }
         setAuLoading(false);
@@ -647,14 +704,30 @@ export default function LoginPage() {
         if (!ch.name.trim()) errs.name = "Full name is required.";
         if (!ch.email.includes("@")) errs.email = "Enter a valid email address.";
         if (!/^\d{10}$/.test(ch.phone)) errs.phone = "Enter a valid 10-digit phone number.";
+        if (errs.name || errs.email || errs.phone) {
+            setChStep(1);
+            setChErrors(errs);
+            return false;
+        }
+
         if (!ch.officerId.trim()) errs.officerId = "Officer ID is required.";
         else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9\-]{6,20}$/.test(ch.officerId.trim()))
-            errs.officerId = "Must be 6\u201320 chars with both letters and digits (e.g. CHIEF-2024-001).";
+            errs.officerId = "Must be 6–20 chars with both letters and digits (e.g. CHIEF-2024-001).";
         if (!ch.passcode.trim()) errs.passcode = "Chief Administrator security passcode is required.";
+        if (Object.keys(errs).length > 0) {
+            setChStep(2);
+            setChErrors(errs);
+            return false;
+        }
+
         if (ch.password.length < 8) errs.password = "Password must be at least 8 characters.";
         else if (!/[A-Z]/.test(ch.password)) errs.password = "Password must contain at least one uppercase letter.";
         else if (!/[^A-Za-z0-9]/.test(ch.password)) errs.password = "Password must contain at least one special character.";
         if (ch.password !== ch.confirm) errs.confirm = "Passwords do not match.";
+        
+        if (Object.keys(errs).length > 0) {
+            setChStep(3);
+        }
         setChErrors(errs);
         return Object.keys(errs).length === 0;
     };
@@ -687,14 +760,20 @@ export default function LoginPage() {
                     setChErrors({}); setChSuccess(false);
                 }, 1800);
             } else {
-                // If it's a passcode error, map it to the passcode field
+                // If it's a passcode error, map it to the passcode field and step
                 if (data.field === "passcode") {
+                    setChStep(2);
                     setChErrors({ passcode: data.error });
+                } else if (data.field === "phone") {
+                    setChStep(1);
+                    setChErrors({ phone: data.error });
                 } else {
+                    setChStep(1);
                     setChErrors({ email: data.error || "Registration failed. Please try again." });
                 }
             }
         } catch {
+            setChStep(1);
             setChErrors({ email: "Connection error. Please try again." });
         }
         setChLoading(false);
