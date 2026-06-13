@@ -971,7 +971,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* ── Role selector ── */}
-                <div className="stagger-children" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", marginBottom: "2rem" }}>
+                <div className="stagger-children role-grid">
                     {(Object.entries(ROLE_CONFIG) as [UserRole, typeof ROLE_CONFIG.user][]).map(([role, config]) => {
                         const isSelected = selectedRole === role;
                         return (

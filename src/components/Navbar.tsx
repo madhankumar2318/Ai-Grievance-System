@@ -31,12 +31,11 @@ export default function Navbar() {
 
     return (
         <nav
-            className="glass no-print"
+            className="glass no-print nav-container"
             style={{
                 position: "sticky", top: 0, zIndex: 100,
                 borderBottom: "1px solid var(--border)",
                 backdropFilter: "blur(20px) saturate(180%)",
-                padding: "0 2rem",
             }}
         >
             <div className="container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: "64px", padding: "0" }}>
@@ -57,7 +56,7 @@ export default function Navbar() {
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1.12) rotate(-5deg)"; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "scale(1) rotate(0deg)"; }}
                     >⚖</div>
-                    <span style={{ fontWeight: "800", fontSize: "1.05rem" }}>
+                    <span className="brand-name">
                         AI Grievance <span className="gradient-text">System</span>
                     </span>
                 </Link>
@@ -262,7 +261,7 @@ export default function Navbar() {
                                     onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; }}
                                 >
-                                    🏠 Grievance Desk
+                                    🏠 <span className="nav-btn-text">Grievance Desk</span>
                                 </Link>
                             ) : (
                                 <Link href="/login" className="btn btn-primary" style={{ padding: "0.5rem 1.25rem", fontSize: "0.9rem", textDecoration: "none" }}>
