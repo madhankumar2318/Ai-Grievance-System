@@ -64,9 +64,9 @@ export default function Navbar() {
                 {/* Right section */}
                 <div className="nav-right" style={{ display: "flex", alignItems: "center" }}>
 
-                    {/* Nav Links */}
+                    {/* Nav Links — hidden on mobile (bottom nav handles those) */}
                     {isLoggedIn && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.15rem", overflow: "hidden" }}>
+                        <div className="desktop-nav-links" style={{ display: "flex", alignItems: "center", gap: "0.15rem", overflow: "hidden" }}>
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>

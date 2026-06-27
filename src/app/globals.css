@@ -106,7 +106,6 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
-  /* Prevent white flash before theme JS loads */
   background: #020617;
   color-scheme: dark;
 }
@@ -320,200 +319,79 @@ textarea::placeholder {
    Keyframe Animations
 ══════════════════════════════════════════════ */
 
-/* Page entry */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Slide up */
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.97);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Glow pulse (for active states) */
 @keyframes glowPulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 var(--primary-glow);
-  }
-
-  50% {
-    box-shadow: 0 0 0 8px transparent;
-  }
+  0%, 100% { box-shadow: 0 0 0 0 var(--primary-glow); }
+  50%       { box-shadow: 0 0 0 8px transparent; }
 }
 
-/* Float (decorative elements) */
 @keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  33% {
-    transform: translateY(-14px) rotate(2deg);
-  }
-
-  66% {
-    transform: translateY(-7px) rotate(-1deg);
-  }
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33%       { transform: translateY(-14px) rotate(2deg); }
+  66%       { transform: translateY(-7px) rotate(-1deg); }
 }
 
-/* Spinner */
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-/* Shimmer */
 @keyframes shimmer {
-  from {
-    background-position: 200% 0;
-  }
-
-  to {
-    background-position: -200% 0;
-  }
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
 }
 
-/* Progress bar fill */
 @keyframes fillBar {
-  from {
-    width: 0%;
-  }
+  from { width: 0%; }
 }
 
-/* Ping for "live" dots */
 @keyframes ping {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-
-  75%,
-  100% {
-    transform: scale(2.2);
-    opacity: 0;
-  }
+  0%        { transform: scale(1); opacity: 0.8; }
+  75%, 100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* Count up (used via JS animation classes) */
 @keyframes countBounce {
-  0% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.18);
-  }
-
-  100% {
-    transform: scale(1);
-  }
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
 }
 
-/* Confetti bits */
 @keyframes confettiFall {
-  0% {
-    opacity: 1;
-    transform: translateY(0) rotate(0deg);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(80px) rotate(720deg);
-  }
+  0%   { opacity: 1; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(80px) rotate(720deg); }
 }
 
-/* Blob drift for login bg */
 @keyframes blobDrift {
-
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-
-  33% {
-    transform: translate(30px, -40px) scale(1.05);
-  }
-
-  66% {
-    transform: translate(-20px, 20px) scale(0.97);
-  }
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -40px) scale(1.05); }
+  66%       { transform: translate(-20px, 20px) scale(0.97); }
 }
 
-/* Voice/mic pulse */
 @keyframes voicePulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
-  }
-
-  50% {
-    box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
-  }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50%       { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
 }
 
-/* ── Animation Utility Classes ────────────────── */
-.animate-fade-in {
-  animation: fadeIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
+/* ── Animation Utility Classes ── */
+.animate-fade-in  { animation: fadeIn 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-float    { animation: float 6s ease-in-out infinite; }
+.animate-spin     { animation: spin 1s linear infinite; }
 
-.animate-slide-up {
-  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* Staggered children */
-.stagger-children>*:nth-child(1) {
-  animation-delay: 0ms;
-}
-
-.stagger-children>*:nth-child(2) {
-  animation-delay: 80ms;
-}
-
-.stagger-children>*:nth-child(3) {
-  animation-delay: 160ms;
-}
-
-.stagger-children>*:nth-child(4) {
-  animation-delay: 240ms;
-}
-
-.stagger-children>*:nth-child(5) {
-  animation-delay: 320ms;
-}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 320ms; }
 
 /* ══════════════════════════════════════════════
    Stat Cards
@@ -560,37 +438,17 @@ tbody tr:hover {
 /* ══════════════════════════════════════════════
    Scrollbar
 ══════════════════════════════════════════════ */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 99px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-faint);
-}
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
 /* ══════════════════════════════════════════════
    Print / PDF Export
 ══════════════════════════════════════════════ */
 @media print {
-
-  nav,
-  .no-print {
-    display: none !important;
-  }
-
-  .print-only {
-    display: block !important;
-  }
+  nav, .no-print    { display: none !important; }
+  .print-only       { display: block !important; }
 
   body {
     background: #ffffff !important;
@@ -606,28 +464,12 @@ tbody tr:hover {
     backdrop-filter: none !important;
   }
 
-  .container {
-    max-width: 100% !important;
-    padding: 0 !important;
-  }
+  .container { max-width: 100% !important; padding: 0 !important; }
+  main        { padding: 1rem !important; }
 
-  main {
-    padding: 1rem !important;
-  }
-
-  .print-stat {
-    border: 1px solid #e2e8f0 !important;
-    page-break-inside: avoid;
-  }
-
-  table {
-    font-size: 11px;
-  }
-
-  th,
-  td {
-    padding: 0.5rem 0.75rem !important;
-  }
+  .print-stat { border: 1px solid #e2e8f0 !important; page-break-inside: avoid; }
+  table       { font-size: 11px; }
+  th, td      { padding: 0.5rem 0.75rem !important; }
 
   span[style] {
     -webkit-print-color-adjust: exact;
@@ -640,17 +482,21 @@ tbody tr:hover {
     -webkit-text-fill-color: #6366f1 !important;
   }
 
-  @page {
-    margin: 1.5cm;
-    size: A4 landscape;
-  }
+  @page { margin: 1.5cm; size: A4 landscape; }
 }
 
 /* ══════════════════════════════════════════════
-   Mobile Responsive Fixes
+   Mobile & Responsive System
 ══════════════════════════════════════════════ */
 
-/* ── Navbar ── */
+/* Desktop nav links — hidden on mobile, bottom nav takes over */
+.desktop-nav-links { display: none; }
+
+@media (min-width: 768px) {
+  .desktop-nav-links { display: flex !important; }
+}
+
+/* Navbar */
 .brand-name {
   display: none;
   font-weight: 800;
@@ -658,54 +504,109 @@ tbody tr:hover {
 }
 
 @media (min-width: 500px) {
-  .brand-name {
-    display: inline;
-  }
+  .brand-name { display: inline; }
 }
 
-.nav-btn-text {
-  display: none;
-}
+.nav-btn-text { display: none; }
 
 @media (min-width: 640px) {
-  .nav-btn-text {
-    display: inline;
-  }
+  .nav-btn-text { display: inline; }
 }
 
-.nav-container {
-  padding: 0 0.6rem;
-}
+.nav-container { padding: 0 1rem; }
 
 @media (min-width: 768px) {
-  .nav-container {
-    padding: 0 2rem;
-  }
+  .nav-container { padding: 0 2rem; }
 }
 
-/* Reduce nav right-section gaps on mobile */
-.nav-right {
-  gap: 0.35rem;
-}
+.nav-right { gap: 0.4rem; }
 
 @media (min-width: 640px) {
-  .nav-right {
-    gap: 0.6rem;
-  }
+  .nav-right { gap: 0.75rem; }
 }
 
-/* Shrink language button on very small screens */
-.lang-btn-text {
-  display: none;
-}
+.lang-btn-text { display: none; }
 
 @media (min-width: 420px) {
-  .lang-btn-text {
-    display: inline;
+  .lang-btn-text { display: inline; }
+}
+
+/* ══════════════════════════════════════════════
+   Mobile Bottom Navigation Bar
+══════════════════════════════════════════════ */
+.mobile-bottom-nav { display: none; }
+
+@media (max-width: 767px) {
+  /* Show the bottom nav on phones */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 62px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    z-index: 200;
+    padding: 0 0.75rem;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  /* Push page content above the bottom nav */
+  body {
+    padding-bottom: 62px;
   }
 }
 
-/* ── Main Form Card (glass card on home page) ── */
+/* Bottom nav tab */
+.mobile-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  border-radius: 0.75rem;
+  margin: 0.35rem 0;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+  position: relative;
+  gap: 0.1rem;
+}
+
+.mobile-tab--active {
+  color: var(--primary);
+  background: linear-gradient(
+    135deg,
+    hsla(245, 75%, 60%, 0.14),
+    hsla(330, 80%, 60%, 0.08)
+  );
+}
+
+.mobile-tab__icon  { font-size: 1.4rem; line-height: 1; }
+.mobile-tab__label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* Active top-border indicator */
+.mobile-tab__indicator {
+  position: absolute;
+  top: -0.35rem;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: var(--grad-primary);
+}
+
+/* ══════════════════════════════════════════════
+   Form & Layout Responsive
+══════════════════════════════════════════════ */
+
+/* Glass form card — responsive padding */
 .form-card {
   padding: 1.25rem !important;
   border-radius: 1rem !important;
@@ -713,7 +614,7 @@ tbody tr:hover {
 
 @media (min-width: 480px) {
   .form-card {
-    padding: 1.75rem !important;
+    padding: 2rem !important;
     border-radius: 1.25rem !important;
   }
 }
@@ -725,7 +626,7 @@ tbody tr:hover {
   }
 }
 
-/* ── Description row: label + voice button ── */
+/* Description label + voice button row */
 .desc-label-row {
   display: flex;
   flex-wrap: wrap;
@@ -735,19 +636,10 @@ tbody tr:hover {
   margin-bottom: 0.5rem;
 }
 
-/* ── Location row: input + GPS button ── */
-.location-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: stretch;
-}
+/* Notification banner */
+.notif-banner { flex-wrap: wrap; }
 
-.location-row input {
-  min-width: 0;
-  flex: 1;
-}
-
-/* ── Responsive grid for login role selector ── */
+/* Login role selector */
 .role-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -756,45 +648,20 @@ tbody tr:hover {
 }
 
 @media (min-width: 600px) {
-  .role-grid {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
+  .role-grid { grid-template-columns: 1fr 1fr 1fr; }
 }
 
-/* ── Hero section heading on mobile ── */
-@media (max-width: 480px) {
-  .hero-subtitle {
-    font-size: 1rem !important;
-    margin-bottom: 2rem !important;
-  }
+/* GPS Camera button — hide long descriptive text on small screens */
+.gps-btn-long { display: none; }
+
+@media (min-width: 520px) {
+  .gps-btn-long { display: inline; }
 }
 
-/* ── GPS Camera button: hide long text on mobile ── */
-.gps-btn-long {
-  display: none;
-}
-
-@media (min-width: 480px) {
-  .gps-btn-long {
-    display: inline;
-  }
-}
-
-/* ── Prevent chatbot bubble overlapping submit button ── */
-@media (max-width: 768px) {
-  main {
-    padding-bottom: 5rem;
-  }
-}
-
-/* ── Tighter label spacing on mobile ── */
-@media (max-width: 480px) {
-  label {
-    margin-bottom: 0.3rem !important;
-  }
-
+/* Tighter inputs on very small screens */
+@media (max-width: 420px) {
   input, textarea {
-    font-size: 0.95rem;
     padding: 0.75rem 0.9rem;
+    font-size: 0.95rem;
   }
 }

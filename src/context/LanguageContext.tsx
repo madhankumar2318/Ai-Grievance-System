@@ -69,7 +69,7 @@ const translations: Record<Language, Translations> = {
         form_description: "Detailed Description",
         form_description_placeholder: "Explain the issue in detail...",
         form_location: "📍 Location & Photo Evidence",
-        form_location_placeholder: "City, District, or Landmark — or use GPS Camera below",
+        form_location_placeholder: "City, District, or Landmark",
         form_submit: "Submit Grievance",
         form_submitting: "Processing with AI…",
         form_voice_start: "🎙️ Voice Input",

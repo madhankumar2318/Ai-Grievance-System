@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import ChatbotAssistant from "@/components/ChatbotAssistant";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,6 +56,7 @@ export default function RootLayout({
             <LanguageProvider>
               <Navbar />
               {children}
+              <MobileBottomNav />
               <ChatbotAssistant />
             </LanguageProvider>
           </ThemeProvider>
