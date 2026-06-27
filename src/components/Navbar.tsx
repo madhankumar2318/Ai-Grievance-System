@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLang, LANGUAGE_NAMES, Language } from "@/context/LanguageContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const ROLE_BADGE = {
     user: { label: "Citizen", color: "#6366f1", bg: "#6366f115" },
@@ -25,6 +25,11 @@ export default function Navbar() {
     const { lang, setLang, t } = useLang();
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [pathname]);
 
     const handleLogout = () => { logout(); router.push("/login"); };
     const isActive = (href: string) => pathname === href;
@@ -113,8 +118,8 @@ export default function Navbar() {
                         </button>
                     )}
 
-                    {/* Language Selector */}
-                    <div style={{ position: "relative" }}>
+                    {/* Language Selector — desktop only */}
+                    <div className="desktop-only-control" style={{ position: "relative" }}>
                         <button
                             onClick={() => setShowLangMenu(p => !p)}
                             style={{
@@ -164,23 +169,37 @@ export default function Navbar() {
                         )}
                     </div>
 
-                    {/* Theme Toggle */}
-                    <button
-                        onClick={toggleTheme}
-                        style={{
-                            width: "38px", height: "38px", borderRadius: "50%",
-                            border: "1px solid var(--border)",
-                            background: "var(--bg-card)",
-                            cursor: "pointer", fontSize: "1rem",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            transition: "var(--transition)",
-                        }}
-                        title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
-                    >
-                        {theme === "light" ? "🌙" : "☀️"}
-                    </button>
+                    {/* Theme Toggle — desktop only */}
+                    <div className="desktop-only-control">
+                        <button
+                            onClick={toggleTheme}
+                            style={{
+                                width: "38px", height: "38px", borderRadius: "50%",
+                                border: "1px solid var(--border)",
+                                background: "var(--bg-card)",
+                                cursor: "pointer", fontSize: "1rem",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                transition: "var(--transition)",
+                            }}
+                            title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)"; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+                        >
+                            {theme === "light" ? "🌙" : "☀️"}
+                        </button>
+                    </div>
+
+                    {/* Hamburger Menu Button — mobile only */}
+                    {isLoggedIn && (
+                        <button
+                            className="mobile-only-control mobile-menu-toggle"
+                            onClick={() => setIsMobileMenuOpen(p => !p)}
+                            title="Toggle Menu"
+                        >
+                            {isMobileMenuOpen ? "✕" : "☰"}
+                        </button>
+                    )}
+
 
                     {/* User Avatar + Dropdown */}
                     {isLoggedIn && user ? (
@@ -273,6 +292,81 @@ export default function Navbar() {
                     )}
                 </div>
             </div>
+
+            {/* Mobile menu drawer */}
+            {isMobileMenuOpen && isLoggedIn && user && (
+                <div className="mobile-menu-drawer animate-fade-in">
+                    {user.role === "user" && (
+                        <>
+                            <Link
+                                href="/"
+                                className={`mobile-menu-drawer-item${isActive("/") ? " mobile-menu-drawer-item--active" : ""}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                📝 {t("nav_home")}
+                            </Link>
+                            <Link
+                                href="/track"
+                                className={`mobile-menu-drawer-item${isActive("/track") ? " mobile-menu-drawer-item--active" : ""}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                🔍 {t("nav_track")}
+                            </Link>
+                        </>
+                    )}
+                    {(user.role === "authority" || user.role === "chief") && (
+                        <Link
+                            href="/admin"
+                            className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            🏛️ {t("nav_admin")}
+                        </Link>
+                    )}
+                    {user.role === "chief" && (
+                        <Link
+                            href="/chief"
+                            className={`mobile-menu-drawer-item${isActive("/chief") ? " mobile-menu-drawer-item--active" : ""}`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            ⭐ {t("nav_chief")}
+                        </Link>
+                    )}
+
+                    {/* Mobile Settings Row (Theme & Language Selector combo) */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid var(--border)", marginTop: "0.5rem", paddingTop: "1rem" }}>
+                        {/* Quick language toggle */}
+                        <div style={{ display: "flex", gap: "0.4rem" }}>
+                            {(Object.keys(LANGUAGE_NAMES) as Language[]).map((l) => (
+                                <button
+                                    key={l}
+                                    onClick={() => setLang(l)}
+                                    style={{
+                                        padding: "0.3rem 0.6rem", borderRadius: "0.35rem", fontSize: "0.75rem", fontWeight: "700",
+                                        border: "1px solid var(--border)",
+                                        background: l === lang ? "var(--grad-primary)" : "var(--bg-elevated)",
+                                        color: l === lang ? "white" : "var(--text-main)",
+                                    }}
+                                >
+                                    {l.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Theme Toggle in mobile menu */}
+                        <button
+                            onClick={toggleTheme}
+                            style={{
+                                padding: "0.3rem 0.75rem", borderRadius: "0.35rem", fontSize: "0.8rem", fontWeight: "700",
+                                border: "1px solid var(--border)", background: "var(--bg-elevated)", color: "var(--text-main)",
+                                display: "flex", alignItems: "center", gap: "0.35rem"
+                            }}
+                        >
+                            {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @keyframes ping {
