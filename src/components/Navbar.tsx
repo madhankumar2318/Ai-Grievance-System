@@ -62,7 +62,7 @@ export default function Navbar() {
                 </Link>
 
                 {/* Right section */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div className="nav-right" style={{ display: "flex", alignItems: "center" }}>
 
                     {/* Nav Links */}
                     {isLoggedIn && (
@@ -126,7 +126,7 @@ export default function Navbar() {
                             }}
                             title="Change Language"
                         >
-                            🌐 {LANGUAGE_NAMES[lang]}
+                            🌐 <span className="lang-btn-text">{LANGUAGE_NAMES[lang]}</span>
                             <span style={{ fontSize: "0.6rem", color: "var(--text-muted)" }}>▾</span>
                         </button>
                         {showLangMenu && (
@@ -206,7 +206,7 @@ export default function Navbar() {
                                 }}>
                                     {getInitials(user.username)}
                                 </div>
-                                <span style={{ fontSize: "0.8rem", fontWeight: "700", color: ROLE_BADGE[user.role].color, paddingRight: "0.25rem" }}>
+                                <span className="nav-btn-text" style={{ fontSize: "0.8rem", fontWeight: "700", color: ROLE_BADGE[user.role].color, paddingRight: "0.25rem" }}>
                                     {ROLE_BADGE[user.role].label}
                                 </span>
                                 <span style={{ fontSize: "0.6rem", color: "var(--text-muted)", paddingRight: "0.5rem" }}>▾</span>

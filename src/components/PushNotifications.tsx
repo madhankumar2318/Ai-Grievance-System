@@ -97,18 +97,18 @@ export function NotificationBanner({ complaintId }: { complaintId?: string }) {
     }
 
     return (
-        <div className="animate-fade-in" style={{
-            padding: "0.8rem 1.2rem", borderRadius: "0.75rem",
+        <div className="animate-fade-in notif-banner" style={{
+            padding: "0.8rem 1rem", borderRadius: "0.75rem",
             background: "linear-gradient(135deg, #6366f115, #ec489915)",
             border: "1px solid #6366f133",
             display: "flex", alignItems: "center", gap: "0.75rem",
             flexWrap: "wrap", marginBottom: "1rem",
         }}>
             <span style={{ fontSize: "1.1rem" }}>🔔</span>
-            <span style={{ fontSize: "0.82rem", color: "var(--text-main)", fontWeight: "600", flex: 1 }}>
+            <span style={{ fontSize: "0.82rem", color: "var(--text-main)", fontWeight: "600", flex: 1, minWidth: "120px" }}>
                 Get instant alerts when your complaint status changes
             </span>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+            <div className="notif-banner-btns" style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                     onClick={handleEnable}
                     disabled={requesting}

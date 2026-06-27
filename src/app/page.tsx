@@ -389,7 +389,7 @@ export default function Home() {
               <p style={{ fontSize: "1.25rem", marginBottom: "3rem" }}>{t("home_subtitle")}</p>
             </div>
 
-            <div className="glass animate-fade-in" style={{ maxWidth: "640px", margin: "0 auto", padding: "3rem", borderRadius: "1.5rem", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.1)" }}>
+            <div className="glass animate-fade-in form-card" style={{ maxWidth: "640px", margin: "0 auto", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.1)" }}>
               <NotificationBanner />
               <h2 style={{ marginBottom: "2rem", textAlign: "center" }}>{t("home_form_title")}</h2>
               <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -408,7 +408,7 @@ export default function Home() {
 
                 {/* Description + Voice */}
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                  <div className="desc-label-row">
                     <label style={{ fontWeight: "600", fontSize: "0.9rem" }}>{t("form_description")}</label>
                     {voiceSupported && (
                       <button
@@ -455,13 +455,12 @@ export default function Home() {
                     {t("form_location")}
                   </label>
 
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "stretch" }}>
+                  <div className="location-row">
                     <input
                       type="text"
                       placeholder={t("form_location_placeholder")}
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      style={{ flex: 1 }}
                     />
                     <button type="button" title="Detect my location"
                       onClick={() => { navigator.geolocation?.getCurrentPosition((pos) => setFormData((p) => ({ ...p, location: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` })), () => alert("Location access denied.")); }}

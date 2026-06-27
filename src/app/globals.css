@@ -198,11 +198,35 @@ p {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding: 0 2rem;
+  }
 }
 
 .section {
-  padding: 6rem 0;
+  padding: 3rem 0;
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding: 5rem 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .section {
+    padding: 6rem 0;
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -622,9 +646,11 @@ tbody tr:hover {
   }
 }
 
-/* ── Responsive Mobile Alignment Fixes ── */
+/* ══════════════════════════════════════════════
+   Mobile Responsive Fixes
+══════════════════════════════════════════════ */
 
-/* Navbar responsive brand name adjustments */
+/* ── Navbar ── */
 .brand-name {
   display: none;
   font-weight: 800;
@@ -637,7 +663,6 @@ tbody tr:hover {
   }
 }
 
-/* Navbar button text responsive collapse */
 .nav-btn-text {
   display: none;
 }
@@ -648,9 +673,8 @@ tbody tr:hover {
   }
 }
 
-/* Nav padding responsive */
 .nav-container {
-  padding: 0 0.75rem;
+  padding: 0 0.6rem;
 }
 
 @media (min-width: 768px) {
@@ -659,7 +683,71 @@ tbody tr:hover {
   }
 }
 
-/* Responsive grid for login role selector */
+/* Reduce nav right-section gaps on mobile */
+.nav-right {
+  gap: 0.35rem;
+}
+
+@media (min-width: 640px) {
+  .nav-right {
+    gap: 0.6rem;
+  }
+}
+
+/* Shrink language button on very small screens */
+.lang-btn-text {
+  display: none;
+}
+
+@media (min-width: 420px) {
+  .lang-btn-text {
+    display: inline;
+  }
+}
+
+/* ── Main Form Card (glass card on home page) ── */
+.form-card {
+  padding: 1.25rem !important;
+  border-radius: 1rem !important;
+}
+
+@media (min-width: 480px) {
+  .form-card {
+    padding: 1.75rem !important;
+    border-radius: 1.25rem !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .form-card {
+    padding: 3rem !important;
+    border-radius: 1.5rem !important;
+  }
+}
+
+/* ── Description row: label + voice button ── */
+.desc-label-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ── Location row: input + GPS button ── */
+.location-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.location-row input {
+  min-width: 0;
+  flex: 1;
+}
+
+/* ── Responsive grid for login role selector ── */
 .role-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -670,5 +758,30 @@ tbody tr:hover {
 @media (min-width: 600px) {
   .role-grid {
     grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+/* ── Hero section heading on mobile ── */
+@media (max-width: 480px) {
+  .hero-subtitle {
+    font-size: 1rem !important;
+    margin-bottom: 2rem !important;
+  }
+}
+
+/* ── Notification banner mobile ── */
+@media (max-width: 480px) {
+  .notif-banner {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.75rem;
+  }
+  .notif-banner-btns {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .notif-banner-btns button {
+    flex: 1;
   }
 }
