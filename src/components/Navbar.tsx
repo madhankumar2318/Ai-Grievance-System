@@ -66,7 +66,7 @@ export default function Navbar() {
 
                     {/* Nav Links */}
                     {isLoggedIn && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.15rem", overflow: "hidden" }}>
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
@@ -118,11 +118,12 @@ export default function Navbar() {
                         <button
                             onClick={() => setShowLangMenu(p => !p)}
                             style={{
-                                padding: "0.4rem 0.7rem", borderRadius: "0.5rem",
+                                padding: "0.35rem 0.5rem", borderRadius: "0.5rem",
                                 border: "1px solid var(--border)", background: "var(--bg-card)",
                                 cursor: "pointer", fontSize: "0.82rem", fontWeight: "600",
-                                display: "flex", alignItems: "center", gap: "0.35rem",
+                                display: "flex", alignItems: "center", gap: "0.2rem",
                                 color: "var(--text-main)", transition: "var(--transition)",
+                                whiteSpace: "nowrap",
                             }}
                             title="Change Language"
                         >
@@ -286,12 +287,13 @@ export default function Navbar() {
 function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
     return (
         <Link href={href} style={{
-            padding: "0.4rem 0.9rem", borderRadius: "0.5rem",
-            fontWeight: "600", fontSize: "0.875rem", textDecoration: "none",
+            padding: "0.35rem 0.7rem", borderRadius: "0.5rem",
+            fontWeight: "600", fontSize: "0.8rem", textDecoration: "none",
             background: active ? "var(--grad-primary)" : "transparent",
             color: active ? "white" : "var(--text-muted)",
             transition: "all 0.2s ease",
             boxShadow: active ? "0 4px 12px var(--primary-glow)" : "none",
+            whiteSpace: "nowrap",
         }}
             onMouseEnter={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = "var(--border-subtle)"; (e.currentTarget as HTMLElement).style.color = "var(--text-main)"; } }}
             onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; } }}

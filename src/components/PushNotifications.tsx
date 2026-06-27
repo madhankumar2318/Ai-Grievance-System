@@ -113,10 +113,11 @@ export function NotificationBanner({ complaintId }: { complaintId?: string }) {
                     onClick={handleEnable}
                     disabled={requesting}
                     style={{
-                        padding: "0.4rem 1rem", borderRadius: "0.5rem",
+                        padding: "0.4rem 0.85rem", borderRadius: "0.5rem",
                         background: "linear-gradient(135deg, #6366f1, #ec4899)",
                         border: "none", cursor: "pointer", color: "white",
-                        fontWeight: "700", fontSize: "0.8rem", opacity: requesting ? 0.7 : 1,
+                        fontWeight: "700", fontSize: "0.75rem", opacity: requesting ? 0.7 : 1,
+                        whiteSpace: "nowrap",
                     }}
                 >
                     {requesting ? "Enabling…" : t("notif_enable")}
