@@ -769,19 +769,32 @@ tbody tr:hover {
   }
 }
 
-/* ── Notification banner mobile ── */
+/* ── GPS Camera button: hide long text on mobile ── */
+.gps-btn-long {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .gps-btn-long {
+    display: inline;
+  }
+}
+
+/* ── Prevent chatbot bubble overlapping submit button ── */
+@media (max-width: 768px) {
+  main {
+    padding-bottom: 5rem;
+  }
+}
+
+/* ── Tighter label spacing on mobile ── */
 @media (max-width: 480px) {
-  .notif-banner {
-    flex-direction: column;
-    align-items: flex-start !important;
-    gap: 0.75rem;
+  label {
+    margin-bottom: 0.3rem !important;
   }
-  .notif-banner-btns {
-    width: 100%;
-    display: flex;
-    gap: 0.5rem;
-  }
-  .notif-banner-btns button {
-    flex: 1;
+
+  input, textarea {
+    font-size: 0.95rem;
+    padding: 0.75rem 0.9rem;
   }
 }

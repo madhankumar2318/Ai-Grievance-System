@@ -383,16 +383,16 @@ export default function Home() {
         <section className="section" style={{ background: "radial-gradient(circle at top right, hsla(245,75%,60%,0.1), transparent)" }}>
           <div className="container animate-fade-in">
             <div style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
-              <h1 style={{ fontSize: "clamp(2.5rem, 8vw, 4.5rem)", marginBottom: "1.5rem" }}>
+              <h1 style={{ fontSize: "clamp(2rem, 8vw, 4.5rem)", marginBottom: "1rem" }}>
                 {t("home_title").split(",")[0]}, <span className="gradient-text">{t("home_title").split(",")[1]?.trim() || "Empowered by AI"}</span>
               </h1>
-              <p style={{ fontSize: "1.25rem", marginBottom: "3rem" }}>{t("home_subtitle")}</p>
+              <p style={{ fontSize: "clamp(0.95rem, 3vw, 1.25rem)", marginBottom: "1.5rem" }}>{t("home_subtitle")}</p>
             </div>
 
             <div className="glass animate-fade-in form-card" style={{ maxWidth: "640px", margin: "0 auto", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.1)" }}>
               <NotificationBanner />
-              <h2 style={{ marginBottom: "2rem", textAlign: "center" }}>{t("home_form_title")}</h2>
-              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+              <h2 style={{ marginBottom: "1.25rem", textAlign: "center", fontSize: "clamp(1.1rem, 5vw, 1.5rem)" }}>{t("home_form_title")}</h2>
+              <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
 
                 {/* Email (optional) */}
                 <div>
@@ -455,25 +455,26 @@ export default function Home() {
                     {t("form_location")}
                   </label>
 
-                  <div className="location-row">
+                  <div style={{ position: "relative" }}>
                     <input
                       type="text"
                       placeholder={t("form_location_placeholder")}
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      style={{ paddingRight: "3rem" }}
                     />
                     <button type="button" title="Detect my location"
                       onClick={() => { navigator.geolocation?.getCurrentPosition((pos) => setFormData((p) => ({ ...p, location: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` })), () => alert("Location access denied.")); }}
-                      style={{ padding: "0 1rem", borderRadius: "0.75rem", border: "1px solid var(--border)", background: "var(--bg-main)", cursor: "pointer", fontSize: "1.1rem", flexShrink: 0, transition: "var(--transition)" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--primary)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                      style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", padding: "0.35rem 0.5rem", borderRadius: "0.5rem", border: "none", background: "transparent", cursor: "pointer", fontSize: "1.15rem", transition: "var(--transition)", lineHeight: 1 }}
                     >🎯</button>
                   </div>
 
                   <button type="button" disabled={mediaFiles.length >= 5} onClick={() => setShowGpsCamera(true)}
-                    style={{ marginTop: "0.75rem", width: "100%", padding: "0.9rem 1rem", borderRadius: "0.75rem", border: "none", background: "linear-gradient(135deg, #6366f1, #ec4899)", color: "white", fontWeight: "700", fontSize: "0.9rem", cursor: mediaFiles.length >= 5 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem", opacity: mediaFiles.length >= 5 ? 0.5 : 1, transition: "var(--transition)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)" }}
+                    style={{ marginTop: "0.75rem", width: "100%", padding: "0.85rem 1rem", borderRadius: "0.75rem", border: "none", background: "linear-gradient(135deg, #6366f1, #ec4899)", color: "white", fontWeight: "700", fontSize: "0.85rem", cursor: mediaFiles.length >= 5 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", opacity: mediaFiles.length >= 5 ? 0.5 : 1, transition: "var(--transition)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)", whiteSpace: "nowrap", overflow: "hidden" }}
                   >
-                    📍📷 Open GPS Camera — Capture Photo with Location Tag
+                    <span>📍📷</span>
+                    <span>Open GPS Camera</span>
+                    <span className="gps-btn-long">&mdash; Capture Photo with Location Tag</span>
                   </button>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "0.75rem 0" }}>
