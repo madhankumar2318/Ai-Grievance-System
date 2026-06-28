@@ -166,8 +166,8 @@ export default function Navbar() {
                         )}
                     </div>
 
-                    {/* Theme Toggle — desktop only */}
-                    <div className="desktop-only-control">
+                    {/* Theme Toggle — visible on both desktop & mobile */}
+                    <div style={{ display: "flex", alignItems: "center" }}>
                         <button
                             onClick={toggleTheme}
                             style={{
@@ -319,25 +319,7 @@ export default function Navbar() {
                         >
                             ⭐ {t("nav_chief")}
                         </Link>
-                    )}
-
-
-                    {/* Mobile Settings Row (Theme Toggle centered) */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0.5rem 1rem", borderTop: "1px solid var(--border)", marginTop: "0.5rem", paddingTop: "1rem" }}>
-                        {/* Theme Toggle in mobile menu */}
-                        <button
-                            onClick={toggleTheme}
-                            style={{
-                                padding: "0.4rem 1rem", borderRadius: "0.5rem", fontSize: "0.85rem", fontWeight: "700",
-                                border: "1px solid var(--border)", background: "var(--bg-elevated)", color: "var(--text-main)",
-                                display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", width: "100%", justifyContent: "center"
-                            }}
-                        >
-                            {theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
-                        </button>
-                    </div>
-
-                </div>
+                    )}                </div>
             )}
 
             <style>{`
