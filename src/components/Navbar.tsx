@@ -76,7 +76,7 @@ export default function Navbar() {
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
                             </>)}
-                            {(user?.role === "authority" || user?.role === "chief") && (
+                            {user?.role === "authority" && (
                                 <NavLink href="/admin" active={isActive("/admin")}>🏛️ {t("nav_admin")}</NavLink>
                             )}
                             {user?.role === "chief" && (
@@ -314,7 +314,7 @@ export default function Navbar() {
                             </Link>
                         </>
                     )}
-                    {(user.role === "authority" || user.role === "chief") && (
+                    {user.role === "authority" && (
                         <Link
                             href="/admin"
                             className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
@@ -332,6 +332,7 @@ export default function Navbar() {
                             ⭐ {t("nav_chief")}
                         </Link>
                     )}
+
 
                     {/* Mobile Settings Row (Theme Toggle centered) */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0.5rem 1rem", borderTop: "1px solid var(--border)", marginTop: "0.5rem", paddingTop: "1rem" }}>
