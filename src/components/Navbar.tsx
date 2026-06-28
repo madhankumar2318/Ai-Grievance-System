@@ -118,8 +118,8 @@ export default function Navbar() {
                         </button>
                     )}
 
-                    {/* Language Selector — desktop only */}
-                    <div className="desktop-only-control" style={{ position: "relative" }}>
+                    {/* Language Selector — visible on both desktop & mobile for easy access */}
+                    <div style={{ position: "relative" }}>
                         <button
                             onClick={() => setShowLangMenu(p => !p)}
                             style={{
@@ -333,38 +333,21 @@ export default function Navbar() {
                         </Link>
                     )}
 
-                    {/* Mobile Settings Row (Theme & Language Selector combo) */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.5rem 1rem", borderTop: "1px solid var(--border)", marginTop: "0.5rem", paddingTop: "1rem" }}>
-                        {/* Quick language toggle */}
-                        <div style={{ display: "flex", gap: "0.4rem" }}>
-                            {(Object.keys(LANGUAGE_NAMES) as Language[]).map((l) => (
-                                <button
-                                    key={l}
-                                    onClick={() => setLang(l)}
-                                    style={{
-                                        padding: "0.3rem 0.6rem", borderRadius: "0.35rem", fontSize: "0.75rem", fontWeight: "700",
-                                        border: "1px solid var(--border)",
-                                        background: l === lang ? "var(--grad-primary)" : "var(--bg-elevated)",
-                                        color: l === lang ? "white" : "var(--text-main)",
-                                    }}
-                                >
-                                    {l.toUpperCase()}
-                                </button>
-                            ))}
-                        </div>
-
+                    {/* Mobile Settings Row (Theme Toggle centered) */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "0.5rem 1rem", borderTop: "1px solid var(--border)", marginTop: "0.5rem", paddingTop: "1rem" }}>
                         {/* Theme Toggle in mobile menu */}
                         <button
                             onClick={toggleTheme}
                             style={{
-                                padding: "0.3rem 0.75rem", borderRadius: "0.35rem", fontSize: "0.8rem", fontWeight: "700",
+                                padding: "0.4rem 1rem", borderRadius: "0.5rem", fontSize: "0.85rem", fontWeight: "700",
                                 border: "1px solid var(--border)", background: "var(--bg-elevated)", color: "var(--text-main)",
-                                display: "flex", alignItems: "center", gap: "0.35rem"
+                                display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", width: "100%", justifyContent: "center"
                             }}
                         >
-                            {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+                            {theme === "light" ? "🌙 Dark Mode" : "☀️ Light Mode"}
                         </button>
                     </div>
+
                 </div>
             )}
 
