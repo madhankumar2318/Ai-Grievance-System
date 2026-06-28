@@ -76,9 +76,6 @@ export default function Navbar() {
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
                             </>)}
-                            {user?.role === "authority" && (
-                                <NavLink href="/admin" active={isActive("/admin")}>🏛️ {t("nav_admin")}</NavLink>
-                            )}
                             {user?.role === "chief" && (
                                 <NavLink href="/chief" active={isActive("/chief")}>⭐ {t("nav_chief")}</NavLink>
                             )}
@@ -313,15 +310,6 @@ export default function Navbar() {
                                 🔍 {t("nav_track")}
                             </Link>
                         </>
-                    )}
-                    {user.role === "authority" && (
-                        <Link
-                            href="/admin"
-                            className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            🏛️ {t("nav_admin")}
-                        </Link>
                     )}
                     {user.role === "chief" && (
                         <Link
