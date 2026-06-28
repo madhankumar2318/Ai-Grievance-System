@@ -155,7 +155,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* ── Stat Cards ── */}
-                <div className="stagger-children" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1.25rem", marginBottom: "2.5rem" }}>
+                <div className="stagger-children admin-stats-grid">
                     {STATS.map(({ label, value, color, icon, grad }) => (
                         <div key={label} className="glass card-hover animate-fade-in" style={{ padding: "1.75rem 1.25rem", borderRadius: "var(--radius)", textAlign: "center", borderTop: `3px solid ${color}`, position: "relative", overflow: "hidden" }}>
                             <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "80px", height: "80px", borderRadius: "50%", background: `${color}18`, filter: "blur(20px)" }} />
@@ -196,201 +196,328 @@ export default function AdminDashboard() {
                     <span>👆</span> Click any row to view full complaint details
                 </p>
 
-                {/* ── Table ── */}
-                <div className="glass" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                        <thead>
-                            <tr style={{ background: "rgba(99,102,241,0.05)", borderBottom: "1px solid var(--border)" }}>
-                                {[t("admin_col_id"), t("admin_col_subject"), t("admin_col_citizen"), t("admin_col_priority"), t("admin_col_status"), t("admin_col_attachments"), t("admin_col_actions"), ""].map((h, i) => (
-                                    <th key={i} style={{ padding: "1.1rem 1.25rem", fontWeight: "700", fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map((c, idx) => {
-                                const pCfg = PRIORITY_CONFIG[c.priority] ?? PRIORITY_CONFIG.Medium;
-                                const sCfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.Pending;
-                                const isExpanded = expandedId === c.id;
-                                return (
-                                    <React.Fragment key={c.id}>
-                                        {/* ── Main Row ── */}
-                                        <tr
-                                            key={c.id}
-                                            onClick={() => toggleRow(c.id)}
-                                            style={{
-                                                borderBottom: isExpanded ? "none" : "1px solid var(--border)",
-                                                animationDelay: `${idx * 40}ms`,
-                                                cursor: "pointer",
-                                                background: isExpanded ? "rgba(99,102,241,0.05)" : "transparent",
-                                                transition: "background 0.2s ease",
-                                            }}
-                                            className="animate-fade-in"
-                                            onMouseEnter={e => { if (!isExpanded) (e.currentTarget as HTMLTableRowElement).style.background = "rgba(99,102,241,0.03)"; }}
-                                            onMouseLeave={e => { if (!isExpanded) (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}
-                                        >
-                                            {/* ID */}
-                                            <td style={{ padding: "1.1rem 1.25rem", fontWeight: "700", fontFamily: "monospace", fontSize: "0.82rem", color: "var(--primary)" }}>{c.id}</td>
-                                            {/* Subject */}
-                                            <td style={{ padding: "1.1rem 1.25rem" }}>
-                                                <div style={{ fontWeight: "600", marginBottom: "0.2rem" }}>{c.subject}</div>
-                                                <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.55rem", borderRadius: "99px", background: "var(--border-subtle)", color: "var(--primary)", fontWeight: "700" }}>{c.category}</span>
-                                            </td>
-                                            {/* User */}
-                                            <td style={{ padding: "1.1rem 1.25rem", fontSize: "0.875rem", color: "var(--text-muted)" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                    <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "800", color: "var(--text-muted)", flexShrink: 0 }}>
-                                                        {c.user.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
-                                                    </div>
-                                                    {c.user}
-                                                </div>
-                                            </td>
-                                            {/* Priority */}
-                                            <td style={{ padding: "1.1rem 1.25rem" }}>
-                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", padding: "0.3rem 0.75rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: "700", background: `${pCfg.color}18`, color: pCfg.color, border: `1px solid ${pCfg.color}35` }}>
-                                                    {c.priority === "Critical" && (
-                                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: pCfg.color, display: "inline-block", position: "relative" }}>
-                                                            <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: pCfg.color, animation: "ping 1.2s ease-out infinite" }} />
-                                                        </span>
-                                                    )}
-                                                    {c.priority}
-                                                </span>
-                                            </td>
-                                            {/* Status */}
-                                            <td style={{ padding: "1.1rem 1.25rem" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: sCfg.dot, flexShrink: 0 }} />
-                                                    <span style={{ fontSize: "0.875rem", fontWeight: "600" }}>{c.status}</span>
-                                                </div>
-                                            </td>
-                                            {/* Attachments */}
-                                            <td style={{ padding: "1.1rem 1.25rem" }}>
-                                                {c.attachments > 0 ? (
-                                                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#6366f1", background: "#6366f115", padding: "0.25rem 0.6rem", borderRadius: "99px", border: "1px solid #6366f130" }}>📎 {c.attachments}</span>
-                                                ) : (
-                                                    <span style={{ fontSize: "0.8rem", color: "var(--text-faint)" }}>—</span>
-                                                )}
-                                            </td>
-                                            {/* Actions */}
-                                            <td style={{ padding: "1.1rem 1.25rem" }} onClick={e => e.stopPropagation()}>
-                                                {c.status === "Resolved" ? (
-                                                    <span style={{ color: "#10b981", fontWeight: "700", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>✅ {t("admin_done")}</span>
-                                                ) : c.status === "Rejected" ? (
-                                                    <span style={{ color: "#ef4444", fontWeight: "700", fontSize: "0.82rem" }}>✕ Rejected</span>
-                                                ) : (
-                                                    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                                                        <button
-                                                            className="btn btn-primary"
-                                                            style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem" }}
-                                                            onClick={() => updateStatus(c.id, "Resolved")}
-                                                        >✓ {t("admin_resolve")}</button>
-                                                        <button
-                                                            style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
-                                                            onClick={() => updateStatus(c.id, "Rejected")}
-                                                            onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
-                                                            onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
-                                                        >✕ Reject</button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                            {/* Chevron */}
-                                            <td style={{ padding: "1.1rem 0.75rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                                                <span style={{ display: "inline-block", transition: "transform 0.3s ease", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                                            </td>
-                                        </tr>
-
-                                        {/* ── Detail Panel ── */}
-                                        {isExpanded && (
-                                            <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                                                <td colSpan={8} style={{ padding: 0 }}>
-                                                    <div style={{
-                                                        padding: "1.5rem 2rem",
-                                                        background: "rgba(99,102,241,0.03)",
-                                                        borderTop: `3px solid ${pCfg.color}`,
-                                                        animation: "slideDown 0.25s ease",
-                                                    }}>
-                                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
-
-                                                            {/* Col 1 — Description */}
-                                                            <div>
-                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-                                                                    {CATEGORY_ICONS[c.category] || "📁"} Description
-                                                                </div>
-                                                                <p style={{ fontSize: "0.88rem", lineHeight: "1.65", color: "var(--text-main)", margin: 0 }}>{c.description}</p>
-                                                            </div>
-
-                                                            {/* Col 2 — Meta */}
-                                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.1rem" }}>📋 Details</div>
-                                                                {[
-                                                                    { icon: "📍", label: "Location", val: c.location },
-                                                                    { icon: "📅", label: "Filed", val: c.date },
-                                                                    { icon: "👤", label: "Citizen", val: c.user },
-                                                                    { icon: "📂", label: "Category", val: c.category },
-                                                                ].map(row => (
-                                                                    <div key={row.label} style={{ display: "flex", gap: "0.5rem", fontSize: "0.83rem" }}>
-                                                                        <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{row.icon}</span>
-                                                                        <span style={{ color: "var(--text-muted)", fontWeight: "600", flexShrink: 0 }}>{row.label}:</span>
-                                                                        <span style={{ color: "var(--text-main)" }}>{row.val}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-
-                                                            {/* Col 3 — AI Note + Actions */}
-                                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>🤖 AI Triage Note</div>
-                                                                <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "0.75rem", padding: "0.75rem 1rem", fontSize: "0.82rem", lineHeight: "1.6", color: "var(--text-main)" }}>
-                                                                    {c.aiNote}
-                                                                </div>
-                                                                {/* Detail actions */}
-                                                                {c.status !== "Resolved" && c.status !== "Rejected" && (
-                                                                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                                                        <button
-                                                                            className="btn btn-primary"
-                                                                            style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
-                                                                            onClick={() => updateStatus(c.id, "Resolved")}
-                                                                        >✓ Mark Resolved</button>
-                                                                        <button
-                                                                            style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
-                                                                            onClick={() => updateStatus(c.id, "Rejected")}
-                                                                            onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
-                                                                            onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
-                                                                        >✕ Reject</button>
-                                                                    </div>
-                                                                )}
-                                                                {(c.status === "Resolved" || c.status === "Rejected") && (
-                                                                    <div style={{ fontSize: "0.82rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                                                                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: sCfg.dot, display: "inline-block" }} />
-                                                                        This complaint is {c.status.toLowerCase()}
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                {/* ── Desktop View (Table) ── */}
+                <div className="admin-desktop-table">
+                    <div className="glass" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                            <thead>
+                                <tr style={{ background: "rgba(99,102,241,0.05)", borderBottom: "1px solid var(--border)" }}>
+                                    {[t("admin_col_id"), t("admin_col_subject"), t("admin_col_citizen"), t("admin_col_priority"), t("admin_col_status"), t("admin_col_attachments"), t("admin_col_actions"), ""].map((h, i) => (
+                                        <th key={i} style={{ padding: "1.1rem 1.25rem", fontWeight: "700", fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((c, idx) => {
+                                    const pCfg = PRIORITY_CONFIG[c.priority] ?? PRIORITY_CONFIG.Medium;
+                                    const sCfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.Pending;
+                                    const isExpanded = expandedId === c.id;
+                                    return (
+                                        <React.Fragment key={c.id}>
+                                            {/* ── Main Row ── */}
+                                            <tr
+                                                key={c.id}
+                                                onClick={() => toggleRow(c.id)}
+                                                style={{
+                                                    borderBottom: isExpanded ? "none" : "1px solid var(--border)",
+                                                    animationDelay: `${idx * 40}ms`,
+                                                    cursor: "pointer",
+                                                    background: isExpanded ? "rgba(99,102,241,0.05)" : "transparent",
+                                                    transition: "background 0.2s ease",
+                                                }}
+                                                className="animate-fade-in"
+                                                onMouseEnter={e => { if (!isExpanded) (e.currentTarget as HTMLTableRowElement).style.background = "rgba(99,102,241,0.03)"; }}
+                                                onMouseLeave={e => { if (!isExpanded) (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}
+                                            >
+                                                {/* ID */}
+                                                <td style={{ padding: "1.1rem 1.25rem", fontWeight: "700", fontFamily: "monospace", fontSize: "0.82rem", color: "var(--primary)" }}>{c.id}</td>
+                                                {/* Subject */}
+                                                <td style={{ padding: "1.1rem 1.25rem" }}>
+                                                    <div style={{ fontWeight: "600", marginBottom: "0.2rem" }}>{c.subject}</div>
+                                                    <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.55rem", borderRadius: "99px", background: "var(--border-subtle)", color: "var(--primary)", fontWeight: "700" }}>{c.category}</span>
+                                                </td>
+                                                {/* User */}
+                                                <td style={{ padding: "1.1rem 1.25rem", fontSize: "0.875rem", color: "var(--text-muted)" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                        <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.65rem", fontWeight: "800", color: "var(--text-muted)", flexShrink: 0 }}>
+                                                            {c.user.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)}
                                                         </div>
+                                                        {c.user}
                                                     </div>
                                                 </td>
+                                                {/* Priority */}
+                                                <td style={{ padding: "1.1rem 1.25rem" }}>
+                                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", padding: "0.3rem 0.75rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: "700", background: `${pCfg.color}18`, color: pCfg.color, border: `1px solid ${pCfg.color}35` }}>
+                                                        {c.priority === "Critical" && (
+                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: pCfg.color, display: "inline-block", position: "relative" }}>
+                                                                <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: pCfg.color, animation: "ping 1.2s ease-out infinite" }} />
+                                                            </span>
+                                                        )}
+                                                        {c.priority}
+                                                    </span>
+                                                </td>
+                                                {/* Status */}
+                                                <td style={{ padding: "1.1rem 1.25rem" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: sCfg.dot, flexShrink: 0 }} />
+                                                        <span style={{ fontSize: "0.875rem", fontWeight: "600" }}>{c.status}</span>
+                                                    </div>
+                                                </td>
+                                                {/* Attachments */}
+                                                <td style={{ padding: "1.1rem 1.25rem" }}>
+                                                    {c.attachments > 0 ? (
+                                                        <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "#6366f1", background: "#6366f115", padding: "0.25rem 0.6rem", borderRadius: "99px", border: "1px solid #6366f130" }}>📎 {c.attachments}</span>
+                                                    ) : (
+                                                        <span style={{ fontSize: "0.8rem", color: "var(--text-faint)" }}>—</span>
+                                                    )}
+                                                </td>
+                                                {/* Actions */}
+                                                <td style={{ padding: "1.1rem 1.25rem" }} onClick={e => e.stopPropagation()}>
+                                                    {c.status === "Resolved" ? (
+                                                        <span style={{ color: "#10b981", fontWeight: "700", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>✅ {t("admin_done")}</span>
+                                                    ) : c.status === "Rejected" ? (
+                                                        <span style={{ color: "#ef4444", fontWeight: "700", fontSize: "0.82rem" }}>✕ Rejected</span>
+                                                    ) : (
+                                                        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                                                            <button
+                                                                className="btn btn-primary"
+                                                                style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem" }}
+                                                                onClick={() => updateStatus(c.id, "Resolved")}
+                                                            >✓ {t("admin_resolve")}</button>
+                                                            <button
+                                                                style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
+                                                                onClick={() => updateStatus(c.id, "Rejected")}
+                                                                onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
+                                                                onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
+                                                            >✕ Reject</button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                {/* Chevron */}
+                                                <td style={{ padding: "1.1rem 0.75rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                                                    <span style={{ display: "inline-block", transition: "transform 0.3s ease", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                                                </td>
                                             </tr>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })}
-                        </tbody>
-                    </table>
 
-                    {/* Empty state */}
+                                            {/* ── Detail Panel ── */}
+                                            {isExpanded && (
+                                                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                    <td colSpan={8} style={{ padding: 0 }}>
+                                                        <div style={{
+                                                            padding: "1.5rem 2rem",
+                                                            background: "rgba(99,102,241,0.03)",
+                                                            borderTop: `3px solid ${pCfg.color}`,
+                                                            animation: "slideDown 0.25s ease",
+                                                        }}>
+                                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
+
+                                                                {/* Col 1 — Description */}
+                                                                <div>
+                                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+                                                                        {CATEGORY_ICONS[c.category] || "📁"} Description
+                                                                    </div>
+                                                                    <p style={{ fontSize: "0.88rem", lineHeight: "1.65", color: "var(--text-main)", margin: 0 }}>{c.description}</p>
+                                                                </div>
+
+                                                                {/* Col 2 — Meta */}
+                                                                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.1rem" }}>📋 Details</div>
+                                                                    {[
+                                                                        { icon: "📍", label: "Location", val: c.location },
+                                                                        { icon: "📅", label: "Filed", val: c.date },
+                                                                        { icon: "👤", label: "Citizen", val: c.user },
+                                                                        { icon: "📂", label: "Category", val: c.category },
+                                                                    ].map(row => (
+                                                                        <div key={row.label} style={{ display: "flex", gap: "0.5rem", fontSize: "0.83rem" }}>
+                                                                            <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{row.icon}</span>
+                                                                            <span style={{ color: "var(--text-muted)", fontWeight: "600", flexShrink: 0 }}>{row.label}:</span>
+                                                                            <span style={{ color: "var(--text-main)" }}>{row.val}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+
+                                                                {/* Col 3 — AI Note + Actions */}
+                                                                <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>🤖 AI Triage Note</div>
+                                                                    <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "0.75rem", padding: "0.75rem 1rem", fontSize: "0.82rem", lineHeight: "1.6", color: "var(--text-main)" }}>
+                                                                        {c.aiNote}
+                                                                    </div>
+                                                                    {/* Detail actions */}
+                                                                    {c.status !== "Resolved" && c.status !== "Rejected" && (
+                                                                        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+                                                                            <button
+                                                                                className="btn btn-primary"
+                                                                                style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
+                                                                                onClick={() => updateStatus(c.id, "Resolved")}
+                                                                            >✓ Mark Resolved</button>
+                                                                            <button
+                                                                                style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
+                                                                                onClick={() => updateStatus(c.id, "Rejected")}
+                                                                                onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
+                                                                                onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
+                                                                            >✕ Reject</button>
+                                                                        </div>
+                                                                    )}
+                                                                    {(c.status === "Resolved" || c.status === "Rejected") && (
+                                                                        <div style={{ fontSize: "0.82rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: sCfg.dot, display: "inline-block" }} />
+                                                                            This complaint is {c.status.toLowerCase()}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        {/* Empty state */}
+                        {loading && (
+                            <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
+                                <div style={{ fontSize: "2rem", marginBottom: "0.75rem", animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</div>
+                                <p style={{ fontWeight: "600", color: "var(--text-muted)" }}>Loading complaints from Supabase...</p>
+                            </div>
+                        )}
+                        {!loading && filtered.length === 0 && (
+                            <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
+                                <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>📭</div>
+                                <p style={{ fontWeight: "600", color: "var(--text-muted)" }}>No complaints match &quot;{filter}&quot;</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Mobile View (Responsive Cards List) ── */}
+                <div className="admin-mobile-cards">
+                    {filtered.map((c) => {
+                        const pCfg = PRIORITY_CONFIG[c.priority] ?? PRIORITY_CONFIG.Medium;
+                        const sCfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.Pending;
+                        const isExpanded = expandedId === c.id;
+
+                        return (
+                            <div
+                                key={c.id}
+                                className={`admin-mobile-card${isExpanded ? " admin-mobile-card--expanded" : ""}`}
+                                onClick={() => toggleRow(c.id)}
+                                style={{ borderTop: `4px solid ${pCfg.color}` }}
+                            >
+                                {/* Header */}
+                                <div className="admin-mobile-card-header">
+                                    <span className="admin-mobile-card-id">{c.id}</span>
+                                    <span className="admin-mobile-card-date">{c.date}</span>
+                                </div>
+
+                                {/* Title */}
+                                <div className="admin-mobile-card-title">{c.subject}</div>
+
+                                {/* Tags */}
+                                <div className="admin-mobile-card-tags">
+                                    <span style={{ fontSize: "0.68rem", padding: "0.15rem 0.55rem", borderRadius: "99px", background: "var(--border-subtle)", color: "var(--primary)", fontWeight: "700" }}>
+                                        {CATEGORY_ICONS[c.category] || "📁"} {c.category}
+                                    </span>
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem", padding: "0.15rem 0.55rem", borderRadius: "99px", fontSize: "0.68rem", fontWeight: "700", background: `${pCfg.color}14`, color: pCfg.color }}>
+                                        {pCfg.icon} {c.priority}
+                                    </span>
+                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.15rem 0.55rem", borderRadius: "99px", fontSize: "0.68rem", fontWeight: "700", background: `${sCfg.dot}14`, color: sCfg.color }}>
+                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: sCfg.dot }} />
+                                        {c.status}
+                                    </span>
+                                </div>
+
+                                {/* Meta details bar (collapsible trigger hint) */}
+                                <div className="admin-mobile-card-meta">
+                                    <span>👤 {c.user.length > 20 ? c.user.substring(0, 18) + "..." : c.user}</span>
+                                    {c.attachments > 0 && (
+                                        <span style={{ fontWeight: "700", color: "#6366f1" }}>📎 {c.attachments}</span>
+                                    )}
+                                </div>
+
+                                {/* Expand details panel */}
+                                {isExpanded && (
+                                    <div className="admin-mobile-card-details">
+                                        {/* Description */}
+                                        <div>
+                                            <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
+                                                Description
+                                            </div>
+                                            <p style={{ fontSize: "0.85rem", lineHeight: "1.5", color: "var(--text-main)", margin: 0 }}>
+                                                {c.description}
+                                            </p>
+                                        </div>
+
+                                        {/* Location info */}
+                                        {c.location && (
+                                            <div>
+                                                <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
+                                                    📍 Location
+                                                </div>
+                                                <p style={{ fontSize: "0.85rem", color: "var(--text-main)", margin: 0 }}>
+                                                    {c.location}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {/* AI Note */}
+                                        <div>
+                                            <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
+                                                🤖 AI Triage Note
+                                            </div>
+                                            <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: "0.5rem", padding: "0.65rem 0.85rem", fontSize: "0.78rem", lineHeight: "1.5", color: "var(--text-main)" }}>
+                                                {c.aiNote}
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        {c.status !== "Resolved" && c.status !== "Rejected" ? (
+                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }} onClick={e => e.stopPropagation()}>
+                                                <button
+                                                    className="btn btn-primary"
+                                                    style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem" }}
+                                                    onClick={() => updateStatus(c.id, "Resolved")}
+                                                >
+                                                    ✓ Resolve
+                                                </button>
+                                                <button
+                                                    style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700" }}
+                                                    onClick={() => updateStatus(c.id, "Rejected")}
+                                                >
+                                                    ✕ Reject
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div style={{ fontSize: "0.8rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.25rem" }}>
+                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: sCfg.dot }} />
+                                                This complaint is {c.status.toLowerCase()}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {/* Empty states for Mobile */}
                     {loading && (
-                        <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "2rem", marginBottom: "0.75rem", animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</div>
-                            <p style={{ fontWeight: "600", color: "var(--text-muted)" }}>Loading complaints from Supabase...</p>
+                        <div style={{ padding: "3rem 1rem", textAlign: "center" }}>
+                            <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem", animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</div>
+                            <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text-muted)" }}>Loading complaints...</p>
                         </div>
                     )}
                     {!loading && filtered.length === 0 && (
-                        <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>📭</div>
-                            <p style={{ fontWeight: "600", color: "var(--text-muted)" }}>No complaints match &quot;{filter}&quot;</p>
+                        <div style={{ padding: "3rem 1rem", textAlign: "center" }}>
+                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📭</div>
+                            <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text-muted)" }}>No complaints match &quot;{filter}&quot;</p>
                         </div>
                     )}
                 </div>
 
             </main>
+
             <style>{`
                 @keyframes ping {
                     0%        { transform: scale(1); opacity: 0.8; }
