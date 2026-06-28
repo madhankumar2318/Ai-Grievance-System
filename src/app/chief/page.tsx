@@ -298,7 +298,7 @@ export default function ChiefDashboard() {
                 </div>
 
                 {/* ── Stat Cards ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "1.25rem", marginBottom: "3rem" }}>
+                <div className="chief-stats-grid">
                     {loading ? (
                         Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
                     ) : (
@@ -321,7 +321,8 @@ export default function ChiefDashboard() {
                             📊 <span className="gradient-text">Analytics Overview</span>
                         </h2>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }}>
+                        <div className="chief-charts-grid">
+
                             {/* Area Chart — Real 7-day Trend */}
                             <div className="glass card-hover" style={{ padding: "1.75rem", borderRadius: "1.25rem" }}>
                                 <div style={{ fontWeight: "700", marginBottom: "0.3rem" }}>📈 Complaints Over Time</div>
@@ -432,7 +433,7 @@ export default function ChiefDashboard() {
 
                 {/* ── Category + Officers Row ── */}
                 {total > 0 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "3rem" }}>
+                    <div className="chief-info-grid">
                         {/* Category Breakdown progress bars */}
                         <div className="glass" style={{ padding: "2rem", borderRadius: "var(--radius)" }}>
                             <h3 style={{ marginBottom: "1.5rem" }}>{t("chief_category_breakdown")}</h3>
@@ -536,57 +537,100 @@ export default function ChiefDashboard() {
                     )}
 
                     {!loading && total > 0 && (
-                        <div style={{ overflowX: "auto" }}>
-                            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                                <thead style={{ background: "rgba(99,102,241,0.05)", borderBottom: "1px solid var(--border)" }}>
-                                    <tr>
-                                        {[
-                                            t("chief_col_id"), t("chief_col_subject"), t("chief_col_citizen"),
-                                            t("chief_col_location"), t("chief_col_priority"), t("chief_col_status"), t("chief_col_date"),
-                                        ].map(h => (
-                                            <th key={h} style={{ padding: "1rem 1.25rem", fontWeight: "700", fontSize: "0.78rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
-                                                {h}
-                                            </th>
+                        <>
+                            {/* Desktop View (Table) */}
+                            <div className="chief-desktop-table" style={{ overflowX: "auto" }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                                    <thead style={{ background: "rgba(99,102,241,0.05)", borderBottom: "1px solid var(--border)" }}>
+                                        <tr>
+                                            {[
+                                                t("chief_col_id"), t("chief_col_subject"), t("chief_col_citizen"),
+                                                t("chief_col_location"), t("chief_col_priority"), t("chief_col_status"), t("chief_col_date"),
+                                            ].map(h => (
+                                                <th key={h} style={{ padding: "1rem 1.25rem", fontWeight: "700", fontSize: "0.78rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
+                                                    {h}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {complaints.map((c, idx) => (
+                                            <tr
+                                                key={c.id}
+                                                className="animate-fade-in"
+                                                style={{ borderBottom: "1px solid var(--border)", animationDelay: `${idx * 30}ms`, transition: "background 0.15s ease" }}
+                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.03)"; }}
+                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                                            >
+                                                <td style={{ padding: "1rem 1.25rem", fontWeight: "700", fontFamily: "monospace", fontSize: "0.82rem", color: "#6366f1", whiteSpace: "nowrap" }}>{c.id}</td>
+                                                <td style={{ padding: "1rem 1.25rem" }}>
+                                                    <div style={{ fontWeight: "600", marginBottom: "0.2rem", fontSize: "0.9rem" }}>{c.subject}</div>
+                                                    <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: `${CATEGORY_COLORS[c.category] || "#6366f1"}22`, color: CATEGORY_COLORS[c.category] || "#6366f1", fontWeight: "700" }}>
+                                                        {c.category}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.user}</td>
+                                                <td style={{ padding: "1rem 1.25rem", fontSize: "0.82rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>📍 {c.location}</td>
+                                                <td style={{ padding: "1rem 1.25rem" }}>
+                                                    <span style={{ padding: "0.2rem 0.7rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: "700", background: `${PRIORITY_COLORS[c.priority] || "#f59e0b"}22`, color: PRIORITY_COLORS[c.priority] || "#f59e0b", border: `1px solid ${PRIORITY_COLORS[c.priority] || "#f59e0b"}44`, whiteSpace: "nowrap" }}>
+                                                        {priorityLabel(c.priority)}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: "1rem 1.25rem" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_DOT[c.status] || "#f59e0b", flexShrink: 0 }} />
+                                                        <span style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}>{statusLabel(c.status)}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: "1rem 1.25rem", fontSize: "0.8rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{c.date}</td>
+                                            </tr>
                                         ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {complaints.map((c, idx) => (
-                                        <tr
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile View (Cards list) */}
+                            <div className="chief-mobile-cards">
+                                {complaints.map((c) => {
+                                    const statusDotColor = STATUS_DOT[c.status] || "#f59e0b";
+                                    return (
+                                        <div
                                             key={c.id}
-                                            className="animate-fade-in"
-                                            style={{ borderBottom: "1px solid var(--border)", animationDelay: `${idx * 30}ms`, transition: "background 0.15s ease" }}
-                                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.03)"; }}
-                                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                                            className="chief-mobile-card"
+                                            style={{ borderTop: `4px solid ${PRIORITY_COLORS[c.priority] || "#6366f1"}` }}
                                         >
-                                            <td style={{ padding: "1rem 1.25rem", fontWeight: "700", fontFamily: "monospace", fontSize: "0.82rem", color: "#6366f1", whiteSpace: "nowrap" }}>{c.id}</td>
-                                            <td style={{ padding: "1rem 1.25rem" }}>
-                                                <div style={{ fontWeight: "600", marginBottom: "0.2rem", fontSize: "0.9rem" }}>{c.subject}</div>
-                                                <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: `${CATEGORY_COLORS[c.category] || "#6366f1"}22`, color: CATEGORY_COLORS[c.category] || "#6366f1", fontWeight: "700" }}>
+                                            <div className="chief-mobile-card-header">
+                                                <span className="chief-mobile-card-id">{c.id}</span>
+                                                <span className="chief-mobile-card-date">{c.date}</span>
+                                            </div>
+
+                                            <div className="chief-mobile-card-title">{c.subject}</div>
+
+                                            <div className="chief-mobile-card-tags">
+                                                <span style={{ fontSize: "0.68rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: `${CATEGORY_COLORS[c.category] || "#6366f1"}22`, color: CATEGORY_COLORS[c.category] || "#6366f1", fontWeight: "700" }}>
                                                     {c.category}
                                                 </span>
-                                            </td>
-                                            <td style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.user}</td>
-                                            <td style={{ padding: "1rem 1.25rem", fontSize: "0.82rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>📍 {c.location}</td>
-                                            <td style={{ padding: "1rem 1.25rem" }}>
-                                                <span style={{ padding: "0.2rem 0.7rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: "700", background: `${PRIORITY_COLORS[c.priority] || "#f59e0b"}22`, color: PRIORITY_COLORS[c.priority] || "#f59e0b", border: `1px solid ${PRIORITY_COLORS[c.priority] || "#f59e0b"}44`, whiteSpace: "nowrap" }}>
+                                                <span style={{ fontSize: "0.68rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: `${PRIORITY_COLORS[c.priority] || "#f59e0b"}22`, color: PRIORITY_COLORS[c.priority] || "#f59e0b", fontWeight: "700" }}>
                                                     {priorityLabel(c.priority)}
                                                 </span>
-                                            </td>
-                                            <td style={{ padding: "1rem 1.25rem" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_DOT[c.status] || "#f59e0b", flexShrink: 0 }} />
-                                                    <span style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}>{statusLabel(c.status)}</span>
-                                                </div>
-                                            </td>
-                                            <td style={{ padding: "1rem 1.25rem", fontSize: "0.8rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{c.date}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.15rem 0.5rem", borderRadius: "99px", fontSize: "0.68rem", fontWeight: "700", background: `${statusDotColor}14`, color: statusDotColor }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusDotColor }} />
+                                                    {statusLabel(c.status)}
+                                                </span>
+                                            </div>
+
+                                            <div className="chief-mobile-card-meta">
+                                                <span>👤 {c.user.length > 28 ? c.user.substring(0, 26) + "..." : c.user}</span>
+                                                <span>📍 {c.location}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
                     )}
                 </div>
+
 
             </main>
 
