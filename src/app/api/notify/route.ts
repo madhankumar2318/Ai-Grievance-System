@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import nodemailer from "nodemailer";
 
 export async function POST(req: Request) {
     try {
@@ -15,15 +13,33 @@ export async function POST(req: Request) {
         const statusText = isStatusChange ? "has been updated" : "has been registered";
         const emoji = isStatusChange ? "🔄" : "✅";
 
-        // If RESEND_API_KEY is not set, skip but don't error
-        if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === "your_resend_api_key") {
-            console.log(`[EMAIL SKIPPED] No RESEND_API_KEY set. Would have sent to: ${to}`);
+        const smtpUser = process.env.SMTP_USER;
+        const smtpPass = process.env.SMTP_PASS;
+
+        // Fallback if SMTP credentials are not set
+        if (!smtpUser || smtpUser === "your_gmail_address" || !smtpPass) {
+            console.log(`[SMTP SKIPPED] SMTP credentials are not set. Would have sent email to: ${to}`);
+            console.log(`Complaint ID: ${complaintId}, Subject: ${subject}, Category: ${category}, Priority: ${priority}`);
             return NextResponse.json({ success: true, skipped: true });
         }
 
-        const { data, error } = await resend.emails.send({
-            from: "AI Grievance System <onboarding@resend.dev>",
-            to: [to],
+        // Dynamically resolve tracking link hostname
+        const origin = req.headers.get("origin") || "";
+        const host = origin ? origin : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+        const trackLink = `${host}/track?id=${complaintId}`;
+
+        // Create Nodemailer Transporter pointing to Gmail SMTP
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: smtpUser,
+                pass: smtpPass,
+            },
+        });
+
+        const mailOptions = {
+            from: `"AI Grievance System" <${smtpUser}>`,
+            to,
             subject: `${emoji} Your Complaint ${complaintId} ${statusText}`,
             html: `
 <!DOCTYPE html>
@@ -79,7 +95,7 @@ export async function POST(req: Request) {
 
       <!-- Track Button -->
       <div style="text-align:center;margin-bottom:24px;">
-        <a href="http://localhost:3000/track?id=${complaintId}"
+        <a href="${trackLink}"
            style="display:inline-block;background:linear-gradient(135deg,#6366f1,#ec4899);color:white;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;">
           🔍 Track Complaint Status
         </a>
@@ -95,16 +111,13 @@ export async function POST(req: Request) {
 </body>
 </html>
             `.trim(),
-        });
+        };
 
-        if (error) {
-            console.error("Resend error:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true, data });
+        await transporter.sendMail(mailOptions);
+        return NextResponse.json({ success: true });
     } catch (err) {
         console.error("Notify API error:", err);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
+
