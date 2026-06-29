@@ -3,7 +3,7 @@ import { Resend } from "resend";
 import { signVerificationToken } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder");
 
 // In-memory OTP store: { email -> { otp, expiresAt } }
 // Note: This resets on server restart — acceptable for development.
