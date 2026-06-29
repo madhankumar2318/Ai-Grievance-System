@@ -128,7 +128,9 @@ Respond with a JSON object matching this schema:
         // ── Send Email Notification ────────────────────────────────
         if (userEmail) {
             try {
-                await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/notify`, {
+                const requestUrl = new URL(req.url);
+                const hostUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+                await fetch(`${hostUrl}/api/notify`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
