@@ -919,3 +919,93 @@ tbody tr:hover {
   border-top: 1px solid var(--border);
   padding-top: 0.75rem;
 }
+
+/* ── Premium PDF Export & Print Styles ── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+  
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-family: system-ui, -apple-system, sans-serif !important;
+  }
+  
+  /* Hide non-printable/interactive elements */
+  nav,
+  button,
+  .no-print,
+  .mobile-menu-drawer,
+  .chatbot-container,
+  #chatbot-toggle,
+  .desktop-only-control {
+    display: none !important;
+  }
+
+  /* Force visibility of print-only headers */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Convert dark-mode cards to elegant white boxes */
+  .glass, .card-hover, .chief-mobile-card, .admin-mobile-card {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    color: #111827 !important;
+    border-radius: 0.75rem !important;
+    padding: 1.25rem !important;
+  }
+
+  /* Optimize text contrast for high-quality printing */
+  h1, h2, h3, h4, h5, h6 {
+    color: #0f172a !important;
+  }
+
+  p, span, div, td, th {
+    color: #374151 !important;
+  }
+
+  /* Remove gradient background fills and replace with solid colors for text */
+  .gradient-text {
+    background: none !important;
+    -webkit-text-fill-color: initial !important;
+    color: #4f46e5 !important; /* Elegant dark indigo */
+    font-weight: 800 !important;
+  }
+
+  /* Tables styling on print */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 1rem !important;
+  }
+
+  th {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    padding: 0.75rem !important;
+    font-weight: 700 !important;
+  }
+
+  td {
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 0.75rem !important;
+    color: #334155 !important;
+  }
+
+  /* Keep charts aligned and fully visible */
+  .recharts-responsive-container {
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Prevent awkward page breaks inside components */
+  .glass, tr, table, .chief-mobile-card, .admin-mobile-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
