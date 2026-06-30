@@ -949,6 +949,15 @@ tbody tr:hover {
     display: block !important;
   }
 
+  /* Force table layout and hide mobile cards on print */
+  .chief-desktop-table, .admin-desktop-table {
+    display: block !important;
+  }
+  .chief-mobile-cards, .admin-mobile-cards {
+    display: none !important;
+  }
+
+
   /* Convert dark-mode cards to elegant white boxes */
   .glass, .card-hover, .chief-mobile-card, .admin-mobile-card {
     background: #ffffff !important;

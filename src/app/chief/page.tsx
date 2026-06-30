@@ -242,7 +242,8 @@ export default function ChiefDashboard() {
             <main className="container section">
 
                 {/* ── Header ── */}
-                <div style={{ marginBottom: "2.5rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+                <div className="no-print" style={{ marginBottom: "2.5rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+
                     <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.5rem" }}>
                             <span style={{ fontSize: "2.5rem" }}>⭐</span>
