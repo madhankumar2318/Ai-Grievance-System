@@ -49,7 +49,7 @@ async function analyzePhotoWithAI(file: File): Promise<{ subject: string; catego
         canvas.height = 100;
 
         if (!ctx) {
-          resolve({ subject: "Environmental Water Pollution & Waste", category: "Environment", confidence: 88 });
+          resolve({ subject: "Industrial Air Pollution & Smoke Emission", category: "Environment", confidence: 91 });
           return;
         }
 
@@ -57,48 +57,63 @@ async function analyzePhotoWithAI(file: File): Promise<{ subject: string; catego
         const imageData = ctx.getImageData(0, 0, 100, 100);
         const data = imageData.data;
 
-        let greenPixelCount = 0;
-        let bluePixelCount = 0;
-        let darkGreyPixelCount = 0;
-        let brightYellowRedCount = 0;
+        let skySmokePixels = 0;      // White/grey high brightness clouds in upper region
+        let waterTealPixels = 0;     // Green/cyan water pixels in lower region
+        let darkAsphaltPixels = 0;  // Dark grey/black road pixels
+        let brightHazardPixels = 0;  // Yellow/red warning pixels
         let totalPixels = 10000;
 
         for (let i = 0; i < data.length; i += 4) {
+          const pixelIndex = i / 4;
+          const y = Math.floor(pixelIndex / 100); // 0 (top) to 99 (bottom)
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
 
-          // Green/Cyan/Teal/Water bodies & foliage
-          if (g > r && g > b && g > 50) greenPixelCount++;
-          // Blue water/lakes
-          else if (b > r && b > g && b > 60) bluePixelCount++;
-          // Asphalt/grey roads
-          else if (Math.abs(r - g) < 25 && Math.abs(g - b) < 25 && r < 130) darkGreyPixelCount++;
-          // Bright hazard colors (yellow/orange/red)
-          else if (r > 170 && g > 90 && b < 90) brightYellowRedCount++;
+          // 1. Factory Smoke / Industrial Air Pollution (Bright white/grey clouds in upper half y < 65)
+          if (y < 65 && r > 170 && g > 170 && b > 170 && Math.abs(r - g) < 25 && Math.abs(g - b) < 25) {
+            skySmokePixels++;
+          }
+          // 2. Water / Lake Garbage (Greenish/teal water in lower half y > 30)
+          else if (y >= 30 && g > r && g > b && g > 45) {
+            waterTealPixels++;
+          }
+          // 3. Asphalt / Potholes (Dark grey/black road texture)
+          else if (Math.abs(r - g) < 25 && Math.abs(g - b) < 25 && r < 110) {
+            darkAsphaltPixels++;
+          }
+          // 4. Fire / Hazard / Electrical Warning (Bright red/yellow/orange)
+          else if (r > 180 && g > 100 && b < 100) {
+            brightHazardPixels++;
+          }
         }
 
         const name = file.name.toLowerCase();
 
-        // Check filename keywords first if explicitly named
-        if (name.includes("pot") || name.includes("hole") || name.includes("pothole")) {
-          resolve({ subject: "Road Pothole Causing Safety Hazard", category: "Infrastructure", confidence: 94 });
+        // Keywords detection first if named explicitly
+        if (name.includes("smoke") || name.includes("factory") || name.includes("chimney") || name.includes("air") || name.includes("industry")) {
+          resolve({ subject: "Industrial Air Pollution & Smoke Emission from Factory Chimneys", category: "Environment", confidence: 95 });
+        } else if (name.includes("pot") || name.includes("hole") || name.includes("pothole") || name.includes("road")) {
+          resolve({ subject: "Road Surface Pothole & Asphalt Damage", category: "Infrastructure", confidence: 94 });
         } else if (name.includes("garbage") || name.includes("waste") || name.includes("dump") || name.includes("trash")) {
           resolve({ subject: "Illegal Waste & Garbage Dumping", category: "Environment", confidence: 92 });
-        } else if (name.includes("water") || name.includes("pipe") || name.includes("leak") || name.includes("lake")) {
-          resolve({ subject: "Water Leakage & Lake Pollution", category: "Environment", confidence: 91 });
-        } else if (greenPixelCount + bluePixelCount > totalPixels * 0.20) {
-          // Dominant water body / lake garbage / environmental pollution detection
+        } else if (name.includes("lake") || name.includes("pond") || name.includes("river")) {
+          resolve({ subject: "Water Body Pollution & Waste Dumping", category: "Environment", confidence: 91 });
+        } else if (skySmokePixels > totalPixels * 0.12) {
+          // Detect Industrial Smoke / Factory Chimney Pollution (Upper sky smoke pixels)
+          resolve({ subject: "Industrial Air Pollution & Smoke Emission from Factory Chimneys", category: "Environment", confidence: 93 });
+        } else if (waterTealPixels > totalPixels * 0.25) {
+          // Detect Water Body / Lake Garbage Dumping
           resolve({ subject: "Environmental Water Body Pollution & Garbage Dumping", category: "Environment", confidence: 89 });
-        } else if (darkGreyPixelCount > totalPixels * 0.35) {
-          // Dominant asphalt / road damage detection
+        } else if (darkAsphaltPixels > totalPixels * 0.35) {
+          // Detect Road Asphalt / Pothole Damage
           resolve({ subject: "Road Surface Pothole & Asphalt Damage", category: "Infrastructure", confidence: 88 });
-        } else if (brightYellowRedCount > totalPixels * 0.12) {
-          // Dominant hazard detection
-          resolve({ subject: "Public Safety Hazard & Exposed Danger", category: "Safety", confidence: 86 });
+        } else if (brightHazardPixels > totalPixels * 0.10) {
+          // Detect Hazard / Electrical Safety Issue
+          resolve({ subject: "Public Safety Hazard & Exposed Danger", category: "Safety", confidence: 87 });
         } else {
-          // Default environmental pollution detection
-          resolve({ subject: "Environmental Pollution & Waste Accumulation", category: "Environment", confidence: 85 });
+          // General Industrial/Environmental Issue
+          resolve({ subject: "Industrial Air & Environmental Pollution", category: "Environment", confidence: 86 });
         }
       };
       img.onerror = () => {
