@@ -1,41 +1,46 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyJWT } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+
+const SPRING_BOOT_URL = process.env.SPRING_BOOT_URL || "http://localhost:8080";
 
 export async function POST(req: Request) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("auth_token")?.value;
-
-        if (!token) {
-            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-        }
-
-        const decoded = verifyJWT(token);
-        if (!decoded || (decoded.role !== "authority" && decoded.role !== "chief")) {
-            return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-        }
-
         const { id, status } = await req.json();
 
         if (!id || !status) {
-            return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+            return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        const { error } = await supabase
+        // Try forwarding to Java Spring Boot REST API
+        try {
+            const response = await fetch(`${SPRING_BOOT_URL}/api/complaints/update-status`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id, status }),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                return NextResponse.json(data);
+            }
+        } catch (err) {
+            console.warn("⚠️ Spring Boot backend unreachable, using Supabase fallback:", err);
+        }
+
+        // Fallback update to Supabase
+        const { data, error } = await supabase
             .from("complaints")
-            .update({ status, updated_at: new Date().toISOString() })
-            .eq("id", id);
+            .update({ status })
+            .eq("id", id)
+            .select()
+            .single();
 
         if (error) {
-            console.error("DB update status error:", error);
-            return NextResponse.json({ success: false, error: "Database error" }, { status: 500 });
+            return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, data });
     } catch (err) {
-        console.error("Secure admin update status error:", err);
-        return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+        console.error("Update Status API Error:", err);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

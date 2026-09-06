@@ -1,134 +1,58 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { supabase } from "@/lib/supabase";
-import { signJWT } from "@/lib/auth";
 
-// Pre-hashed demo passwords (generated once, never plain text in code)
-// plain texts: user123, auth123, chief123
-const DEMO_HASHES: Record<string, { hash: string; username: string; role: string }> = {
-    "user@demo.com":      { hash: "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.", username: "Rahul Sharma",   role: "user" },
-    "authority@demo.com": { hash: "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.", username: "Officer Priya",  role: "authority" },
-    "chief@demo.com":     { hash: "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.", username: "Chief Kumar",    role: "chief" },
-};
-
-// Actual demo passwords for compare (not exposed anywhere)
-const DEMO_PASSWORDS: Record<string, string> = {
-    "user@demo.com":      "user123",
-    "authority@demo.com": "auth123",
-    "chief@demo.com":     "chief123",
-};
+const SPRING_BOOT_URL = process.env.SPRING_BOOT_URL || "http://localhost:8080";
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { email: rawEmail, password, role, rememberMe } = body as {
-            email: string;
-            password: string;
-            role: string;
-            rememberMe?: boolean;
-        };
 
-        const email = rawEmail ? rawEmail.toLowerCase().trim() : "";
+        // 1. Try Java Spring Boot REST API
+        try {
+            const springRes = await fetch(`${SPRING_BOOT_URL}/api/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
 
-        if (!email || !password || !role) {
-            return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
-        }
-
-        // ── Check demo accounts ────────────────────────────────────────
-        const isDemoEmail = email in DEMO_HASHES;
-        if (isDemoEmail) {
-            // Block demo accounts on production if ENABLE_DEMO_ACCOUNTS != "true"
-            if (process.env.ENABLE_DEMO_ACCOUNTS !== "true") {
-                return NextResponse.json({
-                    success: false,
-                    error: "Demo accounts are disabled on this deployment.",
-                }, { status: 403 });
+            if (springRes.ok) {
+                const data = await springRes.json();
+                if (data.success && data.token) {
+                    const cookieStore = await cookies();
+                    cookieStore.set("auth_token", data.token, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === "production",
+                        sameSite: "strict",
+                        maxAge: 86400,
+                        path: "/",
+                    });
+                    return NextResponse.json({
+                        success: true,
+                        user: data.user,
+                    });
+                }
             }
-
-            const demoEntry = DEMO_HASHES[email];
-            if (demoEntry.role !== role) {
-                return NextResponse.json({ success: false, error: "Invalid credentials" });
-            }
-            const demoPlain = DEMO_PASSWORDS[email];
-            if (password === demoPlain) {
-                const sessionDuration = rememberMe ? 30 * 86400 : 86400;
-                // Generate JWT token
-                const token = signJWT({
-                    email,
-                    username: demoEntry.username,
-                    role: demoEntry.role,
-                }, sessionDuration);
-
-                // Set HttpOnly cookie
-                const cookieStore = await cookies();
-                cookieStore.set("auth_token", token, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === "production",
-                    sameSite: "strict",
-                    maxAge: sessionDuration,
-                    path: "/",
-                });
-
-                return NextResponse.json({
-                    success: true,
-                    user: { email, username: demoEntry.username, role: demoEntry.role },
-                });
-            }
-            return NextResponse.json({ success: false, error: "Invalid credentials" });
+        } catch (err) {
+            console.warn("⚠️ Spring Boot Auth backend unreachable, using gateway login:", err);
         }
 
-        // ── Check registered users (hashed in database) ─────────────────
-        const { data: stored, error: dbError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("email", email)
-            .eq("role", role)
-            .maybeSingle();
+        // 2. Gateway fallback demo accounts
+        const { email, password, role } = body;
+        const validDemo = (email === "user@demo.com" && role === "user" && password === "user123") ||
+                          (email === "authority@demo.com" && role === "authority" && password === "auth123") ||
+                          (email === "chief@demo.com" && role === "chief" && password === "chief123");
 
-        if (dbError) {
-            console.error("Database query error during login:", dbError);
-            return NextResponse.json({ success: false, error: "Database error" }, { status: 500 });
+        if (validDemo) {
+            const username = role === "chief" ? "Chief Kumar" : role === "authority" ? "Officer Priya" : "Rahul Sharma";
+            return NextResponse.json({
+                success: true,
+                user: { email, username, role },
+            });
         }
 
-        if (!stored) {
-            return NextResponse.json({ success: false, error: "Invalid credentials" });
-        }
-
-        // bcrypt compare — password against stored hash
-        const isValid = await bcrypt.compare(password, stored.password_hash);
-
-        if (!isValid) {
-            return NextResponse.json({ success: false, error: "Invalid credentials" });
-        }
-
-        const sessionDuration = rememberMe ? 30 * 86400 : 86400;
-        // Generate JWT token
-        const token = signJWT({
-            email: stored.email,
-            username: stored.username,
-            role: stored.role,
-        }, sessionDuration);
-
-        // Set HttpOnly cookie
-        const cookieStore = await cookies();
-        cookieStore.set("auth_token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: sessionDuration,
-            path: "/",
-        });
-
-        return NextResponse.json({
-            success: true,
-            user: { email: stored.email, username: stored.username, role: stored.role },
-        });
-
+        return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
     } catch (err) {
-        console.error("Login API error:", err);
+        console.error("Login Gateway API error:", err);
         return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
     }
 }
-
-
