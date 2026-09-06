@@ -428,7 +428,7 @@ export default function ChiefDashboard() {
 
                 {/* ── Interactive Complaint Map ── */}
                 <div className="glass no-print" style={{ padding: "2rem", borderRadius: "1.5rem", marginBottom: "3rem" }}>
-                    <ComplaintMap title={t("map_title")} subtitle={t("map_subtitle")} />
+                    <ComplaintMap title={t("map_title")} subtitle={t("map_subtitle")} initialComplaints={complaints} />
                 </div>
 
                 {/* ── Category + Officers Row ── */}
