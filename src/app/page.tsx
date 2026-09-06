@@ -5,6 +5,7 @@ import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 import { NotificationBanner } from "@/components/PushNotifications";
+import { analyzePhotoServerAction } from "@/app/actions/analyzePhoto";
 
 interface MediaFile { name: string; type: string; url: string; size: number; file?: File; }
 interface GpsCoords { lat: number; lng: number; accuracy: number; }
@@ -182,7 +183,18 @@ async function analyzePhotoWithAI(file: File): Promise<{ subject: string; catego
       const mimeType = file.type || "image/jpeg";
       const base64Data = dataUrl.split(",")[1];
 
-      // 1. Try Java Backend REST API Vision Endpoint
+      // 1. Try Next.js Server Action (uses GEMINI_API_KEY from Vercel env directly)
+      try {
+        const serverResult = await analyzePhotoServerAction(base64Data, mimeType);
+        if (serverResult && serverResult.subject) {
+          resolve(serverResult);
+          return;
+        }
+      } catch (err) {
+        console.warn("⚠️ Server Action analyze error:", err);
+      }
+
+      // 2. Try Java Backend REST API Vision Endpoint
       try {
         const backendRes = await fetch(`${API_BASE_URL}/api/complaints/analyze-photo`, {
           method: "POST",
@@ -204,7 +216,7 @@ async function analyzePhotoWithAI(file: File): Promise<{ subject: string; catego
         // Backend offline or unreachable
       }
 
-      // 2. Try Direct Client Gemini Vision API if key configured
+      // 3. Try Direct Client Gemini Vision API if NEXT_PUBLIC key configured
       const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
       if (apiKey) {
         const models = ["gemini-1.5-flash", "gemini-2.0-flash"];
