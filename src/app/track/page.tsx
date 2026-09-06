@@ -137,23 +137,58 @@ export default function TrackPage() {
 
         try {
             const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-            const res = await fetch(`${API_URL}/api/complaints/${id}`);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let data: any = null;
 
-            if (!res.ok) {
+            // 1. Try Spring Boot
+            try {
+                const res = await fetch(`${API_URL}/api/complaints/${id}`);
+                if (res.ok) data = await res.json();
+            } catch {
+                // Spring Boot offline
+            }
+
+            // 2. Try Supabase REST API directly
+            if (!data) {
+                try {
+                    const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
+                    const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
+                    const res = await fetch(`${sbUrl}/rest/v1/complaints?id=eq.${id}&select=*`, {
+                        headers: { "apikey": sbKey, "Authorization": `Bearer ${sbKey}` },
+                    });
+                    if (res.ok) {
+                        const arr = await res.json();
+                        if (arr && arr.length > 0) data = arr[0];
+                    }
+                } catch {
+                    // Supabase offline
+                }
+            }
+
+            // 3. Try LocalStorage fallback
+            if (!data && typeof window !== "undefined") {
+                try {
+                    const localList = JSON.parse(localStorage.getItem("grievance_my_complaints") || "[]");
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const found = localList.find((c: any) => c.id === id);
+                    if (found) data = found;
+                } catch {}
+            }
+
+            if (!data) {
                 setComplaint(null);
             } else {
-                const data = await res.json();
                 setComplaint({
                     id: data.id,
                     subject: data.subject,
                     description: data.description,
                     category: data.category,
                     priority: data.priority,
-                    status: data.status,
-                    location: data.location,
-                    date: data.createdAt ? new Date(data.createdAt).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
-                    user: data.userEmail || "Anonymous",
-                    ai_reasoning: data.aiReasoning || "",
+                    status: data.status || "Pending",
+                    location: data.location || "",
+                    date: (data.createdAt || data.created_at) ? new Date(data.createdAt || data.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                    user: data.userEmail || data.user_email || "Anonymous",
+                    ai_reasoning: data.aiReasoning || data.ai_reasoning || "",
                     timeline: buildTimeline(data),
                 });
             }
