@@ -4,6 +4,7 @@ import { useAuth, UserRole } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useLang } from "@/context/LanguageContext";
+import { registerUserServerAction, loginUserServerAction } from "@/app/actions/authActions";
 
 
 
@@ -405,41 +406,27 @@ export default function LoginPage() {
         if (!selectedRole) { setLoginError(t("login_error_role")); return; }
         if (!email.trim() || !password.trim()) { setLoginError(t("login_error_creds")); return; }
         setLoginLoading(true); setLoginError("");
+
         try {
-            const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-            const res = await fetch(`${API_URL}/api/auth/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: email.toLowerCase().trim(),
-                    password,
-                    role: selectedRole,
-                    rememberMe,
-                }),
+            const res = await loginUserServerAction({
+                email: email.toLowerCase().trim(),
+                password,
+                role: selectedRole,
             });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.user) {
-                    login({ username: data.user.username, email: data.user.email, role: data.user.role as UserRole });
-                    if (data.user.role === "user") router.push("/");
-                    else if (data.user.role === "authority") router.push("/admin");
-                    else router.push("/chief");
-                    setLoginLoading(false);
-                    return;
-                }
+
+            if (res.success && res.user) {
+                login({ username: res.user.username, email: res.user.email, role: res.user.role as UserRole });
+                if (res.user.role === "user") router.push("/");
+                else if (res.user.role === "authority") router.push("/admin");
+                else router.push("/chief");
+            } else {
+                setLoginError(res.error || "Invalid email or password.");
             }
         } catch {
-            /* Backend offline or Vercel standalone demo mode */
+            setLoginError("Connection error. Please try again.");
+        } finally {
+            setLoginLoading(false);
         }
-
-        // Resilient login fallback
-        const formattedUser = email.split("@")[0] || "User";
-        const displayName = formattedUser.charAt(0).toUpperCase() + formattedUser.slice(1);
-        login({ username: displayName, email: email.toLowerCase().trim(), role: selectedRole });
-        if (selectedRole === "user") router.push("/");
-        else if (selectedRole === "authority") router.push("/admin");
-        else router.push("/chief");
-        setLoginLoading(false);
     };
 
     const fillDemo = () => {
@@ -636,46 +623,43 @@ export default function LoginPage() {
         if (!validateSignup()) return;
         setSuLoading(true);
         const normalizedEmail = su.email.toLowerCase().trim();
+
         try {
-            const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-            const res = await fetch(`${API_URL}/api/auth/register`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: normalizedEmail, password: su.password,
-                    username: su.name.trim(), role: "user",
-                    phone: su.phone, state: su.state,
-                    district: su.district, pincode: su.pincode,
-                    idType: su.idType,
-                    idNumber: su.idNumber.trim().toUpperCase(),
-                    dob: su.dob,
-                }),
+            const res = await registerUserServerAction({
+                email: normalizedEmail,
+                password: su.password,
+                username: su.name.trim(),
+                role: "user",
+                phone: su.phone,
+                state: su.state,
+                district: su.district,
+                pincode: su.pincode,
+                idType: su.idType,
+                idNumber: su.idNumber.trim().toUpperCase(),
+                dob: su.dob,
             });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.user) {
-                    setSuSuccess(true);
-                    setTimeout(() => {
-                        setMode("login"); setSelectedRole("user"); setEmail(normalizedEmail); setPassword("");
-                        setSu({ name: "", email: "", phone: "", dob: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "", otpToken: "" });
-                        setSuErrors({}); setSuSuccess(false);
-                    }, 1800);
-                    setSuLoading(false);
-                    return;
-                }
+
+            if (res.success && res.user) {
+                setSuSuccess(true);
+                setTimeout(() => {
+                    setMode("login");
+                    setSelectedRole("user");
+                    setEmail(normalizedEmail);
+                    setPassword("");
+                    setSu({ name: "", email: "", phone: "", dob: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "", otpToken: "" });
+                    setSuErrors({});
+                    setSuSuccess(false);
+                }, 1800);
+            } else {
+                setSuStep(1);
+                setSuErrors({ email: res.error || "Registration failed. Please check your details." });
             }
         } catch {
-            /* Backend offline or Vercel standalone demo mode */
+            setSuStep(1);
+            setSuErrors({ email: "Connection error. Please try again." });
+        } finally {
+            setSuLoading(false);
         }
-
-        // Fallback successful registration
-        setSuSuccess(true);
-        setTimeout(() => {
-            setMode("login"); setSelectedRole("user"); setEmail(normalizedEmail); setPassword("");
-            setSu({ name: "", email: "", phone: "", dob: "", idType: "aadhaar", idNumber: "", state: "", district: "", pincode: "", password: "", confirm: "", otpToken: "" });
-            setSuErrors({}); setSuSuccess(false);
-        }, 1800);
-        setSuLoading(false);
     };
 
     const handleAuthSignup = async (e: React.FormEvent) => {
@@ -683,46 +667,43 @@ export default function LoginPage() {
         if (!validateAuthSignup()) return;
         setAuLoading(true);
         const normalizedEmail = au.email.toLowerCase().trim();
+
         try {
-            const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-            const res = await fetch(`${API_URL}/api/auth/register`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: normalizedEmail,
-                    password: au.password,
-                    username: au.name.trim(),
-                    role: "authority",
-                    phone: au.phone,
-                    authorityRole: au.authorityRole,
-                    serviceId: au.serviceId.trim(),
-                    passcode: au.passcode,
-                }),
+            const res = await registerUserServerAction({
+                email: normalizedEmail,
+                password: au.password,
+                username: au.name.trim(),
+                role: "authority",
+                phone: au.phone,
+                authorityRole: au.authorityRole,
+                serviceId: au.serviceId.trim(),
+                workingPlace: au.workingPlace.trim(),
+                state: au.state,
+                district: au.district,
+                passcode: au.passcode,
             });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.user) {
-                    setAuSuccess(true);
-                    setTimeout(() => {
-                        setMode("login"); setSelectedRole("authority"); setEmail(normalizedEmail); setPassword("");
-                        setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "", passcode: "", otpToken: "" });
-                        setAuErrors({}); setAuSuccess(false);
-                    }, 1800);
-                    setAuLoading(false);
-                    return;
-                }
+
+            if (res.success && res.user) {
+                setAuSuccess(true);
+                setTimeout(() => {
+                    setMode("login");
+                    setSelectedRole("authority");
+                    setEmail(normalizedEmail);
+                    setPassword("");
+                    setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "", passcode: "", otpToken: "" });
+                    setAuErrors({});
+                    setAuSuccess(false);
+                }, 1800);
+            } else {
+                setAuStep(1);
+                setAuErrors({ email: res.error || "Authority registration failed." });
             }
         } catch {
-            /* Fallback mode */
+            setAuStep(1);
+            setAuErrors({ email: "Connection error. Please try again." });
+        } finally {
+            setAuLoading(false);
         }
-
-        setAuSuccess(true);
-        setTimeout(() => {
-            setMode("login"); setSelectedRole("authority"); setEmail(normalizedEmail); setPassword("");
-            setAu({ name: "", email: "", phone: "", authorityRole: "", serviceId: "", workingPlace: "", state: "", district: "", password: "", confirm: "", passcode: "", otpToken: "" });
-            setAuErrors({}); setAuSuccess(false);
-        }, 1800);
-        setAuLoading(false);
     };
 
     /* ── Chief sign-up validation + handler ── */
@@ -764,45 +745,39 @@ export default function LoginPage() {
         if (!validateChiefSignup()) return;
         setChLoading(true);
         const normalizedEmail = ch.email.toLowerCase().trim();
+
         try {
-            const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-            const res = await fetch(`${API_URL}/api/auth/register`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: normalizedEmail,
-                    password: ch.password,
-                    username: ch.name.trim(),
-                    role: "chief",
-                    phone: ch.phone,
-                    serviceId: ch.officerId.trim().toUpperCase(),
-                    passcode: ch.passcode,
-                }),
+            const res = await registerUserServerAction({
+                email: normalizedEmail,
+                password: ch.password,
+                username: ch.name.trim(),
+                role: "chief",
+                phone: ch.phone,
+                serviceId: ch.officerId.trim().toUpperCase(),
+                passcode: ch.passcode,
             });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.user) {
-                    setChSuccess(true);
-                    setTimeout(() => {
-                        setMode("login"); setSelectedRole("chief"); setEmail(normalizedEmail); setPassword("");
-                        setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "", passcode: "", otpToken: "" });
-                        setChErrors({}); setChSuccess(false);
-                    }, 1800);
-                    setChLoading(false);
-                    return;
-                }
+
+            if (res.success && res.user) {
+                setChSuccess(true);
+                setTimeout(() => {
+                    setMode("login");
+                    setSelectedRole("chief");
+                    setEmail(normalizedEmail);
+                    setPassword("");
+                    setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "", passcode: "", otpToken: "" });
+                    setChErrors({});
+                    setChSuccess(false);
+                }, 1800);
+            } else {
+                setChStep(1);
+                setChErrors({ email: res.error || "Chief Administrator registration failed." });
             }
         } catch {
-            /* Fallback mode */
+            setChStep(1);
+            setChErrors({ email: "Connection error. Please try again." });
+        } finally {
+            setChLoading(false);
         }
-
-        setChSuccess(true);
-        setTimeout(() => {
-            setMode("login"); setSelectedRole("chief"); setEmail(normalizedEmail); setPassword("");
-            setCh({ name: "", email: "", phone: "", officerId: "", password: "", confirm: "", passcode: "", otpToken: "" });
-            setChErrors({}); setChSuccess(false);
-        }, 1800);
-        setChLoading(false);
     };
 
     const switchMode = (m: "login" | "signup" | "auth-signup" | "chief-signup" | "forgot-password") => {
