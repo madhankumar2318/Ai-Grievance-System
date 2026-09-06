@@ -83,7 +83,7 @@ public class GeminiTriageService {
             );
 
             RestClient restClient = RestClient.create();
-            String[] models = new String[]{"gemini-1.5-flash", "gemini-2.0-flash"};
+            String[] models = new String[]{"gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"};
             
             for (String model : models) {
                 try {
@@ -208,7 +208,7 @@ public class GeminiTriageService {
             );
 
             RestClient restClient = RestClient.create();
-            String[] models = new String[]{"gemini-1.5-flash", "gemini-2.0-flash"};
+            String[] models = new String[]{"gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"};
 
             for (String model : models) {
                 try {

@@ -170,105 +170,141 @@ function classifyImageWithCanvas(imgDataUrl: string): Promise<{ subject: string;
 }
 
 
-async function analyzePhotoWithAI(file: File): Promise<{ subject: string; category: string; confidence: number }> {
+/* ─── Client-side Image Compression (Keeps payload < 200KB for instant Gemini AI processing) ─── */
+function compressImageForAI(file: File): Promise<{ base64Data: string; mimeType: string; dataUrl: string }> {
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = async (e) => {
-      const dataUrl = e.target?.result as string;
-      if (!dataUrl) {
-        resolve({ subject: "Environmental / Infrastructure Issue", category: "Environment", confidence: 85 });
+    reader.onload = (e) => {
+      const srcUrl = e.target?.result as string;
+      if (!srcUrl) {
+        resolve({ base64Data: "", mimeType: "image/jpeg", dataUrl: "" });
         return;
       }
-
-      const mimeType = file.type || "image/jpeg";
-      const base64Data = dataUrl.split(",")[1];
-
-      // 1. Try Next.js Server Action (uses GEMINI_API_KEY from Vercel env directly)
-      try {
-        const serverResult = await analyzePhotoServerAction(base64Data, mimeType);
-        if (serverResult && serverResult.subject) {
-          resolve(serverResult);
-          return;
-        }
-      } catch (err) {
-        console.warn("⚠️ Server Action analyze error:", err);
+      if (typeof window === "undefined") {
+        resolve({ base64Data: srcUrl.split(",")[1] || "", mimeType: file.type || "image/jpeg", dataUrl: srcUrl });
+        return;
       }
-
-      // 2. Try Java Backend REST API Vision Endpoint
-      try {
-        const backendRes = await fetch(`${API_BASE_URL}/api/complaints/analyze-photo`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ base64: base64Data, mimeType }),
-        });
-        if (backendRes.ok) {
-          const bData = await backendRes.json();
-          if (bData.subject && !bData.subject.includes("Detected in Photo")) {
-            resolve({
-              subject: bData.subject,
-              category: bData.category || "Environment",
-              confidence: bData.confidence || 95,
-            });
-            return;
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1024;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
           }
         }
-      } catch {
-        // Backend offline or unreachable
-      }
-
-      // 3. Try Direct Client Gemini Vision API if NEXT_PUBLIC key configured
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (apiKey) {
-        const models = ["gemini-1.5-flash", "gemini-2.0-flash"];
-        for (const model of models) {
-          try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      { inlineData: { mimeType, data: base64Data } },
-                      { text: "Analyze this photo of a civic/environmental issue. Identify exact issue (e.g. Water Body Pollution & Garbage, Severe Road Pothole, Public Garbage Dump, Industrial Air Pollution). Return JSON: {\"subject\":\"...\",\"category\":\"...\",\"confidence\":95}" },
-                    ],
-                  },
-                ],
-                generationConfig: { responseMimeType: "application/json" },
-              }),
-            });
-
-            if (response.ok) {
-              const resData = await response.json();
-              const text = resData?.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (text) {
-                let jsonText = text.trim();
-                if (jsonText.startsWith("```json")) jsonText = jsonText.substring(7);
-                if (jsonText.endsWith("```")) jsonText = jsonText.substring(0, jsonText.length - 3);
-
-                const parsed = JSON.parse(jsonText.trim());
-                if (parsed.subject && parsed.category) {
-                  resolve({
-                    subject: parsed.subject,
-                    category: parsed.category,
-                    confidence: parsed.confidence || 95,
-                  });
-                  return;
-                }
-              }
-            }
-          } catch (err) {
-            console.warn(`Gemini Vision model ${model} error:`, err);
-          }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          const base64Data = compressedDataUrl.split(",")[1];
+          resolve({ base64Data, mimeType: "image/jpeg", dataUrl: compressedDataUrl });
+        } else {
+          resolve({ base64Data: srcUrl.split(",")[1] || "", mimeType: file.type || "image/jpeg", dataUrl: srcUrl });
         }
-      }
-
-      // 3. High-Precision Smart HTML5 Canvas Visual Feature Classifier Fallback
-      const canvasResult = await classifyImageWithCanvas(dataUrl);
-      resolve(canvasResult);
+      };
+      img.onerror = () => {
+        resolve({ base64Data: srcUrl.split(",")[1] || "", mimeType: file.type || "image/jpeg", dataUrl: srcUrl });
+      };
+      img.src = srcUrl;
     };
     reader.readAsDataURL(file);
   });
+}
+
+async function analyzePhotoWithAI(file: File): Promise<{ subject: string; category: string; confidence: number }> {
+  const { base64Data, mimeType, dataUrl } = await compressImageForAI(file);
+  if (!base64Data) {
+    return { subject: "Environmental / Infrastructure Issue", category: "Environment", confidence: 85 };
+  }
+
+  // 1. Try Next.js Server Action (uses GEMINI_API_KEY directly on Vercel)
+  try {
+    const serverResult = await analyzePhotoServerAction(base64Data, mimeType);
+    if (serverResult && serverResult.subject) {
+      return serverResult;
+    }
+  } catch (err) {
+    console.warn("⚠️ Server Action analyze error:", err);
+  }
+
+  // 2. Try Java Backend REST API Vision Endpoint
+  try {
+    const backendRes = await fetch(`${API_BASE_URL}/api/complaints/analyze-photo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64: base64Data, mimeType }),
+    });
+    if (backendRes.ok) {
+      const bData = await backendRes.json();
+      if (bData.subject && !bData.subject.includes("Detected in Photo")) {
+        return {
+          subject: bData.subject,
+          category: bData.category || "Environment",
+          confidence: bData.confidence || 95,
+        };
+      }
+    }
+  } catch {
+    // Backend offline or unreachable
+  }
+
+  // 3. Try Direct Client Gemini Vision API if NEXT_PUBLIC key configured
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  if (apiKey) {
+    const models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"];
+    for (const model of models) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { inlineData: { mimeType, data: base64Data } },
+                  { text: "Analyze this photo of a civic or environmental issue in detail. Return JSON: {\"subject\":\"Specific issue title\",\"category\":\"Environment\" or \"Infrastructure\" or \"Safety\",\"confidence\":95}" },
+                ],
+              },
+            ],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+        });
+
+        if (response.ok) {
+          const resData = await response.json();
+          const text = resData?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            let jsonText = text.trim();
+            if (jsonText.startsWith("```json")) jsonText = jsonText.substring(7);
+            if (jsonText.endsWith("```")) jsonText = jsonText.substring(0, jsonText.length - 3);
+
+            const parsed = JSON.parse(jsonText.trim());
+            if (parsed.subject && parsed.category) {
+              return {
+                subject: parsed.subject,
+                category: parsed.category,
+                confidence: parsed.confidence || 96,
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`Gemini Vision model ${model} error:`, err);
+      }
+    }
+  }
+
+  // 4. Fallback: Multi-zone canvas feature classifier
+  return await classifyImageWithCanvas(dataUrl);
 }
 
 /* ─── GPS + Camera Modal ─────────────────────────────────── */
