@@ -365,12 +365,6 @@ export default function TrackPage() {
                     <div className="glass" style={{ padding: "2rem", borderRadius: "1.5rem" }}>
                         <h3 style={{ marginBottom: "1.75rem" }}>{t("track_timeline")}</h3>
                         <div style={{ position: "relative" }}>
-                            {/* Vertical connector line */}
-                            <div style={{
-                                position: "absolute", left: "19px", top: "20px", bottom: "20px", width: "2px",
-                                background: `linear-gradient(180deg, #6366f1 ${Math.max(0, (doneCount / timeline.length) * 100)}%, var(--border) ${Math.max(0, (doneCount / timeline.length) * 100)}%)`,
-                                transition: "background 1s ease",
-                            }} />
                             <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
                                 {timeline.map((step: TimelineStep, i: number) => {
                                     const isActive = !step.done && i === doneCount;
@@ -379,31 +373,73 @@ export default function TrackPage() {
                                         <div key={`${step.stage}-${i}`} style={{
                                             display: "flex", gap: "1.25rem",
                                             paddingBottom: i < timeline.length - 1 ? "1.75rem" : "0",
+                                            position: "relative",
                                         }}>
+                                            {/* Vertical connector line to next step */}
+                                            {i < timeline.length - 1 && (
+                                                <div style={{
+                                                    position: "absolute",
+                                                    left: "20px",
+                                                    top: "40px",
+                                                    bottom: "0px",
+                                                    width: "2px",
+                                                    transform: "translateX(-50%)",
+                                                    background: step.done
+                                                        ? (timeline[i + 1]?.done ? "#6366f1" : "linear-gradient(180deg, #6366f1 0%, #f59e0b 100%)")
+                                                        : "rgba(255, 255, 255, 0.15)",
+                                                    zIndex: 0,
+                                                    transition: "background 0.5s ease",
+                                                }} />
+                                            )}
+
                                             {/* Icon bubble */}
-                                            <div style={{ position: "relative", flexShrink: 0 }}>
+                                            <div style={{
+                                                position: "relative",
+                                                width: "40px",
+                                                height: "40px",
+                                                flexShrink: 0,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                zIndex: 1,
+                                            }}>
                                                 {isActive && (
                                                     <div style={{
-                                                        position: "absolute", inset: "-6px", borderRadius: "50%",
-                                                        border: "2px solid #6366f1",
-                                                        animation: "glowPulse 1.5s ease-in-out infinite",
-                                                        opacity: 0.6,
+                                                        position: "absolute",
+                                                        width: "48px",
+                                                        height: "48px",
+                                                        top: "-4px",
+                                                        left: "-4px",
+                                                        borderRadius: "50%",
+                                                        border: "2px solid #f59e0b",
+                                                        animation: "pulseRing 2s ease-in-out infinite",
+                                                        pointerEvents: "none",
                                                     }} />
                                                 )}
                                                 <div style={{
                                                     width: "40px", height: "40px", borderRadius: "50%",
                                                     display: "flex", alignItems: "center", justifyContent: "center",
-                                                    fontSize: "1rem", zIndex: 1,
-                                                    background: step.done ? "linear-gradient(135deg, #6366f1, #ec4899)" : "var(--bg-main)",
+                                                    fontSize: "1.05rem",
+                                                    background: step.done
+                                                        ? "linear-gradient(135deg, #6366f1, #ec4899)"
+                                                        : isActive
+                                                        ? "rgba(245, 158, 11, 0.18)"
+                                                        : "var(--bg-main)",
                                                     border: `2px solid ${step.done ? "#6366f1" : isActive ? "#f59e0b" : "var(--border)"}`,
-                                                    boxShadow: step.done ? "0 0 12px rgba(99,102,241,0.3)" : isActive ? "0 0 10px rgba(245,158,11,0.3)" : "none",
+                                                    boxShadow: step.done
+                                                        ? "0 0 12px rgba(99,102,241,0.3)"
+                                                        : isActive
+                                                        ? "0 0 14px rgba(245,158,11,0.4)"
+                                                        : "none",
+                                                    color: step.done ? "#ffffff" : isActive ? "#f59e0b" : "var(--text-muted)",
                                                     transition: "all 0.4s ease",
                                                 }}>
                                                     {icon}
                                                 </div>
                                             </div>
+
                                             {/* Content */}
-                                            <div style={{ flex: 1, paddingTop: "0.5rem" }}>
+                                            <div style={{ flex: 1, paddingTop: "0.4rem" }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
                                                     <span style={{ fontWeight: "700", fontSize: "0.95rem", color: step.done ? "var(--text-main)" : isActive ? "#f59e0b" : "var(--text-muted)" }}>
                                                         {step.stage}
@@ -484,6 +520,18 @@ export default function TrackPage() {
                 @keyframes glowPulse {
                     0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); opacity: 1; }
                     50%       { box-shadow: 0 0 0 8px rgba(99,102,241,0); opacity: 0.4; }
+                }
+                @keyframes pulseRing {
+                    0%, 100% {
+                        transform: scale(1);
+                        opacity: 0.9;
+                        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
+                    }
+                    50% {
+                        transform: scale(1.15);
+                        opacity: 0.25;
+                        box-shadow: 0 0 0 7px rgba(245, 158, 11, 0);
+                    }
                 }
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
