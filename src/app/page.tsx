@@ -332,12 +332,14 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); setIsSubmitting(true);
+    const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
     try {
-      const res = await fetch("/api/complaint", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData, userEmail: (formData.email || "").toLowerCase().trim(), attachmentCount: mediaFiles.length }) });
+      const res = await fetch(`${API_URL}/api/complaints`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...formData, userEmail: (formData.email || "").toLowerCase().trim(), attachmentCount: mediaFiles.length }) });
       setResult(await res.json());
     } catch (err) { console.error(err); }
     finally { setIsSubmitting(false); }
   };
+
 
   const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
 

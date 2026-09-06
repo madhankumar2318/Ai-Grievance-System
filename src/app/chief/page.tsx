@@ -154,25 +154,25 @@ export default function ChiefDashboard() {
     /* ── Fetch from Supabase ────────────────────────────────────────────── */
     const fetchComplaints = async () => {
         setLoading(true);
+        const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
         try {
-            const res = await fetch("/api/admin/complaints");
+            const res = await fetch(`${API_URL}/api/complaints`);
             const data = await res.json();
+            const list = Array.isArray(data) ? data : data.complaints || [];
 
-            if (data.success && data.complaints) {
-                setComplaints(data.complaints.map((c: DbChiefComplaint) => ({
-                    id: c.id,
-                    subject: c.subject,
-                    category: c.category || "Other",
-                    priority: c.priority || "Medium",
-                    status: c.status || "Pending",
-                    user: c.user_email || "Anonymous",
-                    location: c.location || "—",
-                    date: new Date(c.created_at).toLocaleDateString("en-IN"),
-                    created_at: c.created_at,
-                    updated_at: c.updated_at,
-                })));
-                setLastRefresh(new Date());
-            }
+            setComplaints(list.map((c: DbChiefComplaint) => ({
+                id: c.id,
+                subject: c.subject,
+                category: c.category || "Other",
+                priority: c.priority || "Medium",
+                status: c.status || "Pending",
+                user: c.user_email || "Anonymous",
+                location: c.location || "—",
+                date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                created_at: c.created_at,
+                updated_at: c.updated_at,
+            })));
+            setLastRefresh(new Date());
         } catch (err) {
             console.error("Chief dashboard fetch error:", err);
         } finally {

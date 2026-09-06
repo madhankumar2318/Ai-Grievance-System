@@ -65,28 +65,28 @@ export default function AdminDashboard() {
     const toggleRow = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
     const fetchComplaints = async () => {
+        const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
         try {
-            const res = await fetch("/api/admin/complaints");
+            const res = await fetch(`${API_URL}/api/complaints`);
             const data = await res.json();
-            if (data.success && data.complaints) {
-                const mapped = data.complaints.map((c: DbAdminComplaint) => ({
-                    id: c.id,
-                    subject: c.subject,
-                    category: c.category,
-                    priority: c.priority,
-                    status: c.status,
-                    user: c.user_email || "Anonymous",
-                    attachments: c.attachment_count || 0,
-                    userEmail: c.user_email || "",
-                    description: c.description,
-                    location: c.location,
-                    date: new Date(c.created_at).toLocaleDateString("en-IN"),
-                    aiNote: c.ai_reasoning || "Triage complete.",
-                }));
-                setComplaints(mapped);
-            }
+            const list = Array.isArray(data) ? data : data.complaints || [];
+            const mapped = list.map((c: DbAdminComplaint) => ({
+                id: c.id,
+                subject: c.subject,
+                category: c.category,
+                priority: c.priority,
+                status: c.status,
+                user: c.user_email || "Anonymous",
+                attachments: c.attachment_count || 0,
+                userEmail: c.user_email || "",
+                description: c.description,
+                location: c.location,
+                date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                aiNote: c.ai_reasoning || "Triage complete.",
+            }));
+            setComplaints(mapped);
         } catch (err) {
-            console.error("Error fetching complaints:", err);
+            console.error("Error fetching complaints from Spring Boot:", err);
         } finally {
             setLoading(false);
         }
@@ -99,24 +99,15 @@ export default function AdminDashboard() {
     const updateStatus = async (id: string, newStatus: "Resolved" | "Rejected") => {
         setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
         setExpandedId(null);
-        const complaint = complaints.find(c => c.id === id);
-        if (complaint?.userEmail) {
-            try {
-                await fetch("/api/notify", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ to: complaint.userEmail, complaintId: id, subject: complaint.subject, category: complaint.category, priority: complaint.priority, type: "status_change" }),
-                });
-            } catch { /* silent */ }
-        }
+        const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
         try {
-            await fetch("/api/admin/update-status", {
+            await fetch(`${API_URL}/api/complaints/update-status`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id, status: newStatus }),
             });
         } catch (err) {
-            console.error("Error updating status:", err);
+            console.error("Error updating status in Spring Boot:", err);
         }
     };
 
