@@ -136,22 +136,13 @@ export default function TrackPage() {
         setErrorMsg("");
 
         try {
-            const { supabase, isConfigured } = await import("@/lib/supabase");
+            const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
+            const res = await fetch(`${API_URL}/api/complaints/${id}`);
 
-            if (!isConfigured) {
-                setErrorMsg("Database is not configured. Please contact support.");
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from("complaints")
-                .select("*")
-                .eq("id", id)
-                .single();
-
-            if (error || !data) {
+            if (!res.ok) {
                 setComplaint(null);
             } else {
+                const data = await res.json();
                 setComplaint({
                     id: data.id,
                     subject: data.subject,
@@ -160,9 +151,9 @@ export default function TrackPage() {
                     priority: data.priority,
                     status: data.status,
                     location: data.location,
-                    date: new Date(data.created_at).toLocaleDateString("en-IN"),
-                    user: data.user_email || "Anonymous",
-                    ai_reasoning: data.ai_reasoning || "",
+                    date: data.createdAt ? new Date(data.createdAt).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                    user: data.userEmail || "Anonymous",
+                    ai_reasoning: data.aiReasoning || "",
                     timeline: buildTimeline(data),
                 });
             }

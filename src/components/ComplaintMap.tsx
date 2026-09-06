@@ -45,10 +45,13 @@ export default function ComplaintMap({ title = "🗺️ Live Complaint Map", sub
         setIsClient(true);
         const fetchPins = async () => {
             try {
-                const { supabase } = await import("@/lib/supabase");
-                const { data } = await supabase.from("complaints").select("*");
-                if (data) {
-                    const parsed = data.map((c: { id: string; subject: string; category: string; priority: string; status: string; location: string | null; created_at: string; user_email: string | null }) => {
+                const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
+                const res = await fetch(`${API_URL}/api/complaints`);
+                const data = await res.json();
+                const list = Array.isArray(data) ? data : data.complaints || [];
+
+                if (list) {
+                    const parsed = list.map((c: { id: string; subject: string; category: string; priority: string; status: string; location: string | null; created_at?: string; createdAt?: string; user_email?: string | null; userEmail?: string | null }) => {
                         let lat = 28.6139;
                         let lng = 77.2090;
                         const coords = c.location ? c.location.split(",") : [];
@@ -64,6 +67,7 @@ export default function ComplaintMap({ title = "🗺️ Live Complaint Map", sub
                             lat = 28.6000 + (hash % 100) * 0.0004;
                             lng = 77.2000 + (hash % 70) * 0.0005;
                         }
+                        const createdDate = c.created_at || c.createdAt;
                         return {
                             id: c.id,
                             subject: c.subject,
@@ -73,14 +77,14 @@ export default function ComplaintMap({ title = "🗺️ Live Complaint Map", sub
                             location: c.location || "Unknown",
                             lat,
                             lng,
-                            date: new Date(c.created_at).toLocaleDateString("en-IN"),
-                            user: c.user_email || "Anonymous"
+                            date: createdDate ? new Date(createdDate).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                            user: c.user_email || c.userEmail || "Anonymous"
                         };
                     });
                     setPins(parsed);
                 }
             } catch (err) {
-                console.error("Error fetching map pins:", err);
+                console.error("Error fetching map pins from Spring Boot:", err);
             }
         };
         fetchPins();
