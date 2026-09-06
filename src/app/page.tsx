@@ -319,37 +319,108 @@ function GpsCameraModal({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
   const [step, setStep] = useState<"idle" | "loading" | "live" | "preview" | "error">("idle");
   const [camError, setCamError] = useState("");
   const [gps, setGps] = useState<GpsCoords | null>(null);
+  const [landmark, setLandmark] = useState<string>("");
   const [gpsStatus, setGpsStatus] = useState<"fetching" | "ok" | "denied" | "idle">("idle");
   const [captured, setCaptured] = useState<string | null>(null);
 
   const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    if (watchIdRef.current !== null) {
+      navigator.geolocation?.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
   }, []);
+
+  const fetchLandmark = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+        headers: { "Accept-Language": "en" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const addr = data.address || {};
+        const road = addr.road || addr.street || addr.suburb || addr.neighbourhood || "";
+        const town = addr.town || addr.city || addr.county || addr.district || "";
+        const state = addr.state || "";
+        const parts = [road, town, state].filter(Boolean);
+        if (parts.length > 0) {
+          setLandmark(parts.join(", "));
+          return;
+        }
+        if (data.display_name) {
+          setLandmark(data.display_name.split(",").slice(0, 3).join(",").trim());
+        }
+      }
+    } catch {
+      // Offline reverse geocode
+    }
+  };
 
   const start = useCallback(async () => {
     setStep("loading");
     setCamError("");
     setGpsStatus("fetching");
-    navigator.geolocation?.getCurrentPosition(
-      (pos) => { setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }); setGpsStatus("ok"); },
-      () => setGpsStatus("denied"),
-      { timeout: 8000, enableHighAccuracy: true }
-    );
+
+    let bestAcc = Infinity;
+    if (navigator.geolocation) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const acc = pos.coords.accuracy;
+          if (acc <= bestAcc || bestAcc === Infinity) {
+            bestAcc = acc;
+            const newGps = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: acc };
+            setGps(newGps);
+            setGpsStatus("ok");
+            fetchLandmark(newGps.lat, newGps.lng);
+          }
+        },
+        () => setGpsStatus((prev) => (prev === "ok" ? "ok" : "denied")),
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+      );
+    } else {
+      setGpsStatus("denied");
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
       streamRef.current = stream;
-      if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play(); }
       setStep("live");
     } catch {
       setCamError("Camera permission denied. Please allow camera access in your browser settings.");
       setStep("error");
     }
   }, []);
+
+  // Ensure stream attaches to video element as soon as live step mounts
+  useEffect(() => {
+    if (step === "live" && videoRef.current && streamRef.current) {
+      const v = videoRef.current;
+      if (v.srcObject !== streamRef.current) {
+        v.srcObject = streamRef.current;
+      }
+      v.play().catch(() => {});
+    }
+  }, [step]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -358,18 +429,25 @@ function GpsCameraModal({
     return () => stopCamera();
   }, [start, stopCamera]);
 
-  const buildAddress = (g: GpsCoords | null) => g ? `${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}` : "";
+  const buildAddress = (g: GpsCoords | null) => {
+    if (!g) return "";
+    if (landmark) return `${landmark} (${g.lat.toFixed(5)}, ${g.lng.toFixed(5)})`;
+    return `${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`;
+  };
 
   const stampLocation = (canvas: HTMLCanvasElement, g: GpsCoords | null) => {
     const ctx = canvas.getContext("2d")!;
     const w = canvas.width, h = canvas.height;
     const now = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
     const lines = g
-      ? [`📍 ${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`, `🎯 ±${Math.round(g.accuracy)}m  •  ${now}`]
+      ? [
+          landmark ? `📍 ${landmark}` : `📍 Location: ${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`,
+          `🎯 ±${Math.round(g.accuracy)}m  •  ${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}  •  ${now}`,
+        ]
       : [`📅 ${now}`, "📍 Location unavailable"];
     const padX = 16, padY = 10, lineH = 22, fontSize = 14;
     const boxH = lines.length * lineH + padY * 2;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
     ctx.fillRect(0, h - boxH, w, boxH);
     ctx.fillStyle = "#ffffff";
     ctx.font = `bold ${fontSize}px monospace`;
@@ -383,11 +461,13 @@ function GpsCameraModal({
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
     const v = videoRef.current, c = canvasRef.current;
-    c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext("2d")!.drawImage(v, 0, 0);
+    c.width = v.videoWidth || 1280;
+    c.height = v.videoHeight || 720;
+    c.getContext("2d")!.drawImage(v, 0, 0, c.width, c.height);
     stampLocation(c, gps);
     setCaptured(c.toDataURL("image/jpeg", 0.92));
-    stopCamera(); setStep("preview");
+    stopCamera();
+    setStep("preview");
   };
 
   const retake = () => { setCaptured(null); start(); };
@@ -395,7 +475,8 @@ function GpsCameraModal({
     if (!captured) return;
     fetch(captured).then(r => r.blob()).then(blob => {
       const f: MediaFile = { name: `gps_photo_${Date.now()}.jpg`, type: "image/jpeg", url: URL.createObjectURL(blob), size: blob.size, file: new File([blob], `gps_photo_${Date.now()}.jpg`, { type: "image/jpeg" }) };
-      onCapture(f, gps, buildAddress(gps)); onClose();
+      onCapture(f, gps, buildAddress(gps));
+      onClose();
     });
   };
   const close = () => { stopCamera(); onClose(); };
@@ -409,7 +490,7 @@ function GpsCameraModal({
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.88)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-      <div className="glass" style={{ width: "100%", maxWidth: "520px", borderRadius: "1.5rem", overflow: "hidden" }}>
+      <div className="glass" style={{ width: "100%", maxWidth: "540px", borderRadius: "1.5rem", overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", fontWeight: "700" }}><span>📍📷</span> GPS Camera</div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -419,17 +500,35 @@ function GpsCameraModal({
         </div>
         <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
           {step === "error" && <div style={{ padding: "1rem", background: "#ef444420", border: "1px solid #ef4444", borderRadius: "0.75rem", color: "#ef4444", fontSize: "0.875rem" }}>⚠️ {camError}</div>}
-          {step === "loading" && <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--text-muted)" }}><div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>⏳</div><p>Starting camera &amp; GPS…</p></div>}
+          {step === "loading" && <div style={{ textAlign: "center", padding: "3rem 1rem", color: "var(--text-muted)" }}><div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>⏳</div><p>Starting camera &amp; locking precise GPS…</p></div>}
           {step === "live" && (
             <>
-              <div style={{ position: "relative", borderRadius: "0.75rem", overflow: "hidden", background: "#000" }}>
-                <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", display: "block", maxHeight: "320px", objectFit: "cover" }} />
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.55)", padding: "0.5rem 0.75rem", fontSize: "0.7rem", fontFamily: "monospace", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span>{gpsStatus === "ok" && gps ? `📍 ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}  ±${Math.round(gps.accuracy)}m` : gpsStatus === "fetching" ? "📍 Acquiring GPS…" : "📍 Location unavailable"}</span>
-                  <span>{new Date().toLocaleTimeString("en-IN")}</span>
+              <div style={{ position: "relative", borderRadius: "0.75rem", overflow: "hidden", background: "#111" }}>
+                <video
+                  ref={(el) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (videoRef as any).current = el;
+                    if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                      el.srcObject = streamRef.current;
+                      el.play().catch(() => {});
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{ width: "100%", display: "block", maxHeight: "340px", objectFit: "cover", background: "#111" }}
+                />
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.65)", padding: "0.5rem 0.75rem", fontSize: "0.7rem", fontFamily: "monospace", color: "white", display: "flex", flexDirection: "column", gap: "2px" }}>
+                  <div style={{ fontWeight: "700", color: "#67e8f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {landmark ? `📍 ${landmark}` : gpsStatus === "ok" ? "📍 Locking landmark address…" : "📍 Acquiring GPS…"}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>{gpsStatus === "ok" && gps ? `🌐 ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${Math.round(gps.accuracy)}m)` : "Searching satellites…"}</span>
+                    <span>{new Date().toLocaleTimeString("en-IN")}</span>
+                  </div>
                 </div>
                 <div style={{ position: "absolute", inset: 0, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <div style={{ width: 48, height: 48, border: "2px solid rgba(255,255,255,0.7)", borderRadius: "50%" }} />
+                  <div style={{ width: 56, height: 56, border: "2px solid rgba(255,255,255,0.75)", borderRadius: "50%" }} />
                 </div>
               </div>
               <button className="btn btn-primary" onClick={capturePhoto} style={{ fontSize: "1rem" }}>📸 Capture with GPS Tag</button>
@@ -441,7 +540,12 @@ function GpsCameraModal({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={captured} alt="Captured" style={{ width: "100%", display: "block" }} />
               </div>
-              {gpsStatus === "ok" && <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 0.9rem", borderRadius: "0.75rem", background: "#22c55e15", border: "1px solid #22c55e44", fontSize: "0.8rem", color: "#22c55e", fontWeight: "600" }}>✅ GPS location stamped on photo</div>}
+              {gpsStatus === "ok" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.9rem", borderRadius: "0.75rem", background: "#22c55e15", border: "1px solid #22c55e44", fontSize: "0.8rem", color: "#22c55e", fontWeight: "600" }}>
+                  <div>✅ Location Stamped on Photo</div>
+                  {landmark && <div style={{ fontSize: "0.75rem", color: "var(--text-main)", fontWeight: "400" }}>📍 {landmark}</div>}
+                </div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <button className="btn" onClick={retake} style={{ border: "1px solid var(--border)", background: "transparent", color: "var(--text-main)" }}>🔄 Retake</button>
                 <button className="btn btn-primary" onClick={usePhoto}>✅ Use Photo</button>
