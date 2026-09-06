@@ -344,7 +344,7 @@ export default function ChiefDashboard() {
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
                                         <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                         <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                        <Tooltip content={<CustomTooltip />} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(99, 102, 241, 0.35)", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
                                         <Area type="monotone" dataKey="Filed"    stroke="#6366f1" strokeWidth={2.5} fill="url(#gradFiled)"    dot={{ fill: "#6366f1", r: 4 }} activeDot={{ r: 6 }} />
                                         <Area type="monotone" dataKey="Resolved" stroke="#10b981" strokeWidth={2.5} fill="url(#gradResolved)" dot={{ fill: "#10b981", r: 4 }} activeDot={{ r: 6 }} />
                                     </AreaChart>
@@ -405,7 +405,7 @@ export default function ChiefDashboard() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                                     <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                     <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CustomTooltip />} />
+                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(99, 102, 241, 0.08)", rx: 8, ry: 8 }} />
                                     <Bar dataKey="count" name="Complaints" radius={[6, 6, 0, 0]} maxBarSize={60}>
                                         {priorityBarData.map(entry => (
                                             <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
