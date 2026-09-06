@@ -7,7 +7,6 @@ import org.springframework.http.MediaType;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 @Service
 public class GeminiTriageService {
@@ -88,32 +87,30 @@ public class GeminiTriageService {
             for (String model : models) {
                 try {
                     String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
-                    Map response = restClient.post()
+                    Map<?, ?> response = restClient.post()
                             .uri(url)
                             .contentType(MediaType.APPLICATION_JSON)
                             .body(requestBody)
                             .retrieve()
                             .body(Map.class);
 
-                    if (response != null && response.containsKey("candidates")) {
-                        List candidates = (List) response.get("candidates");
-                        if (!candidates.isEmpty()) {
-                            Map candidate = (Map) candidates.get(0);
-                            Map content = (Map) candidate.get("content");
-                            List parts = (List) content.get("parts");
-                            Map part = (Map) parts.get(0);
-                            String text = (String) part.get("text");
+                    if (response != null && response.get("candidates") instanceof List<?> candidates && !candidates.isEmpty()) {
+                        if (candidates.get(0) instanceof Map<?, ?> candidate &&
+                                candidate.get("content") instanceof Map<?, ?> content &&
+                                content.get("parts") instanceof List<?> parts && !parts.isEmpty()) {
 
-                            if (text != null && !text.isBlank()) {
-                                text = text.trim();
-                                if (text.startsWith("```json")) text = text.substring(7);
-                                if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
+                            if (parts.get(0) instanceof Map<?, ?> part && part.get("text") instanceof String text) {
+                                if (!text.isBlank()) {
+                                    text = text.trim();
+                                    if (text.startsWith("```json")) text = text.substring(7);
+                                    if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
 
-                                String category = extractJsonValue(text, "category", fallback.getCategory());
-                                String priority = extractJsonValue(text, "priority", fallback.getPriority());
-                                String reasoning = extractJsonValue(text, "reasoning", fallback.getReasoning());
+                                    String category = extractJsonValue(text, "category", fallback.getCategory());
+                                    String priority = extractJsonValue(text, "priority", fallback.getPriority());
+                                    String reasoning = extractJsonValue(text, "reasoning", fallback.getReasoning());
 
-                                return new TriageResult(category, priority, "AI Classification: " + reasoning);
+                                    return new TriageResult(category, priority, "AI Classification: " + reasoning);
+                                }
                             }
                         }
                     }
@@ -214,31 +211,29 @@ public class GeminiTriageService {
                 try {
                     String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
 
-                    Map response = restClient.post()
+                    Map<?, ?> response = restClient.post()
                             .uri(url)
                             .contentType(MediaType.APPLICATION_JSON)
                             .body(requestBody)
                             .retrieve()
                             .body(Map.class);
 
-                    if (response != null && response.containsKey("candidates")) {
-                        List candidates = (List) response.get("candidates");
-                        if (!candidates.isEmpty()) {
-                            Map candidate = (Map) candidates.get(0);
-                            Map content = (Map) candidate.get("content");
-                            List parts = (List) content.get("parts");
-                            Map part = (Map) parts.get(0);
-                            String text = (String) part.get("text");
+                    if (response != null && response.get("candidates") instanceof List<?> candidates && !candidates.isEmpty()) {
+                        if (candidates.get(0) instanceof Map<?, ?> candidate &&
+                                candidate.get("content") instanceof Map<?, ?> content &&
+                                content.get("parts") instanceof List<?> parts && !parts.isEmpty()) {
 
-                            if (text != null && !text.isBlank()) {
-                                text = text.trim();
-                                if (text.startsWith("```json")) text = text.substring(7);
-                                if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
+                            if (parts.get(0) instanceof Map<?, ?> part && part.get("text") instanceof String text) {
+                                if (!text.isBlank()) {
+                                    text = text.trim();
+                                    if (text.startsWith("```json")) text = text.substring(7);
+                                    if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
 
-                                String subject = extractJsonValue(text, "subject", "Civic Issue Detected");
-                                String category = extractJsonValue(text, "category", "Environment");
+                                    String subject = extractJsonValue(text, "subject", "Civic Issue Detected");
+                                    String category = extractJsonValue(text, "category", "Environment");
 
-                                return new TriageResult(category, "High", subject);
+                                    return new TriageResult(category, "High", subject);
+                                }
                             }
                         }
                     }
