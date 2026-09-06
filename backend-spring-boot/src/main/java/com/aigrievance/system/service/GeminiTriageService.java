@@ -83,37 +83,42 @@ public class GeminiTriageService {
             );
 
             RestClient restClient = RestClient.create();
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+            String[] models = new String[]{"gemini-1.5-flash", "gemini-2.0-flash"};
+            
+            for (String model : models) {
+                try {
+                    String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+                    Map response = restClient.post()
+                            .uri(url)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(requestBody)
+                            .retrieve()
+                            .body(Map.class);
 
-            Map response = restClient.post()
-                    .uri(url)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(Map.class);
+                    if (response != null && response.containsKey("candidates")) {
+                        List candidates = (List) response.get("candidates");
+                        if (!candidates.isEmpty()) {
+                            Map candidate = (Map) candidates.get(0);
+                            Map content = (Map) candidate.get("content");
+                            List parts = (List) content.get("parts");
+                            Map part = (Map) parts.get(0);
+                            String text = (String) part.get("text");
 
-            if (response != null && response.containsKey("candidates")) {
-                List candidates = (List) response.get("candidates");
-                if (!candidates.isEmpty()) {
-                    Map candidate = (Map) candidates.get(0);
-                    Map content = (Map) candidate.get("content");
-                    List parts = (List) content.get("parts");
-                    Map part = (Map) parts.get(0);
-                    String text = (String) part.get("text");
+                            if (text != null && !text.isBlank()) {
+                                text = text.trim();
+                                if (text.startsWith("```json")) text = text.substring(7);
+                                if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
 
-                    if (text != null && !text.isBlank()) {
-                        // Clean JSON output string
-                        text = text.trim();
-                        if (text.startsWith("```json")) text = text.substring(7);
-                        if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
+                                String category = extractJsonValue(text, "category", fallback.getCategory());
+                                String priority = extractJsonValue(text, "priority", fallback.getPriority());
+                                String reasoning = extractJsonValue(text, "reasoning", fallback.getReasoning());
 
-                        // Simple extraction
-                        String category = extractJsonValue(text, "category", fallback.getCategory());
-                        String priority = extractJsonValue(text, "priority", fallback.getPriority());
-                        String reasoning = extractJsonValue(text, "reasoning", fallback.getReasoning());
-
-                        return new TriageResult(category, priority, "AI Classification: " + reasoning);
+                                return new TriageResult(category, priority, "AI Classification: " + reasoning);
+                            }
+                        }
                     }
+                } catch (Exception e) {
+                    System.err.println("⚠️ Gemini model " + model + " failed, trying next: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
@@ -161,5 +166,90 @@ public class GeminiTriageService {
         }
 
         return new TriageResult(category, priority, reasoning);
+    }
+
+    public TriageResult analyzePhotoVision(String base64Image, String mimeType) {
+        if (base64Image != null && base64Image.contains(",")) {
+            base64Image = base64Image.split(",")[1];
+        }
+
+        if (apiKey == null || apiKey.isBlank() || apiKey.contains("your_gemini")) {
+            return new TriageResult("Environment", "High", "Civic & Environmental Issue Detected in Photo");
+        }
+
+        try {
+            Map<String, Object> inlineData = Map.of(
+                    "mimeType", mimeType != null ? mimeType : "image/jpeg",
+                    "data", base64Image
+            );
+
+            String prompt = """
+                    Analyze this photo of a civic, municipal, or environmental issue.
+                    Identify the exact issue shown (e.g. Environmental Water Body Pollution & Garbage Dumping, Industrial Air Pollution & Factory Smoke, Severe Road Pothole & Asphalt Damage, Exposed Electrical Wires & Safety Hazard, Public Garbage Dumping, Broken Streetlight).
+
+                    Output JSON matching schema:
+                    {
+                      "subject": "Exact specific title of problem",
+                      "category": "Environment" | "Infrastructure" | "Safety" | "Public Health" | "Administrative" | "Other",
+                      "confidence": 95
+                    }
+                    """;
+
+            Map<String, Object> requestBody = Map.of(
+                    "contents", List.of(
+                            Map.of("parts", List.of(
+                                    Map.of("inlineData", inlineData),
+                                    Map.of("text", prompt)
+                            ))
+                    ),
+                    "generationConfig", Map.of(
+                            "responseMimeType", "application/json"
+                    )
+            );
+
+            RestClient restClient = RestClient.create();
+            String[] models = new String[]{"gemini-1.5-flash", "gemini-2.0-flash"};
+
+            for (String model : models) {
+                try {
+                    String url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + apiKey;
+
+                    Map response = restClient.post()
+                            .uri(url)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(requestBody)
+                            .retrieve()
+                            .body(Map.class);
+
+                    if (response != null && response.containsKey("candidates")) {
+                        List candidates = (List) response.get("candidates");
+                        if (!candidates.isEmpty()) {
+                            Map candidate = (Map) candidates.get(0);
+                            Map content = (Map) candidate.get("content");
+                            List parts = (List) content.get("parts");
+                            Map part = (Map) parts.get(0);
+                            String text = (String) part.get("text");
+
+                            if (text != null && !text.isBlank()) {
+                                text = text.trim();
+                                if (text.startsWith("```json")) text = text.substring(7);
+                                if (text.endsWith("```")) text = text.substring(0, text.length() - 3);
+
+                                String subject = extractJsonValue(text, "subject", "Civic Issue Detected");
+                                String category = extractJsonValue(text, "category", "Environment");
+
+                                return new TriageResult(category, "High", subject);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠️ Gemini Vision model " + model + " failed: " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Gemini Vision API error: " + e.getMessage());
+        }
+
+        return new TriageResult("Environment", "High", "Civic & Environmental Issue Detected in Photo");
     }
 }

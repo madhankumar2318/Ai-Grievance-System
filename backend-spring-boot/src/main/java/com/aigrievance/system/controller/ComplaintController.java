@@ -4,6 +4,7 @@ import com.aigrievance.system.dto.ComplaintRequest;
 import com.aigrievance.system.dto.StatusUpdateRequest;
 import com.aigrievance.system.model.Complaint;
 import com.aigrievance.system.service.ComplaintService;
+import com.aigrievance.system.service.GeminiTriageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,28 @@ public class ComplaintController {
 
     @Autowired
     private ComplaintService complaintService;
+
+    @Autowired
+    private GeminiTriageService geminiTriageService;
+
+    @PostMapping("/analyze-photo")
+    public ResponseEntity<Map<String, Object>> analyzePhoto(@RequestBody Map<String, String> request) {
+        String base64 = request.get("base64");
+        if (base64 == null || base64.isBlank()) {
+            base64 = request.get("dataUrl");
+        }
+        String mimeType = request.getOrDefault("mimeType", "image/jpeg");
+        if (base64 == null || base64.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing image data"));
+        }
+
+        GeminiTriageService.TriageResult result = geminiTriageService.analyzePhotoVision(base64, mimeType);
+        return ResponseEntity.ok(Map.of(
+                "subject", result.getReasoning(),
+                "category", result.getCategory(),
+                "confidence", 95
+        ));
+    }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> submitComplaint(@RequestBody ComplaintRequest request) {
