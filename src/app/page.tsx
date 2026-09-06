@@ -50,98 +50,124 @@ function classifyImageWithCanvas(imgDataUrl: string): Promise<{ subject: string;
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        const w = 100;
-        const h = 100;
-        canvas.width = w;
-        canvas.height = h;
+        const W = 100, H = 100;
+        canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve({ subject: "Civic & Environmental Hazard", category: "Environment", confidence: 85 });
-          return;
-        }
-        ctx.drawImage(img, 0, 0, w, h);
-        const imgData = ctx.getImageData(0, 0, w, h);
-        const data = imgData.data;
+        if (!ctx) { resolve({ subject: "Civic & Environmental Hazard", category: "Environment", confidence: 85 }); return; }
+        ctx.drawImage(img, 0, 0, W, H);
+        const { data } = ctx.getImageData(0, 0, W, H);
 
-        let totalR = 0, totalG = 0, totalB = 0;
-        let topBright = 0, topBlue = 0, topCount = 0;
-        let bottomR = 0, bottomG = 0, bottomB = 0, bottomCount = 0;
-        let waterPixelCount = 0;
-        let darkAsphaltCount = 0;
+        // ── per-pixel feature counters ─────────────────────────────────────
+        let skyBluePixels = 0;       // bright blue sky (factory photo top zone)
+        let darkStructurePixels = 0; // dark grey chimney structures
+        let waterGreenBluePixels = 0;// actual water — dark teal/murky, NOT bright blue
+        let garbageEarthPixels = 0;  // brownish/greenish mixed earthy colours (garbage)
+        let potholeGreyPixels = 0;   // uniform dark grey road surface
+        let smokeWhitePixels = 0;    // white/light grey plume pixels
+
         const gridAvgs: number[] = [];
 
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const idx = (y * w + x) * 4;
-            const r = data[idx];
-            const g = data[idx + 1];
-            const b = data[idx + 2];
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            const i = (y * W + x) * 4;
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+            const brightness = (r + g + b) / 3;
+            const saturation = Math.max(r, g, b) - Math.min(r, g, b);
 
-            totalR += r; totalG += g; totalB += b;
-            const bright = (r + g + b) / 3;
+            // SKY BLUE — very bright AND clearly blue-dominant
+            if (brightness > 140 && b > r + 25 && b > g + 10 && b > 130) {
+              skyBluePixels++;
+            }
 
-            if (y < 40) {
-              topBright += bright;
-              if (b > r + 15 && b > g + 10) topBlue++;
-              topCount++;
-            } else {
-              bottomR += r; bottomG += g; bottomB += b;
-              bottomCount++;
+            // DARK STRUCTURE (chimneys, poles, factories) — dark grey/black
+            if (brightness < 80 && saturation < 30) {
+              darkStructurePixels++;
+            }
 
-              if ((b > r + 10 && g > r + 5) || (g > r + 15 && b > r - 15 && bright < 210)) {
-                waterPixelCount++;
-              }
+            // SMOKE / PLUME — bright white or very light grey in upper half
+            if (y < 50 && brightness > 180 && saturation < 40) {
+              smokeWhitePixels++;
+            }
 
-              if (bright < 85 && Math.abs(r - g) < 20 && Math.abs(g - b) < 20) {
-                darkAsphaltCount++;
-              }
+            // ACTUAL WATER — murky teal/dark blue-green, NOT bright sky-blue
+            // Key difference: water is darker (brightness 40–150) + muted blue-green
+            if (brightness > 30 && brightness < 155 && b > r + 8 && g > r - 5 && b < 200) {
+              waterGreenBluePixels++;
+            }
+
+            // GARBAGE / EARTH — brown-orange, yellowish, or mixed earthy hues
+            if (r > g + 15 && r > b + 10 && brightness > 60 && brightness < 200) {
+              garbageEarthPixels++;
+            }
+
+            // ROAD / POTHOLE — uniform dark mid-grey asphalt
+            if (brightness > 50 && brightness < 130 && saturation < 25 && y > 50) {
+              potholeGreyPixels++;
             }
           }
         }
 
+        // ── 10×10 block variance (garbage heaps = very high variance) ──────
         for (let gy = 0; gy < 10; gy++) {
           for (let gx = 0; gx < 10; gx++) {
-            let gSum = 0;
-            for (let py = gy * 10; py < (gy + 1) * 10; py++) {
+            let s = 0;
+            for (let py = gy * 10; py < (gy + 1) * 10; py++)
               for (let px = gx * 10; px < (gx + 1) * 10; px++) {
-                const idx = (py * w + px) * 4;
-                gSum += (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                const i = (py * W + px) * 4;
+                s += (data[i] + data[i + 1] + data[i + 2]) / 3;
               }
-            }
-            gridAvgs.push(gSum / 100);
+            gridAvgs.push(s / 100);
           }
         }
-
         const avgGrid = gridAvgs.reduce((a, b) => a + b, 0) / gridAvgs.length;
-        const highVarianceScore = gridAvgs.reduce((a, b) => a + Math.pow(b - avgGrid, 2), 0) / gridAvgs.length;
+        const blockVariance = gridAvgs.reduce((a, b) => a + (b - avgGrid) ** 2, 0) / gridAvgs.length;
 
-        const avgTopBright = topBright / Math.max(topCount, 1);
-        const waterRatio = waterPixelCount / Math.max(bottomCount, 1);
-        const asphaltRatio = darkAsphaltCount / Math.max(bottomCount, 1);
+        const total = W * H;
+        const skyR        = skyBluePixels / total;
+        const darkR       = darkStructurePixels / total;
+        const smokeR      = smokeWhitePixels / total;
+        const waterR      = waterGreenBluePixels / total;
+        const garbageR    = garbageEarthPixels / total;
+        const potholeR    = potholeGreyPixels / total;
 
-        if (waterRatio > 0.15) {
-          resolve({ subject: "Environmental Water Body Pollution & Garbage Dumping", category: "Environment", confidence: 95 });
-        } else if (asphaltRatio > 0.32) {
+        // ── Decision tree ──────────────────────────────────────────────────
+        // Priority 1: Factory/Smoke — sky-blue in top half + dark vertical structure + possible plume
+        if (skyR > 0.10 && darkR > 0.04) {
+          resolve({ subject: "Industrial Air Pollution & Factory Smoke Emission", category: "Environment", confidence: 96 });
+        }
+        // Priority 2: Smoke plume dominant in top zone without much sky
+        else if (smokeR > 0.12 && darkR > 0.03) {
+          resolve({ subject: "Industrial Factory Smoke & Air Quality Hazard", category: "Environment", confidence: 94 });
+        }
+        // Priority 3: Road pothole — uniform dark grey over bottom, low variance
+        else if (potholeR > 0.28 && blockVariance < 900) {
           resolve({ subject: "Severe Road Pothole & Asphalt Damage", category: "Infrastructure", confidence: 93 });
-        } else if (highVarianceScore > 1100) {
+        }
+        // Priority 4: Water body — murky blue-green, mid-brightness, NOT sky-blue
+        else if (waterR > 0.30 && skyR < 0.15) {
+          resolve({ subject: "Environmental Water Body Pollution & Garbage Dumping", category: "Environment", confidence: 95 });
+        }
+        // Priority 5: Garbage / earth dump — brownish-earthy tones + high block variance
+        else if ((garbageR > 0.25 || blockVariance > 1200)) {
           resolve({ subject: "Public Garbage Dumping & Solid Waste Accumulation", category: "Environment", confidence: 92 });
-        } else if (avgTopBright > 175 && topBlue < 8) {
-          resolve({ subject: "Industrial Air Pollution & Factory Smoke Emission", category: "Environment", confidence: 94 });
-        } else if (avgTopBright < 55) {
-          resolve({ subject: "Exposed Electrical Wires & Streetlight Hazard", category: "Safety", confidence: 90 });
-        } else {
-          resolve({ subject: "Civic Infrastructure & Public Maintenance Hazard", category: "Infrastructure", confidence: 88 });
+        }
+        // Priority 6: Dark scene — wire/streetlight hazard
+        else if (darkR > 0.30) {
+          resolve({ subject: "Exposed Electrical Wires & Streetlight Safety Hazard", category: "Safety", confidence: 90 });
+        }
+        // Default
+        else {
+          resolve({ subject: "Civic Infrastructure & Public Maintenance Issue", category: "Infrastructure", confidence: 87 });
         }
       } catch {
         resolve({ subject: "Civic & Environmental Issue", category: "Environment", confidence: 85 });
       }
     };
-    img.onerror = () => {
-      resolve({ subject: "Civic & Environmental Issue", category: "Environment", confidence: 85 });
-    };
+    img.onerror = () => resolve({ subject: "Civic & Environmental Issue", category: "Environment", confidence: 85 });
     img.src = imgDataUrl;
   });
 }
+
 
 async function analyzePhotoWithAI(file: File): Promise<{ subject: string; category: string; confidence: number }> {
   return new Promise((resolve) => {
