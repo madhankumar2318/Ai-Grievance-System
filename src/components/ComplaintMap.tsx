@@ -164,7 +164,12 @@ export default function ComplaintMap({
                 center: defaultCenter,
                 zoom: 12,
                 zoomControl: true,
-                scrollWheelZoom: false,
+                scrollWheelZoom: true,
+                dragging: true,
+                touchZoom: true,
+                doubleClickZoom: true,
+                boxZoom: true,
+                keyboard: true,
             });
 
             // OpenStreetMap tile layer with high-reliability CDN
@@ -253,6 +258,7 @@ export default function ComplaintMap({
                 const marker = L.marker([pin.lat, pin.lng], { icon: svgIcon }).addTo(markersLayer);
                 marker.on("click", () => {
                     setSelected(pin);
+                    map.flyTo([pin.lat, pin.lng], Math.max(map.getZoom(), 13), { duration: 0.8 });
                 });
 
                 marker.bindTooltip(`
@@ -274,6 +280,14 @@ export default function ComplaintMap({
         });
     }, [pins]);
 
+    const handleFitAll = () => {
+        if (!mapInstanceRef.current || pins.length === 0) return;
+        import("leaflet").then((L) => {
+            const coords: [number, number][] = pins.map(p => [p.lat, p.lng]);
+            mapInstanceRef.current?.fitBounds(L.latLngBounds(coords), { padding: [50, 50], maxZoom: 14 });
+        });
+    };
+
     return (
         <div style={{ fontFamily: "inherit" }}>
             {/* Header */}
@@ -282,9 +296,34 @@ export default function ComplaintMap({
                     <h2 style={{ fontSize: "clamp(1.5rem, 3vw, 2rem)", marginBottom: "0.4rem" }}>{title}</h2>
                     <p style={{ color: "var(--text-muted)", fontSize: "0.92rem" }}>{subtitle}</p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                        🖐️ Drag to pan • 🔍 Scroll to zoom
+                    </span>
+                    <button
+                        type="button"
+                        onClick={handleFitAll}
+                        style={{
+                            padding: "0.35rem 0.75rem",
+                            borderRadius: "0.5rem",
+                            border: "1px solid var(--border)",
+                            background: "var(--bg-card)",
+                            color: "var(--text-main)",
+                            fontSize: "0.78rem",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "0.35rem",
+                            transition: "var(--transition)",
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}
+                    >
+                        🎯 Fit All Pins
+                    </button>
                     <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--primary)" }}>
-                        📍 {pins.length} Grievance{pins.length !== 1 ? "s" : ""} Plotted
+                        📍 {pins.length} Plotted
                     </span>
                 </div>
             </div>
@@ -381,6 +420,10 @@ export default function ComplaintMap({
                 .leaflet-container {
                     font-family: inherit !important;
                     background: #0f1523 !important;
+                    cursor: grab !important;
+                }
+                .leaflet-container:active {
+                    cursor: grabbing !important;
                 }
             `}</style>
         </div>
