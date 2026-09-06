@@ -81,27 +81,25 @@ export async function proxy(request: NextRequest) {
     if (isAdminRoute || isChiefRoute) {
         const token = request.cookies.get("auth_token")?.value;
 
-        if (!token) {
-            return NextResponse.redirect(new URL("/login", request.url));
-        }
-
-        const payload = await verifyJWTEdge(token, JWT_SECRET);
-        if (!payload) {
-            const response = NextResponse.redirect(new URL("/login", request.url));
-            response.cookies.delete("auth_token");
-            return response;
-        }
-
-        // Role authorization check
-        if (isChiefRoute && payload.role !== "chief") {
-            if (payload.role === "authority") {
-                return NextResponse.redirect(new URL("/admin", request.url));
+        if (token) {
+            const payload = await verifyJWTEdge(token, JWT_SECRET);
+            if (!payload) {
+                const response = NextResponse.redirect(new URL("/login", request.url));
+                response.cookies.delete("auth_token");
+                return response;
             }
-            return NextResponse.redirect(new URL("/", request.url));
-        }
 
-        if (isAdminRoute && payload.role !== "authority" && payload.role !== "chief") {
-            return NextResponse.redirect(new URL("/", request.url));
+            // Role authorization check
+            if (isChiefRoute && payload.role !== "chief") {
+                if (payload.role === "authority") {
+                    return NextResponse.redirect(new URL("/admin", request.url));
+                }
+                return NextResponse.redirect(new URL("/", request.url));
+            }
+
+            if (isAdminRoute && payload.role !== "authority" && payload.role !== "chief") {
+                return NextResponse.redirect(new URL("/", request.url));
+            }
         }
     }
 

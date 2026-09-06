@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
 import { NotificationBanner } from "@/components/PushNotifications";
 import { analyzePhotoServerAction } from "@/app/actions/analyzePhoto";
@@ -563,6 +564,7 @@ function GpsCameraModal({
 /* ─── Main Complaint Page ────────────────────────────────── */
 export default function Home() {
   const { t } = useLang();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({ subject: "", description: "", location: "", email: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<SubmissionResponse | null>(null);
@@ -714,7 +716,7 @@ export default function Home() {
 
   if (result?.success) {
     return (
-      <ProtectedRoute allowedRoles={["user"]}>
+      <ProtectedRoute allowedRoles={["user", "authority", "chief"]}>
         <main className="container section animate-fade-in" style={{ textAlign: "center" }}>
           <NotificationBanner complaintId={result.data.id} />
           <div className="glass" style={{ padding: "4rem", borderRadius: "1.5rem", maxWidth: "600px", margin: "0 auto" }}>
@@ -747,8 +749,106 @@ export default function Home() {
   }
 
   return (
-    <ProtectedRoute allowedRoles={["user"]}>
+    <ProtectedRoute allowedRoles={["user", "authority", "chief"]}>
       {showGpsCamera && <GpsCameraModal onCapture={handleGpsCapture} onClose={() => setShowGpsCamera(false)} />}
+
+      {/* Authority quick-access dashboard banner */}
+      {user?.role === "authority" && (
+        <div className="container" style={{ paddingTop: "1.25rem", paddingBottom: "0" }}>
+          <div className="glass animate-fade-in" style={{
+            padding: "0.85rem 1.25rem",
+            borderRadius: "0.875rem",
+            border: "1px solid rgba(249, 115, 22, 0.35)",
+            background: "linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(249, 115, 22, 0.04))",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "1rem",
+            flexWrap: "wrap",
+            boxShadow: "0 4px 16px rgba(249, 115, 22, 0.08)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <span style={{ fontSize: "1.3rem" }}>🛡️</span>
+              <div>
+                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#f97316" }}>
+                  Signed in as Authority ({user.username})
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  You have access to the Authority Grievance Management Dashboard.
+                </div>
+              </div>
+            </div>
+            <Link
+              href="/admin"
+              className="btn btn-primary"
+              style={{
+                padding: "0.45rem 1.15rem",
+                fontSize: "0.82rem",
+                borderRadius: "0.5rem",
+                textDecoration: "none",
+                background: "linear-gradient(135deg, #f97316, #ea580c)",
+                border: "none",
+                color: "white",
+                fontWeight: "700",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              Open Authority Dashboard →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Chief Administrator quick-access dashboard banner */}
+      {user?.role === "chief" && (
+        <div className="container" style={{ paddingTop: "1.25rem", paddingBottom: "0" }}>
+          <div className="glass animate-fade-in" style={{
+            padding: "0.85rem 1.25rem",
+            borderRadius: "0.875rem",
+            border: "1px solid rgba(236, 72, 153, 0.35)",
+            background: "linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(236, 72, 153, 0.04))",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "1rem",
+            flexWrap: "wrap",
+            boxShadow: "0 4px 16px rgba(236, 72, 153, 0.08)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <span style={{ fontSize: "1.3rem" }}>⭐</span>
+              <div>
+                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#ec4899" }}>
+                  Signed in as Chief Administrator ({user.username})
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  Access city-wide oversight, analytics, and departmental controls.
+                </div>
+              </div>
+            </div>
+            <Link
+              href="/chief"
+              className="btn btn-primary"
+              style={{
+                padding: "0.45rem 1.15rem",
+                fontSize: "0.82rem",
+                borderRadius: "0.5rem",
+                textDecoration: "none",
+                background: "linear-gradient(135deg, #ec4899, #db2777)",
+                border: "none",
+                color: "white",
+                fontWeight: "700",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              Open Chief Dashboard →
+            </Link>
+          </div>
+        </div>
+      )}
 
       <main>
         <section className="section" style={{ background: "radial-gradient(circle at top right, hsla(245,75%,60%,0.1), transparent)" }}>

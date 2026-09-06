@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
+import { getComplaintsServerAction, updateComplaintStatusServerAction } from "@/app/actions/complaintActions";
 
 
 const PRIORITY_CONFIG: Record<string, { color: string; icon: string }> = {
@@ -65,28 +66,28 @@ export default function AdminDashboard() {
     const toggleRow = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
     const fetchComplaints = async () => {
-        const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
+        setLoading(true);
         try {
-            const res = await fetch(`${API_URL}/api/complaints`);
-            const data = await res.json();
-            const list = Array.isArray(data) ? data : data.complaints || [];
-            const mapped = list.map((c: DbAdminComplaint) => ({
-                id: c.id,
-                subject: c.subject,
-                category: c.category,
-                priority: c.priority,
-                status: c.status,
-                user: c.user_email || "Anonymous",
-                attachments: c.attachment_count || 0,
-                userEmail: c.user_email || "",
-                description: c.description,
-                location: c.location,
-                date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
-                aiNote: c.ai_reasoning || "Triage complete.",
-            }));
-            setComplaints(mapped);
+            const res = await getComplaintsServerAction();
+            if (res.success && res.complaints) {
+                const mapped = res.complaints.map((c) => ({
+                    id: c.id,
+                    subject: c.subject,
+                    category: c.category || "General",
+                    priority: c.priority || "Medium",
+                    status: c.status || "Pending",
+                    user: c.user_email || "Citizen",
+                    attachments: c.attachment_count || 0,
+                    userEmail: c.user_email || "",
+                    description: c.description || "",
+                    location: c.location || "Location not specified",
+                    date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                    aiNote: c.ai_reasoning || "Triage complete.",
+                }));
+                setComplaints(mapped);
+            }
         } catch (err) {
-            console.error("Error fetching complaints from Spring Boot:", err);
+            console.error("Error fetching complaints in admin dashboard:", err);
         } finally {
             setLoading(false);
         }
@@ -99,15 +100,10 @@ export default function AdminDashboard() {
     const updateStatus = async (id: string, newStatus: "Resolved" | "Rejected") => {
         setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
         setExpandedId(null);
-        const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
         try {
-            await fetch(`${API_URL}/api/complaints/update-status`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, status: newStatus }),
-            });
+            await updateComplaintStatusServerAction(id, newStatus);
         } catch (err) {
-            console.error("Error updating status in Spring Boot:", err);
+            console.error("Error updating status:", err);
         }
     };
 

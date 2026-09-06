@@ -76,6 +76,9 @@ export default function Navbar() {
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
                             </>)}
+                            {user?.role === "authority" && (
+                                <NavLink href="/admin" active={isActive("/admin")}>🛡️ Authority Portal</NavLink>
+                            )}
                             {user?.role === "chief" && (
                                 <NavLink href="/chief" active={isActive("/chief")}>⭐ {t("nav_chief")}</NavLink>
                             )}
@@ -243,6 +246,40 @@ export default function Navbar() {
                                             <div style={{ fontWeight: "700", fontSize: "0.875rem" }}>{user.username}</div>
                                             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>{user.email}</div>
                                         </div>
+                                        {user.role === "authority" && (
+                                            <Link
+                                                href="/admin"
+                                                onClick={() => setShowUserMenu(false)}
+                                                style={{
+                                                    display: "flex", alignItems: "center", gap: "0.5rem",
+                                                    padding: "0.65rem 1rem", textDecoration: "none",
+                                                    fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)",
+                                                    borderBottom: "1px solid var(--border)",
+                                                    transition: "background 0.15s",
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-main)"; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                                            >
+                                                🛡️ Authority Dashboard
+                                            </Link>
+                                        )}
+                                        {user.role === "chief" && (
+                                            <Link
+                                                href="/chief"
+                                                onClick={() => setShowUserMenu(false)}
+                                                style={{
+                                                    display: "flex", alignItems: "center", gap: "0.5rem",
+                                                    padding: "0.65rem 1rem", textDecoration: "none",
+                                                    fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)",
+                                                    borderBottom: "1px solid var(--border)",
+                                                    transition: "background 0.15s",
+                                                }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-main)"; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                                            >
+                                                ⭐ Chief Dashboard
+                                            </Link>
+                                        )}
                                         {/* Logout */}
                                         <button
                                             onClick={() => { setShowUserMenu(false); handleLogout(); }}
@@ -311,6 +348,15 @@ export default function Navbar() {
                             </Link>
                         </>
                     )}
+                    {user.role === "authority" && (
+                        <Link
+                            href="/admin"
+                            className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            🛡️ Authority Portal
+                        </Link>
+                    )}
                     {user.role === "chief" && (
                         <Link
                             href="/chief"
@@ -319,7 +365,8 @@ export default function Navbar() {
                         >
                             ⭐ {t("nav_chief")}
                         </Link>
-                    )}                </div>
+                    )}
+                </div>
             )}
 
             <style>{`

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ComplaintMap from "@/components/ComplaintMap";
 import { useLang } from "@/context/LanguageContext";
+import { getComplaintsServerAction } from "@/app/actions/complaintActions";
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -151,28 +152,26 @@ export default function ChiefDashboard() {
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-    /* ── Fetch from Supabase ────────────────────────────────────────────── */
+    /* ── Fetch from Supabase / Spring Boot ────────────────────────────────────────────── */
     const fetchComplaints = async () => {
         setLoading(true);
-        const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
         try {
-            const res = await fetch(`${API_URL}/api/complaints`);
-            const data = await res.json();
-            const list = Array.isArray(data) ? data : data.complaints || [];
-
-            setComplaints(list.map((c: DbChiefComplaint) => ({
-                id: c.id,
-                subject: c.subject,
-                category: c.category || "Other",
-                priority: c.priority || "Medium",
-                status: c.status || "Pending",
-                user: c.user_email || "Anonymous",
-                location: c.location || "—",
-                date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
-                created_at: c.created_at,
-                updated_at: c.updated_at,
-            })));
-            setLastRefresh(new Date());
+            const res = await getComplaintsServerAction();
+            if (res.success && res.complaints) {
+                setComplaints(res.complaints.map((c) => ({
+                    id: c.id,
+                    subject: c.subject,
+                    category: c.category || "Other",
+                    priority: c.priority || "Medium",
+                    status: c.status || "Pending",
+                    user: c.user_email || "Anonymous",
+                    location: c.location || "—",
+                    date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                    created_at: c.created_at,
+                    updated_at: c.updated_at || c.created_at,
+                })));
+                setLastRefresh(new Date());
+            }
         } catch (err) {
             console.error("Chief dashboard fetch error:", err);
         } finally {

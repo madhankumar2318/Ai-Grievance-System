@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
+import { syncSessionCookieServerAction, logoutServerAction } from "@/app/actions/authActions";
+
 export type UserRole = "user" | "authority" | "chief";
 
 interface AuthUser {
@@ -13,6 +15,7 @@ interface AuthUser {
 interface AuthContextType {
     user: AuthUser | null;
     isLoggedIn: boolean;
+    isLoading: boolean;
     login: (user: AuthUser) => void;
     logout: () => void;
 }
@@ -21,19 +24,23 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<AuthUser | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const stored = localStorage.getItem("grievance_user");
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
-                setTimeout(() => {
+                if (parsed && parsed.role) {
                     setUser(parsed);
-                }, 0);
+                    // Sync edge cookie in background
+                    syncSessionCookieServerAction(parsed).catch(() => {});
+                }
             } catch {
                 localStorage.removeItem("grievance_user");
             }
         }
+        setIsLoading(false);
     }, []);
 
     const login = (authUser: AuthUser) => {
@@ -44,20 +51,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: authUser.email,
             role: authUser.role,
         }));
+        syncSessionCookieServerAction(authUser).catch(() => {});
     };
 
     const logout = async () => {
         try {
-            await fetch("/api/auth/logout", { method: "POST" });
+            await logoutServerAction();
         } catch (err) {
-            console.error("Error clearing session cookie:", err);
+            console.error("Error clearing auth cookie:", err);
         }
+        try {
+            await fetch("/api/auth/logout", { method: "POST" });
+        } catch {}
         setUser(null);
         localStorage.removeItem("grievance_user");
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout }}>
+        <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
