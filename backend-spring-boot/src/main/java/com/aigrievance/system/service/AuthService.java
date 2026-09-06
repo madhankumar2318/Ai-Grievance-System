@@ -61,4 +61,25 @@ public class AuthService {
 
         return new AuthResponse(false, "Invalid email, password, or role.");
     }
+
+    public AuthResponse register(com.aigrievance.system.dto.RegisterRequest request) {
+        String email = request.getEmail() != null ? request.getEmail().toLowerCase().trim() : "";
+        String role = request.getRole() != null ? request.getRole() : "user";
+        String username = request.getUsername() != null ? request.getUsername().trim() : "Citizen User";
+
+        if (email.isBlank() || request.getPassword() == null || request.getPassword().isBlank()) {
+            return new AuthResponse(false, "Email and password are required.");
+        }
+
+        if (userRepository.existsByEmail(email)) {
+            return new AuthResponse(false, "Email is already registered.");
+        }
+
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        User user = new User(email, username, hashedPassword, role);
+        userRepository.save(user);
+
+        String token = tokenProvider.generateToken(email, username, role);
+        return new AuthResponse(true, token, new AuthResponse.UserDto(email, username, role));
+    }
 }
