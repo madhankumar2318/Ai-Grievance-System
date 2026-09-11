@@ -25,7 +25,9 @@ public class ComplaintService {
 
     @Transactional
     public Map<String, Object> createComplaint(ComplaintRequest request) {
-        String complaintId = "GRV-" + (10000 + new Random().nextInt(90000));
+        String randomSuffix = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        int year = java.time.Year.now().getValue();
+        String complaintId = "GRV-" + year + "-" + randomSuffix;
 
         // Perform AI Triage
         GeminiTriageService.TriageResult triage = geminiTriageService.classifyComplaint(
@@ -49,16 +51,16 @@ public class ComplaintService {
         // Save to PostgreSQL via Spring Data JPA
         complaintRepository.save(complaint);
 
-        // Send Email Notification in async background thread
+        // Send Email Notification in managed async thread pool
         if (complaint.getUserEmail() != null && !complaint.getUserEmail().isBlank()) {
-            new Thread(() -> emailService.sendComplaintNotification(
+            java.util.concurrent.CompletableFuture.runAsync(() -> emailService.sendComplaintNotification(
                     complaint.getUserEmail(),
                     complaintId,
                     complaint.getSubject(),
                     triage.getCategory(),
                     triage.getPriority(),
                     "submission"
-            )).start();
+            ));
         }
 
         return Map.of(
@@ -95,16 +97,16 @@ public class ComplaintService {
             complaint.setStatus(newStatus);
             complaintRepository.save(complaint);
 
-            // Send status update notification email
+            // Send status update notification email via managed async thread pool
             if (complaint.getUserEmail() != null && !complaint.getUserEmail().isBlank()) {
-                new Thread(() -> emailService.sendComplaintNotification(
+                java.util.concurrent.CompletableFuture.runAsync(() -> emailService.sendComplaintNotification(
                         complaint.getUserEmail(),
                         complaint.getId(),
                         complaint.getSubject(),
                         complaint.getCategory(),
                         complaint.getPriority(),
                         "status_change"
-                )).start();
+                ));
             }
         }
         return complaint;

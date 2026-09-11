@@ -21,6 +21,15 @@ public class AuthService {
     @Autowired
     private JwtTokenProvider tokenProvider;
 
+    @org.springframework.beans.factory.annotation.Value("${security.passphrase.chief:Ch-Falcon20}")
+    private String chiefPassphrase;
+
+    @org.springframework.beans.factory.annotation.Value("${security.passphrase.authority:Au-Titan18}")
+    private String authorityPassphrase;
+
+    @org.springframework.beans.factory.annotation.Value("${security.demo.enabled:false}")
+    private boolean demoEnabled;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     // Pre-configured demo accounts
@@ -35,8 +44,8 @@ public class AuthService {
         String password = request.getPassword();
         String role = request.getRole();
 
-        // 1. Check demo accounts
-        if (DEMO_USERS.containsKey(email)) {
+        // 1. Check demo accounts if enabled
+        if (demoEnabled && DEMO_USERS.containsKey(email)) {
             String[] demoDetails = DEMO_USERS.get(email);
             String demoName = demoDetails[0];
             String demoPass = demoDetails[1];
@@ -69,6 +78,17 @@ public class AuthService {
 
         if (email.isBlank() || request.getPassword() == null || request.getPassword().isBlank()) {
             return new AuthResponse(false, "Email and password are required.");
+        }
+
+        // Validate administrative secret passphrases for elevated roles
+        if ("chief".equalsIgnoreCase(role)) {
+            if (request.getPasscode() == null || !request.getPasscode().trim().equals(chiefPassphrase)) {
+                return new AuthResponse(false, "Access Denied: Invalid Chief Administrator verification passphrase.");
+            }
+        } else if ("authority".equalsIgnoreCase(role)) {
+            if (request.getPasscode() == null || !request.getPasscode().trim().equals(authorityPassphrase)) {
+                return new AuthResponse(false, "Access Denied: Invalid Field Officer verification passphrase.");
+            }
         }
 
         if (userRepository.existsByEmail(email)) {

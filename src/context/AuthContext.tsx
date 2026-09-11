@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-import { syncSessionCookieServerAction, logoutServerAction } from "@/app/actions/authActions";
+import { getVerifiedSessionServerAction, logoutServerAction } from "@/app/actions/authActions";
 
 export type UserRole = "user" | "authority" | "chief";
 
@@ -27,20 +27,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const stored = localStorage.getItem("grievance_user");
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                if (parsed && parsed.role) {
-                    setUser(parsed);
-                    // Sync edge cookie in background
-                    syncSessionCookieServerAction(parsed).catch(() => {});
+        // Authenticate with server-signed HTTP-only cookie as authoritative source of truth
+        getVerifiedSessionServerAction()
+            .then((res) => {
+                if (res.authenticated && res.user) {
+                    setUser(res.user);
+                    localStorage.setItem("grievance_user", JSON.stringify(res.user));
+                } else {
+                    setUser(null);
+                    localStorage.removeItem("grievance_user");
                 }
-            } catch {
-                localStorage.removeItem("grievance_user");
-            }
-        }
-        setIsLoading(false);
+            })
+            .catch(() => {
+                // Fallback to cached metadata if offline, but without elevated privilege minting
+                const stored = localStorage.getItem("grievance_user");
+                if (stored) {
+                    try {
+                        const parsed = JSON.parse(stored);
+                        if (parsed && parsed.role) setUser(parsed);
+                    } catch {
+                        localStorage.removeItem("grievance_user");
+                    }
+                }
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
     }, []);
 
     const login = (authUser: AuthUser) => {
@@ -51,7 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: authUser.email,
             role: authUser.role,
         }));
-        syncSessionCookieServerAction(authUser).catch(() => {});
     };
 
     const logout = async () => {

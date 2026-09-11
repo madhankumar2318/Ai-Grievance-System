@@ -81,30 +81,38 @@ export async function proxy(request: NextRequest) {
     if (isAdminRoute || isChiefRoute) {
         const token = request.cookies.get("auth_token")?.value;
 
-        if (token) {
-            const payload = await verifyJWTEdge(token, JWT_SECRET);
-            if (!payload) {
-                const response = NextResponse.redirect(new URL("/login", request.url));
-                response.cookies.delete("auth_token");
-                return response;
-            }
+        // Strictly require token for protected routes
+        if (!token) {
+            const loginUrl = new URL("/login", request.url);
+            loginUrl.searchParams.set("redirect", pathname);
+            return NextResponse.redirect(loginUrl);
+        }
 
-            // Role authorization check
-            if (isChiefRoute && payload.role !== "chief") {
-                if (payload.role === "authority") {
-                    return NextResponse.redirect(new URL("/admin", request.url));
-                }
-                return NextResponse.redirect(new URL("/", request.url));
-            }
+        const payload = await verifyJWTEdge(token, JWT_SECRET);
+        if (!payload) {
+            const response = NextResponse.redirect(new URL("/login", request.url));
+            response.cookies.delete("auth_token");
+            return response;
+        }
 
-            if (isAdminRoute && payload.role !== "authority" && payload.role !== "chief") {
-                return NextResponse.redirect(new URL("/", request.url));
+        // Role authorization checks
+        if (isChiefRoute && payload.role !== "chief") {
+            if (payload.role === "authority") {
+                return NextResponse.redirect(new URL("/admin", request.url));
             }
+            return NextResponse.redirect(new URL("/", request.url));
+        }
+
+        if (isAdminRoute && payload.role !== "authority" && payload.role !== "chief") {
+            return NextResponse.redirect(new URL("/", request.url));
         }
     }
 
     return NextResponse.next();
 }
+
+// Export both proxy and middleware for full Next.js 16 compatibility
+export const middleware = proxy;
 
 export const config = {
     matcher: ["/admin/:path*", "/chief/:path*"],

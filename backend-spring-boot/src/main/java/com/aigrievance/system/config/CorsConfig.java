@@ -15,7 +15,11 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.setAllowedOriginPatterns(List.of("http://localhost:3000", "https://*.vercel.app"));
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://ai-grievance-system-beta.vercel.app"
+        ));
         config.setAllowedHeaders(List.of("Origin", "Content-Type", "Accept", "Authorization"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 

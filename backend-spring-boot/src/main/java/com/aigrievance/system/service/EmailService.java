@@ -31,6 +31,11 @@ public class EmailService {
                 : "High".equalsIgnoreCase(priority) ? "#f97316"
                 : "Medium".equalsIgnoreCase(priority) ? "#f59e0b" : "#10b981";
 
+        String safeSubject = org.springframework.web.util.HtmlUtils.htmlEscape(subject != null ? subject : "");
+        String safeCategory = org.springframework.web.util.HtmlUtils.htmlEscape(category != null ? category : "");
+        String safePriority = org.springframework.web.util.HtmlUtils.htmlEscape(priority != null ? priority : "");
+        String safeComplaintId = org.springframework.web.util.HtmlUtils.htmlEscape(complaintId != null ? complaintId : "");
+
         String htmlContent = """
                 <!DOCTYPE html>
                 <html>
@@ -98,13 +103,13 @@ public class EmailService {
                 """.formatted(
                 emoji,
                 isStatusChange ? "Your complaint status has been updated by an authority officer." : "Your grievance has been received and processed by our AI triage system.",
-                complaintId,
-                subject,
-                category,
+                safeComplaintId,
+                safeSubject,
+                safeCategory,
                 priorityColor,
-                priority,
+                safePriority,
                 trackingLink,
-                complaintId
+                safeComplaintId
         );
 
         try {

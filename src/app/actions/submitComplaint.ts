@@ -9,7 +9,20 @@ interface SubmitComplaintParams {
 }
 
 export async function submitComplaintServerAction(params: SubmitComplaintParams) {
-  const { subject, description, location = "", email = "", attachmentCount = 0 } = params;
+  const cleanSubject = (params.subject || "").trim().slice(0, 200);
+  const cleanDescription = (params.description || "").trim().slice(0, 2500);
+  const cleanLocation = (params.location || "").trim().slice(0, 250);
+  const cleanEmail = (params.email || "").toLowerCase().trim().slice(0, 150);
+  const attachmentCount = Math.max(0, Math.min(10, params.attachmentCount || 0));
+
+  if (!cleanSubject || !cleanDescription) {
+    return { success: false, error: "Subject and description are required." };
+  }
+
+  const subject = cleanSubject;
+  const description = cleanDescription;
+  const location = cleanLocation;
+  const email = cleanEmail;
 
   // 1. Try Java Spring Boot REST API first if running
   const springBootUrl = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
@@ -23,7 +36,7 @@ export async function submitComplaintServerAction(params: SubmitComplaintParams)
         subject,
         description,
         location,
-        userEmail: email.toLowerCase().trim(),
+        userEmail: email,
         attachmentCount,
       }),
       signal: controller.signal,
@@ -111,7 +124,13 @@ Output ONLY valid JSON:
     }
   }
 
-  const complaintId = `GRV-${Math.floor(10000 + Math.random() * 90000)}`;
+  // High-entropy tracking ID: GRV-YYYY-XXXXXX (unguessable, prevents IDOR enumeration)
+  const randomSuffix = Array.from(crypto.getRandomValues(new Uint8Array(4)))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+  const year = new Date().getFullYear();
+  const complaintId = `GRV-${year}-${randomSuffix}`;
   const now = new Date().toISOString();
 
   // 3. Persist to Supabase Database

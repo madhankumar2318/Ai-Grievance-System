@@ -15,6 +15,9 @@ export interface DbComplaintRecord {
   ai_reasoning: string | null;
 }
 
+import { getVerifiedSessionServerAction } from "./authActions";
+import { cookies } from "next/headers";
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
 const SPRING_BOOT_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
@@ -30,11 +33,16 @@ export async function getComplaintsServerAction(): Promise<{
 }> {
   // 1. Try Java Spring Boot REST API first if running locally
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
     const res = await fetch(`${SPRING_BOOT_URL}/api/complaints`, {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers,
       signal: controller.signal,
       cache: "no-store",
     });
@@ -104,15 +112,30 @@ export async function updateComplaintStatusServerAction(
     return { success: false, error: "Complaint ID and status are required." };
   }
 
+  // Enforce server-side authorization check: only officers or chiefs can update status
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Unauthorized: Please log in with authorized credentials." };
+  }
+
+  if (session.user.role !== "authority" && session.user.role !== "chief") {
+    return { success: false, error: "Access Denied: Only field officers and chief administrators can update complaint status." };
+  }
+
   const now = new Date().toISOString();
 
   // 1. Try Java Spring Boot REST API
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2000);
     const res = await fetch(`${SPRING_BOOT_URL}/api/complaints/update-status`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ id, status: newStatus }),
       signal: controller.signal,
     });

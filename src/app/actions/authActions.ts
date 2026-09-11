@@ -92,6 +92,20 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
     return { success: false, error: "Email and password are required." };
   }
 
+  // Enforce administrative secret passphrases for elevated roles
+  const CHIEF_PASSPHRASE = process.env.CHIEF_PASSPHRASE || "Ch-Falcon20";
+  const AUTHORITY_PASSPHRASE = process.env.AUTHORITY_PASSPHRASE || "Au-Titan18";
+
+  if (role === "chief") {
+    if (!params.passcode || params.passcode.trim() !== CHIEF_PASSPHRASE) {
+      return { success: false, error: "Access Denied: Invalid Chief Administrator verification passphrase." };
+    }
+  } else if (role === "authority") {
+    if (!params.passcode || params.passcode.trim() !== AUTHORITY_PASSPHRASE) {
+      return { success: false, error: "Access Denied: Invalid Field Officer verification passphrase." };
+    }
+  }
+
   // 1. Try Java Spring Boot REST API first if running locally
   try {
     const controller = new AbortController();
@@ -208,14 +222,15 @@ export async function loginUserServerAction(credentials: {
   const password = credentials.password;
   const role = credentials.role;
 
-  // Demo accounts
+  // Demo accounts (only active when explicitly enabled in environment)
+  const isDemoEnabled = process.env.ENABLE_DEMO_ACCOUNTS === "true" || process.env.NEXT_PUBLIC_DEMO_MODE === "true";
   const DEMO_USERS: Record<string, { name: string; pass: string; role: string }> = {
     "user@demo.com": { name: "Rahul Sharma", pass: "user123", role: "user" },
     "authority@demo.com": { name: "Officer Priya", pass: "auth123", role: "authority" },
     "chief@demo.com": { name: "Chief Kumar", pass: "chief123", role: "chief" },
   };
 
-  if (DEMO_USERS[email]) {
+  if (isDemoEnabled && DEMO_USERS[email]) {
     const demo = DEMO_USERS[email];
     if (demo.role === role && demo.pass === password) {
       const user = { email, username: demo.name, role: demo.role };
@@ -300,14 +315,68 @@ export async function loginUserServerAction(credentials: {
 }
 
 /**
- * Sync cookie for client sessions restored from localStorage
+ * Get verified session directly from HTTP-only auth_token cookie
  */
-export async function syncSessionCookieServerAction(user: { email: string; username: string; role: string }) {
-  if (user && user.email && user.role) {
-    await setAuthCookie(user);
-    return { success: true };
+export async function getVerifiedSessionServerAction(): Promise<{
+  authenticated: boolean;
+  user: { email: string; username: string; role: "user" | "authority" | "chief" } | null;
+}> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if (!token) return { authenticated: false, user: null };
+
+    const parts = token.split(".");
+    if (parts.length !== 3) return { authenticated: false, user: null };
+
+    const [encodedHeader, encodedPayload, encodedSignature] = parts;
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(JWT_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+
+    const signatureInputData = encoder.encode(`${encodedHeader}.${encodedPayload}`);
+    const signatureBytes = Buffer.from(encodedSignature, "base64url");
+
+    const isValid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      signatureBytes,
+      signatureInputData
+    );
+
+    if (!isValid) return { authenticated: false, user: null };
+
+    const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf-8"));
+    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
+      return { authenticated: false, user: null };
+    }
+
+    return {
+      authenticated: true,
+      user: {
+        email: payload.email,
+        username: payload.username,
+        role: payload.role,
+      },
+    };
+  } catch (err) {
+    console.error("Session verification error:", err);
+    return { authenticated: false, user: null };
   }
-  return { success: false };
+}
+
+/**
+ * Backward compatible session verification (never trusts unverified client roles)
+ */
+export async function syncSessionCookieServerAction(_untrustedUser: { email: string; username: string; role: string }) {
+  // Verify existing cryptographic cookie rather than accepting client-supplied role
+  const verified = await getVerifiedSessionServerAction();
+  return { success: verified.authenticated };
 }
 
 /**
