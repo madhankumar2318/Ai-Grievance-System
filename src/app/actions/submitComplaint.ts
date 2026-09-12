@@ -1,5 +1,7 @@
 "use server";
 
+import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
+
 interface SubmitComplaintParams {
   subject: string;
   description: string;
@@ -9,6 +11,17 @@ interface SubmitComplaintParams {
 }
 
 export async function submitComplaintServerAction(params: SubmitComplaintParams) {
+  const ip = await getClientIp();
+
+  // Enforce rate limit: max 10 complaint submissions per minute per IP
+  const rateResult = checkRateLimit(ip, "submit_complaint", 10, 60000);
+  if (!rateResult.success) {
+    return {
+      success: false,
+      error: `Submission rate limit exceeded: Maximum 10 grievances per minute. Please wait ${rateResult.retryAfterSeconds}s before trying again.`,
+    };
+  }
+
   const cleanSubject = (params.subject || "").trim().slice(0, 200);
   const cleanDescription = (params.description || "").trim().slice(0, 2500);
   const cleanLocation = (params.location || "").trim().slice(0, 250);

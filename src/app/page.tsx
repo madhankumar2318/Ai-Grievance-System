@@ -231,8 +231,14 @@ async function analyzePhotoWithAI(file: File): Promise<{ subject: string; catego
   // 1. Try Next.js Server Action (uses GEMINI_API_KEY directly on Vercel)
   try {
     const serverResult = await analyzePhotoServerAction(base64Data, mimeType);
-    if (serverResult && serverResult.subject) {
-      return serverResult;
+    if (serverResult) {
+      if (serverResult.error) {
+        alert(serverResult.error);
+        return { subject: "Analysis Paused", category: "Environment", confidence: 0 };
+      }
+      if (serverResult.subject) {
+        return serverResult;
+      }
     }
   } catch (err) {
     console.warn("⚠️ Server Action analyze error:", err);
@@ -686,6 +692,9 @@ export default function Home() {
         } catch {}
 
         setResult(response);
+      } else if (response && response.error) {
+        alert(response.error);
+        return;
       } else {
         throw new Error("Submission returned unhandled status");
       }

@@ -1,9 +1,56 @@
 "use server";
 
+import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
+
 export async function analyzePhotoServerAction(
   base64Data: string,
   mimeType: string
-): Promise<{ subject: string; category: string; confidence: number } | null> {
+): Promise<{ subject: string; category: string; confidence: number; error?: string } | null> {
+  const ip = await getClientIp();
+
+  // Enforce rate limit: max 5 photo analysis requests per minute per IP
+  const rateResult = checkRateLimit(ip, "analyze_photo", 5, 60000);
+  if (!rateResult.success) {
+    console.warn(`⚠️ Rate limit exceeded on analyze_photo for IP ${ip}`);
+    return {
+      subject: "Rate Limit Reached",
+      category: "Environment",
+      confidence: 0,
+      error: `Rate limit reached: Max 5 photo analyses per minute. Please wait ${rateResult.retryAfterSeconds}s before trying again.`,
+    };
+  }
+
+  // Validate payload size (max 5MB base64 string)
+  if (!base64Data || typeof base64Data !== "string") {
+    return null;
+  }
+  if (base64Data.length > 5 * 1024 * 1024) {
+    return {
+      subject: "Image Too Large",
+      category: "Environment",
+      confidence: 0,
+      error: "Image payload exceeds 5MB. Please upload a smaller or compressed photo.",
+    };
+  }
+
+  // Validate MIME type against whitelist
+  const cleanMime = (mimeType || "image/jpeg").toLowerCase().trim();
+  const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  if (!allowedMimes.includes(cleanMime)) {
+    return {
+      subject: "Invalid Image Type",
+      category: "Environment",
+      confidence: 0,
+      error: "Unsupported image format. Allowed formats: JPEG, PNG, WEBP.",
+    };
+  }
+
+  // Strip data URL prefix if present
+  let cleanBase64 = base64Data;
+  if (cleanBase64.includes(",")) {
+    cleanBase64 = cleanBase64.split(",")[1];
+  }
+
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
   if (!apiKey || apiKey.includes("your_gemini")) {
@@ -26,8 +73,8 @@ export async function analyzePhotoServerAction(
                 parts: [
                   {
                     inlineData: {
-                      mimeType: mimeType || "image/jpeg",
-                      data: base64Data,
+                      mimeType: cleanMime,
+                      data: cleanBase64,
                     },
                   },
                   {
