@@ -115,6 +115,20 @@ function buildTimeline(c: Record<string, string>) {
     return base;
 }
 
+/* ── PII Masking ─────────────────────────────────────────────────────────── */
+/**
+ * Masks a citizen's email on the public tracking page to prevent PII exposure.
+ * e.g. "rajan.kumar@gmail.com" → "r***r@gmail.com"
+ * Officers/Chief dashboards always receive the full email via authenticated APIs.
+ */
+function maskEmail(email: string): string {
+    if (!email || !email.includes("@")) return "Registered Citizen";
+    const [local, domain] = email.split("@");
+    if (local.length <= 1) return `${local}***@${domain}`;
+    const masked = local[0] + "***" + local[local.length - 1];
+    return `${masked}@${domain}`;
+}
+
 /* ── Component ──────────────────────────────────────────────────────────── */
 export default function TrackPage() {
     const { t } = useLang();
@@ -187,7 +201,7 @@ export default function TrackPage() {
                     status: data.status || "Pending",
                     location: data.location || "",
                     date: (data.createdAt || data.created_at) ? new Date(data.createdAt || data.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
-                    user: data.userEmail || data.user_email || "Anonymous",
+                    user: maskEmail(data.userEmail || data.user_email || ""),
                     ai_reasoning: data.aiReasoning || data.ai_reasoning || "",
                     timeline: buildTimeline(data),
                 });
