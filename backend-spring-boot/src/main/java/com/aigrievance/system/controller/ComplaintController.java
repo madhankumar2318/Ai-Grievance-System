@@ -57,7 +57,35 @@ public class ComplaintController {
 
     @GetMapping("/user/{email}")
     public ResponseEntity<List<Complaint>> getComplaintsByUser(@PathVariable String email) {
-        return ResponseEntity.ok(complaintService.getComplaintsByUser(email));
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        // ── IDOR Ownership Check ───────────────────────────────────────────────
+        // Citizens may only read their own complaints.
+        // Field officers (ROLE_AUTHORITY) and chief admins (ROLE_CHIEF) may
+        // read any citizen's complaints for oversight/case management.
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
+        }
+
+        boolean isElevated = auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_AUTHORITY") || a.getAuthority().equals("ROLE_CHIEF")
+        );
+
+        // Standard citizen: enforce strict ownership — caller email must match path email
+        if (!isElevated) {
+            String authenticatedEmail = auth.getName();
+            if (authenticatedEmail == null || !authenticatedEmail.equalsIgnoreCase(email.trim())) {
+                // Return 403 — never reveal whether the other user's complaints even exist
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+            }
+        }
+
+        return ResponseEntity.ok(complaintService.getComplaintsByUser(email.trim().toLowerCase()));
     }
 
     @GetMapping("/{id}")
