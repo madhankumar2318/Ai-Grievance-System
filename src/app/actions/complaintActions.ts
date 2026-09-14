@@ -17,10 +17,23 @@ export interface DbComplaintRecord {
 
 import { getVerifiedSessionServerAction } from "./authActions";
 import { cookies } from "next/headers";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
 const SPRING_BOOT_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
+
+/**
+ * Server-side PII masking helper.
+ * Runs on the server before any JSON is serialised to the browser.
+ * e.g. "rajan.kumar@gmail.com" → "r***r@gmail.com"
+ */
+function maskEmailServerSide(email: string | null | undefined): string {
+  if (!email || !email.includes("@")) return "Registered Citizen";
+  const [local, domain] = email.split("@");
+  if (local.length <= 1) return `${local}***@${domain}`;
+  return `${local[0]}***${local[local.length - 1]}@${domain}`;
+}
 
 /**
  * Fetch all complaints with Spring Boot local check + Supabase cloud fallback
@@ -211,4 +224,136 @@ export async function updateComplaintStatusServerAction(
     console.error("Supabase status update network error:", err);
     return { success: false, error: "Network error updating status." };
   }
+}
+
+/**
+ * Public complaint lookup by ID — fully server-side.
+ *
+ * Security guarantees:
+ *  1. Anti-scraping: max 20 tracking queries per minute per IP.
+ *  2. PII masking: user_email is masked on the server (r***r@domain.com) before
+ *     the JSON is serialised to the browser. Raw emails NEVER leave the server
+ *     for unauthenticated / citizen callers.
+ *  3. Elevated access: authenticated field officers and chief admins receive the
+ *     full record (unmasked) for case management.
+ */
+export async function getComplaintByIdServerAction(id: string): Promise<{
+  success: boolean;
+  complaint?: DbComplaintRecord | null;
+  error?: string;
+  rateLimited?: boolean;
+}> {
+  // 1. Sanitise input
+  const cleanId = (id || "").trim().toUpperCase();
+  if (!cleanId || cleanId.length > 60) {
+    return { success: false, error: "Invalid complaint ID format." };
+  }
+
+  // 2. Anti-scraping rate limit: max 20 tracking lookups per minute per IP
+  const ip = await getClientIp();
+  const rateResult = checkRateLimit(ip, "track_complaint", 20, 60000);
+  if (!rateResult.success) {
+    return {
+      success: false,
+      rateLimited: true,
+      error: `Too many tracking requests. Please wait ${rateResult.retryAfterSeconds}s before searching again.`,
+    };
+  }
+
+  // 3. Determine if caller holds an elevated role (unmasked access)
+  const session = await getVerifiedSessionServerAction();
+  const isElevated =
+    session.authenticated &&
+    session.user &&
+    (session.user.role === "authority" || session.user.role === "chief");
+
+  // 4. Try Java Spring Boot REST API first (forwards auth token for role-aware masking at backend too)
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(
+      `${SPRING_BOOT_URL}/api/complaints/${encodeURIComponent(cleanId)}`,
+      { method: "GET", headers: reqHeaders, signal: controller.signal, cache: "no-store" }
+    );
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data: any = await res.json();
+      if (data && data.id) {
+        const rawEmail = data.userEmail ?? data.user_email ?? "";
+        return {
+          success: true,
+          complaint: {
+            id: data.id,
+            subject: data.subject ?? "",
+            description: data.description ?? "",
+            category: data.category ?? "Other",
+            priority: data.priority ?? "Medium",
+            status: data.status ?? "Pending",
+            // ── Server-side PII masking ─────────────────────────────────────
+            user_email: isElevated ? rawEmail : maskEmailServerSide(rawEmail),
+            location: data.location ?? "",
+            attachment_count: data.attachmentCount ?? data.attachment_count ?? 0,
+            created_at: data.createdAt ?? data.created_at ?? new Date().toISOString(),
+            updated_at: data.updatedAt ?? data.updated_at ?? data.createdAt ?? data.created_at,
+            ai_reasoning: data.aiReasoning ?? data.ai_reasoning ?? "",
+          },
+        };
+      }
+    }
+  } catch {
+    // Spring Boot offline — fall through to Supabase server-side query
+  }
+
+  // 5. Supabase server-to-server query (API key stays on the server — never sent to browser)
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(cleanId)}&select=*`,
+      {
+        method: "GET",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list) && list.length > 0) {
+        const item = list[0];
+        const rawEmail = item.user_email ?? "";
+        return {
+          success: true,
+          complaint: {
+            id: item.id,
+            subject: item.subject ?? "",
+            description: item.description ?? "",
+            category: item.category ?? "Other",
+            priority: item.priority ?? "Medium",
+            status: item.status ?? "Pending",
+            // ── Server-side PII masking ─────────────────────────────────────
+            user_email: isElevated ? rawEmail : maskEmailServerSide(rawEmail),
+            location: item.location ?? "",
+            attachment_count: item.attachment_count ?? 0,
+            created_at: item.created_at ?? new Date().toISOString(),
+            updated_at: item.updated_at ?? item.created_at,
+            ai_reasoning: item.ai_reasoning ?? "",
+          },
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Server-side Supabase complaint lookup error:", err);
+  }
+
+  return { success: false, error: "Complaint not found. Please check the ID and try again." };
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import AIAdvocateCard from "@/components/AIAdvocateCard";
+import { getComplaintByIdServerAction } from "@/app/actions/complaintActions";
 
 export interface TimelineStep {
     stage: string;
@@ -150,62 +151,91 @@ export default function TrackPage() {
         setErrorMsg("");
 
         try {
-            const API_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let data: any = null;
+            // ── Secure server-side lookup ─────────────────────────────────────
+            // getComplaintByIdServerAction runs entirely on the Next.js server:
+            //   • Supabase API key never reaches the browser
+            //   • user_email is masked before JSON is serialised to the client
+            //   • Rate-limited to 20 queries/min/IP to prevent ID enumeration
+            const result = await getComplaintByIdServerAction(id);
 
-            // 1. Try Spring Boot
-            try {
-                const res = await fetch(`${API_URL}/api/complaints/${id}`);
-                if (res.ok) data = await res.json();
-            } catch {
-                // Spring Boot offline
+            if (result.success && result.complaint) {
+                const c = result.complaint;
+                setComplaint({
+                    id: c.id,
+                    subject: c.subject,
+                    description: c.description,
+                    category: c.category,
+                    priority: c.priority,
+                    status: c.status || "Pending",
+                    location: c.location || "",
+                    date: c.created_at
+                        ? new Date(c.created_at).toLocaleDateString("en-IN")
+                        : new Date().toLocaleDateString("en-IN"),
+                    // user_email is already masked server-side — no client masking needed
+                    user: c.user_email || "Registered Citizen",
+                    ai_reasoning: c.ai_reasoning || "",
+                    timeline: buildTimeline({
+                        created_at: c.created_at,
+                        updated_at: c.updated_at || c.created_at,
+                        status: c.status,
+                        category: c.category,
+                        priority: c.priority,
+                        ai_reasoning: c.ai_reasoning || "",
+                    }),
+                });
+                return;
             }
 
-            // 2. Try Supabase REST API directly
-            if (!data) {
-                try {
-                    const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
-                    const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
-                    const res = await fetch(`${sbUrl}/rest/v1/complaints?id=eq.${id}&select=*`, {
-                        headers: { "apikey": sbKey, "Authorization": `Bearer ${sbKey}` },
-                    });
-                    if (res.ok) {
-                        const arr = await res.json();
-                        if (arr && arr.length > 0) data = arr[0];
-                    }
-                } catch {
-                    // Supabase offline
+            // Rate-limited or server error — surface message to user
+            if (!result.success && result.error) {
+                // Don't fall through to localStorage for rate limit errors
+                if (result.rateLimited) {
+                    setErrorMsg(result.error);
+                    return;
                 }
             }
 
-            // 3. Try LocalStorage fallback
-            if (!data && typeof window !== "undefined") {
+            // ── Offline / demo fallback — localStorage only ───────────────────
+            // This path is only reached if the server action found nothing.
+            // localStorage data was written by this same browser so no
+            // cross-user PII leakage is possible here.
+            if (typeof window !== "undefined") {
                 try {
-                    const localList = JSON.parse(localStorage.getItem("grievance_my_complaints") || "[]");
+                    const localList = JSON.parse(
+                        localStorage.getItem("grievance_my_complaints") || "[]"
+                    );
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const found = localList.find((c: any) => c.id === id);
-                    if (found) data = found;
-                } catch {}
+                    if (found) {
+                        setComplaint({
+                            id: found.id,
+                            subject: found.subject,
+                            description: found.description,
+                            category: found.category,
+                            priority: found.priority,
+                            status: found.status || "Pending",
+                            location: found.location || "",
+                            date: found.createdAt
+                                ? new Date(found.createdAt).toLocaleDateString("en-IN")
+                                : new Date().toLocaleDateString("en-IN"),
+                            user: maskEmail(found.userEmail || found.user_email || ""),
+                            ai_reasoning: found.aiReasoning || found.ai_reasoning || "",
+                            timeline: buildTimeline({
+                                created_at: found.createdAt || found.created_at || new Date().toISOString(),
+                                updated_at: found.updatedAt || found.updated_at || found.createdAt || found.created_at,
+                                status: found.status,
+                                category: found.category,
+                                priority: found.priority,
+                                ai_reasoning: found.aiReasoning || found.ai_reasoning || "",
+                            }),
+                        });
+                        return;
+                    }
+                } catch { /* localStorage parse error — ignore */ }
             }
 
-            if (!data) {
-                setComplaint(null);
-            } else {
-                setComplaint({
-                    id: data.id,
-                    subject: data.subject,
-                    description: data.description,
-                    category: data.category,
-                    priority: data.priority,
-                    status: data.status || "Pending",
-                    location: data.location || "",
-                    date: (data.createdAt || data.created_at) ? new Date(data.createdAt || data.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
-                    user: maskEmail(data.userEmail || data.user_email || ""),
-                    ai_reasoning: data.aiReasoning || data.ai_reasoning || "",
-                    timeline: buildTimeline(data),
-                });
-            }
+            // Nothing found anywhere
+            setComplaint(null);
         } catch {
             setComplaint(null);
             setErrorMsg("Something went wrong. Please try again.");
