@@ -62,7 +62,7 @@ public class AuthService {
         Optional<User> userOptional = userRepository.findByEmailAndRole(email, role);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            if (passwordEncoder.matches(password, user.getPasswordHash()) || password.equals(user.getPasswordHash())) {
+            if (passwordEncoder.matches(password, user.getPasswordHash())) {
                 String token = tokenProvider.generateToken(user.getEmail(), user.getUsername(), user.getRole());
                 return new AuthResponse(true, token, new AuthResponse.UserDto(user.getEmail(), user.getUsername(), user.getRole()));
             }
@@ -75,9 +75,18 @@ public class AuthService {
         String email = request.getEmail() != null ? request.getEmail().toLowerCase().trim() : "";
         String role = request.getRole() != null ? request.getRole() : "user";
         String username = request.getUsername() != null ? request.getUsername().trim() : "Citizen User";
+        String password = request.getPassword();
 
-        if (email.isBlank() || request.getPassword() == null || request.getPassword().isBlank()) {
+        if (email.isBlank() || password == null || password.isBlank()) {
             return new AuthResponse(false, "Email and password are required.");
+        }
+
+        // Enforce password complexity policy
+        if (password.length() < 8) {
+            return new AuthResponse(false, "Password must be at least 8 characters long.");
+        }
+        if (!password.matches(".*[a-z].*") || !password.matches(".*[A-Z].*") || !password.matches(".*[0-9].*")) {
+            return new AuthResponse(false, "Password must contain at least one uppercase letter, one lowercase letter, and one number.");
         }
 
         // Validate administrative secret passphrases for elevated roles

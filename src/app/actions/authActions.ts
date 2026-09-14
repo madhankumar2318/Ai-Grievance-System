@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
@@ -83,6 +84,17 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
   error?: string;
   user?: { email: string; username: string; role: string };
 }> {
+  const ip = await getClientIp();
+
+  // Enforce rate limit: max 3 account registrations per 10 minutes per IP
+  const rateResult = checkRateLimit(ip, "register", 3, 600000);
+  if (!rateResult.success) {
+    return {
+      success: false,
+      error: `Registration rate limit exceeded. Please wait ${rateResult.retryAfterSeconds}s before creating another account.`,
+    };
+  }
+
   const email = (params.email || "").toLowerCase().trim();
   const username = (params.username || "").trim();
   const role = params.role || "user";
@@ -90,6 +102,17 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
 
   if (!email || !password) {
     return { success: false, error: "Email and password are required." };
+  }
+
+  // Enforce password complexity policy
+  if (password.length < 8) {
+    return { success: false, error: "Password must be at least 8 characters long." };
+  }
+  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return {
+      success: false,
+      error: "Password must contain at least one uppercase letter, one lowercase letter, and one number.",
+    };
   }
 
   // Enforce administrative secret passphrases for elevated roles
@@ -218,6 +241,17 @@ export async function loginUserServerAction(credentials: {
   error?: string;
   user?: { email: string; username: string; role: string };
 }> {
+  const ip = await getClientIp();
+
+  // Enforce rate limit: max 5 login attempts per minute per IP (brute-force defense)
+  const rateResult = checkRateLimit(ip, "login", 5, 60000);
+  if (!rateResult.success) {
+    return {
+      success: false,
+      error: `Too many login attempts. Please wait ${rateResult.retryAfterSeconds}s before trying again.`,
+    };
+  }
+
   const email = (credentials.email || "").toLowerCase().trim();
   const password = credentials.password;
   const role = credentials.role;
@@ -285,9 +319,6 @@ export async function loginUserServerAction(credentials: {
         try {
           isMatch = bcrypt.compareSync(password, hash);
         } catch {}
-        if (!isMatch && hash === password) {
-          isMatch = true;
-        }
 
         if (isMatch) {
           const authUser = {

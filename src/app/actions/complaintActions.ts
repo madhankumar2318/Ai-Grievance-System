@@ -31,6 +31,26 @@ export async function getComplaintsServerAction(): Promise<{
   source: "spring-boot" | "supabase" | "empty";
   error?: string;
 }> {
+  // Enforce server-side authorization check: only officers or chiefs can view all complaints
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return {
+      success: false,
+      complaints: [],
+      source: "empty",
+      error: "Unauthorized: Please log in with authorized credentials.",
+    };
+  }
+
+  if (session.user.role !== "authority" && session.user.role !== "chief") {
+    return {
+      success: false,
+      complaints: [],
+      source: "empty",
+      error: "Access Denied: Only field officers and chief administrators can view all complaints.",
+    };
+  }
+
   // 1. Try Java Spring Boot REST API first if running locally
   try {
     const cookieStore = await cookies();

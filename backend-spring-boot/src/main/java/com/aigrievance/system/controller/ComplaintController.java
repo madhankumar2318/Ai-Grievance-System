@@ -66,7 +66,46 @@ public class ComplaintController {
         if (complaint == null) {
             return ResponseEntity.notFound().build();
         }
+
+        // Check if caller is authenticated as field officer or chief
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean isElevated = auth != null && auth.getAuthorities().stream().anyMatch(a ->
+                a.getAuthority().equals("ROLE_AUTHORITY") || a.getAuthority().equals("ROLE_CHIEF")
+        );
+
+        if (!isElevated) {
+            return ResponseEntity.ok(sanitizeForPublic(complaint));
+        }
+
         return ResponseEntity.ok(complaint);
+    }
+
+    private Complaint sanitizeForPublic(Complaint original) {
+        if (original == null) return null;
+        Complaint copy = new Complaint();
+        copy.setId(original.getId());
+        copy.setSubject(original.getSubject());
+        copy.setDescription(original.getDescription());
+        copy.setCategory(original.getCategory());
+        copy.setPriority(original.getPriority());
+        copy.setStatus(original.getStatus());
+        copy.setUserEmail(maskEmail(original.getUserEmail()));
+        copy.setLocation(original.getLocation());
+        copy.setAttachmentCount(original.getAttachmentCount());
+        copy.setAiReasoning(original.getAiReasoning());
+        copy.setCreatedAt(original.getCreatedAt());
+        copy.setUpdatedAt(original.getUpdatedAt());
+        return copy;
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return "Registered Citizen";
+        String[] parts = email.split("@", 2);
+        String local = parts[0];
+        String domain = parts[1];
+        if (local.length() <= 1) return local + "***@" + domain;
+        return local.charAt(0) + "***" + local.charAt(local.length() - 1) + "@" + domain;
     }
 
     @PostMapping("/update-status")
