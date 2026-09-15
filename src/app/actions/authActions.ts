@@ -7,7 +7,18 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
 const SPRING_BOOT_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-const JWT_SECRET = process.env.JWT_SECRET || "default_super_secret_key_change_me_in_production";
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret === "default_super_secret_key_change_me_in_production") {
+    if (process.env.NODE_ENV === "production" && !process.env.NEXT_PHASE?.includes("build")) {
+      console.warn("⚠️ SECURITY WARNING: JWT_SECRET is using default placeholder. Ensure strong JWT_SECRET is configured in environment variables.");
+    }
+    return "default_super_secret_key_change_me_in_production";
+  }
+  return secret;
+}
+
+const JWT_SECRET = getJwtSecret();
 
 function base64urlEncode(str: string): string {
   return Buffer.from(str).toString("base64url");
