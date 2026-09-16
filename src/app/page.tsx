@@ -265,53 +265,7 @@ async function analyzePhotoWithAI(file: File): Promise<{ subject: string; catego
     // Backend offline or unreachable
   }
 
-  // 3. Try Direct Client Gemini Vision API if NEXT_PUBLIC key configured
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  if (apiKey) {
-    const models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"];
-    for (const model of models) {
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { inlineData: { mimeType, data: base64Data } },
-                  { text: "Analyze this photo of a civic or environmental issue in detail. Return JSON: {\"subject\":\"Specific issue title\",\"category\":\"Environment\" or \"Infrastructure\" or \"Safety\",\"confidence\":95}" },
-                ],
-              },
-            ],
-            generationConfig: { responseMimeType: "application/json" },
-          }),
-        });
-
-        if (response.ok) {
-          const resData = await response.json();
-          const text = resData?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) {
-            let jsonText = text.trim();
-            if (jsonText.startsWith("```json")) jsonText = jsonText.substring(7);
-            if (jsonText.endsWith("```")) jsonText = jsonText.substring(0, jsonText.length - 3);
-
-            const parsed = JSON.parse(jsonText.trim());
-            if (parsed.subject && parsed.category) {
-              return {
-                subject: parsed.subject,
-                category: parsed.category,
-                confidence: parsed.confidence || 96,
-              };
-            }
-          }
-        }
-      } catch (err) {
-        console.warn(`Gemini Vision model ${model} error:`, err);
-      }
-    }
-  }
-
-  // 4. Fallback: Multi-zone canvas feature classifier
+  // 3. Fallback: Local offline multi-zone canvas feature classifier (Zero API key / zero network dependency)
   return await classifyImageWithCanvas(dataUrl);
 }
 
@@ -700,7 +654,12 @@ export default function Home() {
       }
     } catch (err) {
       console.warn("Server action failed, using client fallback:", err);
-      const fallbackId = `GRV-${Math.floor(10000 + Math.random() * 90000)}`;
+      const randomSuffix = Array.from(crypto.getRandomValues(new Uint8Array(4)))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+      const year = new Date().getFullYear();
+      const fallbackId = `GRV-${year}-${randomSuffix}`;
       const fallbackResult = {
         success: true,
         data: {

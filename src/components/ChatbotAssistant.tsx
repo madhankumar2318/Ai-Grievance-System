@@ -22,7 +22,7 @@ const BOT_RESPONSES: Record<string, string> = {
     voice: "🎙️ Yes! Click the **Voice Input** button on the complaint form, speak your issue, and the text will be filled automatically. No typing needed!",
     photo: "📸 Click **AI Analyze Photo** after uploading an image. Our AI will read what's in the photo and auto-fill the Subject and Category fields!",
     track: "🔍 Use your GRV- tracking ID (shown after submission) on the Track page. You can also enable browser notifications to get automatic status alerts.",
-    login: "🔐 Demo credentials:\n• Citizen: user@demo.com / user123\n• Officer: authority@demo.com / auth123\n• Chief: chief@demo.com / chief123",
+    login: "🔐 Account Access:\n• Citizens: Register using your email address on the Login page.\n• Field Officers & Chiefs: Contact your system administrator for official department credentials and onboarding passphrases.",
     hi: "👋 Hello! I'm here to help you with grievance filing. You can ask me about filing complaints, tracking status, or any category-specific info!",
     hello: "👋 Hello! I'm here to help you with grievance filing. You can ask me about filing complaints, tracking status, or any category-specific info!",
     namaste: "🙏 Namaste! I'm here to help you. Ask me about filing complaints, tracking status, or how our AI system works!",
@@ -42,7 +42,7 @@ function getBotReply(input: string): string {
     if (lower.includes("electric") || lower.includes("power") || lower.includes("current")) {
         return "⚡ Power/electricity issues go under **Infrastructure**. Mention your area, consumer number if possible, and duration of the outage.";
     }
-    return "🤔 I'm not sure about that specific query. Try asking about:\n• How to file a complaint\n• Water/road/hospital/pollution issues\n• Tracking your complaint status\n• Voice input or photo analysis features\n• Login credentials";
+    return "🤔 I'm not sure about that specific query. Try asking about:\n• How to file a complaint\n• Water/road/hospital/pollution issues\n• Tracking your complaint status\n• Voice input or photo analysis features\n• Account access & registration";
 }
 
 export default function ChatbotAssistant() {
