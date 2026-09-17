@@ -107,13 +107,50 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
   }
 
   const email = (params.email || "").toLowerCase().trim();
-  const username = (params.username || "").trim();
+  let username = (params.username || "").trim();
   const role = params.role || "user";
   const password = params.password;
 
   if (!email || !password) {
     return { success: false, error: "Email and password are required." };
   }
+
+  // Enforce strict email format and length policy
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (email.length > 120 || !emailRegex.test(email)) {
+    return { success: false, error: "Please enter a valid email address (max 120 characters)." };
+  }
+
+  // Sanitize and cap username
+  username = username.replace(/<[^>]*>/g, "").replace(/[\r\n\t]/g, " ").trim();
+  if (username.length > 50) {
+    username = username.slice(0, 50).trim();
+  }
+  if (!username) {
+    username = "Citizen User";
+  }
+
+  // Validate and sanitize phone if provided
+  let phone = (params.phone || "").trim();
+  if (phone) {
+    phone = phone.replace(/[^0-9+]/g, "");
+    if (!/^\+?[0-9]{10,15}$/.test(phone)) {
+      return { success: false, error: "Invalid phone number. Must contain 10 to 15 digits." };
+    }
+  }
+
+  // Validate pincode if provided (6-digit Indian postal PIN code)
+  const pincode = (params.pincode || "").trim();
+  if (pincode && !/^\d{6}$/.test(pincode)) {
+    return { success: false, error: "Invalid postal pincode. Must be exactly 6 digits." };
+  }
+
+  // Sanitize state, district, ID fields
+  const state = (params.state || "").replace(/<[^>]*>/g, "").trim().slice(0, 60);
+  const district = (params.district || "").replace(/<[^>]*>/g, "").trim().slice(0, 60);
+  const idType = (params.idType || "aadhaar").replace(/<[^>]*>/g, "").trim().slice(0, 30);
+  const idNumber = (params.idNumber || "").replace(/<[^>]*>/g, "").trim().slice(0, 50);
+  const dob = (params.dob || "").replace(/<[^>]*>/g, "").trim().slice(0, 20);
 
   // Enforce password complexity policy
   if (password.length < 8) {
@@ -152,13 +189,13 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
         password,
         username,
         role,
-        phone: params.phone,
-        state: params.state,
-        district: params.district,
-        pincode: params.pincode,
-        idType: params.idType,
-        idNumber: params.idNumber,
-        dob: params.dob,
+        phone,
+        state,
+        district,
+        pincode,
+        idType,
+        idNumber,
+        dob,
         authorityRole: params.authorityRole,
         serviceId: params.serviceId,
         passcode: params.passcode,
@@ -211,12 +248,12 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
         username: username || "Citizen User",
         password_hash: passwordHash,
         role,
-        phone: params.phone || "",
-        state: params.state || "",
-        district: params.district || "",
-        pincode: params.pincode || "",
-        id_type: params.idType || "aadhaar",
-        dob: params.dob || "",
+        phone: phone || "",
+        state: state || "",
+        district: district || "",
+        pincode: pincode || "",
+        id_type: idType || "aadhaar",
+        dob: dob || "",
         authority_role: params.authorityRole || null,
         service_id: params.serviceId || null,
         created_at: new Date().toISOString(),

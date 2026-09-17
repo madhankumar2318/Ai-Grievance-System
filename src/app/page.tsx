@@ -8,6 +8,7 @@ import { useLang } from "@/context/LanguageContext";
 import { NotificationBanner } from "@/components/PushNotifications";
 import { analyzePhotoServerAction } from "@/app/actions/analyzePhoto";
 import { submitComplaintServerAction } from "@/app/actions/submitComplaint";
+import { reverseGeocodeServerAction } from "@/app/actions/geoActions";
 
 interface MediaFile { name: string; type: string; url: string; size: number; file?: File; }
 interface GpsCoords { lat: number; lng: number; accuracy: number; }
@@ -302,26 +303,12 @@ function GpsCameraModal({
 
   const fetchLandmark = async (lat: number, lng: number) => {
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-        headers: { "Accept-Language": "en" },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const addr = data.address || {};
-        const road = addr.road || addr.street || addr.suburb || addr.neighbourhood || "";
-        const town = addr.town || addr.city || addr.county || addr.district || "";
-        const state = addr.state || "";
-        const parts = [road, town, state].filter(Boolean);
-        if (parts.length > 0) {
-          setLandmark(parts.join(", "));
-          return;
-        }
-        if (data.display_name) {
-          setLandmark(data.display_name.split(",").slice(0, 3).join(",").trim());
-        }
+      const res = await reverseGeocodeServerAction(lat, lng);
+      if (res.success && res.landmark) {
+        setLandmark(res.landmark);
       }
     } catch {
-      // Offline reverse geocode
+      // Offline fallback
     }
   };
 
