@@ -357,3 +357,113 @@ export async function getComplaintByIdServerAction(id: string): Promise<{
 
   return { success: false, error: "Complaint not found. Please check the ID and try again." };
 }
+
+/**
+ * Fetch complaints submitted by a specific citizen.
+ *
+ * Security & IDOR guarantees:
+ *  1. Authenticated session required (getVerifiedSessionServerAction).
+ *  2. IDOR Enforcement: If caller has citizen role (user), they can ONLY fetch
+ *     complaints matching their own authenticated email address.
+ *  3. Elevated access: Field officers (authority) and chiefs can query any citizen's complaints.
+ *  4. Cloud resilience: Tries Java Spring Boot (GET /api/complaints/user/{email}) first,
+ *     then falls back to server-to-server Supabase query.
+ */
+export async function getUserComplaintsServerAction(targetEmail?: string): Promise<{
+  success: boolean;
+  complaints: DbComplaintRecord[];
+  error?: string;
+}> {
+  // 1. Enforce authenticated session
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return {
+      success: false,
+      complaints: [],
+      error: "Unauthorized: Please log in to view your complaints.",
+    };
+  }
+
+  const authenticatedEmail = session.user.email.toLowerCase().trim();
+  const isElevated = session.user.role === "authority" || session.user.role === "chief";
+
+  // If no target email provided, default to caller's own email
+  const requestedEmail = (targetEmail || authenticatedEmail).toLowerCase().trim();
+
+  // 2. IDOR Ownership Check
+  if (!isElevated && requestedEmail !== authenticatedEmail) {
+    return {
+      success: false,
+      complaints: [],
+      error: "Access Denied: You may only view your own submitted complaints.",
+    };
+  }
+
+  // 3. Try Spring Boot REST API
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(
+      `${SPRING_BOOT_URL}/api/complaints/user/${encodeURIComponent(requestedEmail)}`,
+      { method: "GET", headers: reqHeaders, signal: controller.signal, cache: "no-store" }
+    );
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data: any = await res.json();
+      const list = Array.isArray(data) ? data : data.complaints || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mapped: DbComplaintRecord[] = list.map((c: any) => ({
+        id: c.id,
+        subject: c.subject ?? "",
+        description: c.description ?? "",
+        category: c.category ?? "Other",
+        priority: c.priority ?? "Medium",
+        status: c.status ?? "Pending",
+        user_email: c.userEmail ?? c.user_email ?? requestedEmail,
+        location: c.location ?? "",
+        attachment_count: c.attachmentCount ?? c.attachment_count ?? 0,
+        created_at: c.createdAt ?? c.created_at ?? new Date().toISOString(),
+        updated_at: c.updatedAt ?? c.updated_at ?? c.createdAt ?? c.created_at,
+        ai_reasoning: c.aiReasoning ?? c.ai_reasoning ?? "",
+      }));
+      return { success: true, complaints: mapped };
+    }
+  } catch {
+    // Spring Boot offline — fall through to Supabase
+  }
+
+  // 4. Try Supabase cloud database
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?user_email=eq.${encodeURIComponent(requestedEmail)}&order=created_at.desc`,
+      {
+        method: "GET",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list)) {
+        return { success: true, complaints: list };
+      }
+    }
+  } catch (err) {
+    console.error("⚠️ Supabase user complaints lookup error:", err);
+  }
+
+  return { success: false, complaints: [], error: "Failed to load user grievances." };
+}
+

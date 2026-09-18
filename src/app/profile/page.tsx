@@ -5,6 +5,7 @@ import { useTheme } from "@/context/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { getUserComplaintsServerAction } from "@/app/actions/complaintActions";
 
 const ROLE_CONFIG = {
     user: { label: "Citizen", icon: "👤", color: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
@@ -39,18 +40,66 @@ export default function ProfilePage() {
     });
 
     const [complaints, setComplaints] = useState<{ id: string; subject: string; status: string; date: string }[]>([]);
+    const [loadingComplaints, setLoadingComplaints] = useState(false);
     const [editName, setEditName] = useState(false);
     const [displayName, setDisplayName] = useState(user?.username || "");
 
     useEffect(() => {
-        if (typeof window === "undefined") return;
-        try {
-            const stored = JSON.parse(localStorage.getItem("grievance_complaints") || "[]");
-            const mine = stored.filter((c: { userEmail: string }) => (c.userEmail || "").toLowerCase() === (user?.email || "").toLowerCase());
-            setTimeout(() => {
-                setComplaints(mine.slice(-5).reverse());
-            }, 0);
-        } catch { /* ignore */ }
+        if (!user?.email) return;
+        let isMounted = true;
+
+        async function loadGrievances() {
+            setLoadingComplaints(true);
+            try {
+                // 1. Fetch live grievances from secure server action (Spring Boot / Supabase)
+                const res = await getUserComplaintsServerAction();
+                if (isMounted && res.success && res.complaints) {
+                    const mapped = res.complaints.map((c: any) => ({
+                        id: c.id,
+                        subject: c.subject,
+                        status: c.status || "Pending",
+                        date: c.created_at
+                            ? new Date(c.created_at).toLocaleDateString("en-IN", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                              })
+                            : new Date().toLocaleDateString("en-IN"),
+                    }));
+                    setComplaints(mapped);
+                    setLoadingComplaints(false);
+                    return;
+                }
+            } catch (err) {
+                console.warn("⚠️ Server grievance fetch error:", err);
+            }
+
+            // 2. Local fallback if offline or demo submissions
+            if (isMounted && typeof window !== "undefined") {
+                try {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const localSubmissions = JSON.parse(
+                        localStorage.getItem("grievance_my_complaints") || "[]"
+                    );
+                    if (localSubmissions.length > 0) {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const localMapped = localSubmissions.map((c: any) => ({
+                            id: c.id,
+                            subject: c.subject || c.ai_triage?.category || "Grievance",
+                            status: c.status || "Pending",
+                            date: new Date().toLocaleDateString("en-IN"),
+                        }));
+                        setComplaints(localMapped.slice(0, 10));
+                    }
+                } catch { /* ignore */ }
+            }
+            if (isMounted) setLoadingComplaints(false);
+        }
+
+        loadGrievances();
+        return () => {
+            isMounted = false;
+        };
     }, [user?.email]);
 
     if (!user) return null;
@@ -151,7 +200,12 @@ export default function ProfilePage() {
                     {user.role === "user" && (
                         <div className="glass animate-slide-up" style={{ borderRadius: "var(--radius-lg)", padding: "1.5rem", boxShadow: "var(--shadow-lg)" }}>
                             <h2 style={{ fontWeight: "800", fontSize: "1rem", marginBottom: "1rem" }}>📋 Recent Complaints</h2>
-                            {complaints.length === 0 ? (
+                            {loadingComplaints ? (
+                                <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
+                                    <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>⏳</div>
+                                    <p style={{ fontSize: "0.875rem" }}>Loading your grievances...</p>
+                                </div>
+                            ) : complaints.length === 0 ? (
                                 <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
                                     <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📭</div>
                                     <p style={{ fontSize: "0.875rem" }}>No complaints filed yet.</p>
