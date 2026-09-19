@@ -537,17 +537,50 @@ export default function Home() {
     }
   }, []);
 
+  const ALLOWED_UPLOAD_MIME_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+  ]);
+  const BLOCKED_UPLOAD_EXTENSIONS = /\.(svg|exe|bat|cmd|sh|html|htm|js|mjs|php|py|jar|msi|vbs)$/i;
+  const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
+
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    const newFiles: MediaFile[] = Array.from(files).map((f) => {
+    const incoming = Array.from(files);
+    const validFiles: MediaFile[] = [];
+
+    for (const f of incoming) {
+      // SVG XSS Mitigation & Dangerous Executable / Script Blocking
+      if (BLOCKED_UPLOAD_EXTENSIONS.test(f.name) || f.type === "image/svg+xml") {
+        alert(`File "${f.name}" rejected: SVG and script/executable files are blocked for security.`);
+        continue;
+      }
+      // MIME Whitelist
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(f.type)) {
+        alert(`File "${f.name}" rejected: Unsupported format. Allowed formats: JPG, PNG, WEBP, MP4, MOV.`);
+        continue;
+      }
+      // Max file size enforcement (25MB)
+      if (f.size > MAX_FILE_SIZE_BYTES) {
+        alert(`File "${f.name}" rejected: File size exceeds the 25MB limit.`);
+        continue;
+      }
+
       if (f.type.startsWith("image/")) {
         lastImageFileRef.current = f;
         setHasImageForAnalysis(true);
       }
-      return { name: f.name, type: f.type, url: URL.createObjectURL(f), size: f.size, file: f };
-    });
-    setMediaFiles((prev) => [...prev, ...newFiles].slice(0, 5));
-    setAnalysisResult(null);
+      validFiles.push({ name: f.name, type: f.type, url: URL.createObjectURL(f), size: f.size, file: f });
+    }
+
+    if (validFiles.length > 0) {
+      setMediaFiles((prev) => [...prev, ...validFiles].slice(0, 5));
+      setAnalysisResult(null);
+    }
   };
 
   const handleGpsCapture = (file: MediaFile, _coords: GpsCoords | null, address: string) => {
@@ -916,9 +949,9 @@ export default function Home() {
                   >
                     <div style={{ fontSize: "1.5rem", marginBottom: "0.35rem" }}>📎</div>
                     <p style={{ margin: 0, fontWeight: "600", fontSize: "0.8rem", color: "var(--text-main)" }}>Click or drag &amp; drop photos / videos</p>
-                    <p style={{ margin: "0.2rem 0 0", fontSize: "0.7rem" }}>JPG, PNG, GIF, MP4, MOV — up to 50MB</p>
+                    <p style={{ margin: "0.2rem 0 0", fontSize: "0.7rem" }}>JPG, PNG, WEBP, MP4, MOV — up to 25MB (Max 5 files)</p>
                   </div>
-                  <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
+                  <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" style={{ display: "none" }} onChange={(e) => handleFiles(e.target.files)} />
 
                   {/* AI Photo Analysis Button */}
                   {hasImageForAnalysis && (

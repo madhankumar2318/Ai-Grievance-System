@@ -23,29 +23,45 @@ public class ComplaintService {
     @Autowired
     private EmailService emailService;
 
+    private String sanitizeInput(String input, int maxLength) {
+        if (input == null) return "";
+        // Strip all HTML tags and non-printable control characters to prevent Stored XSS
+        String clean = input.replaceAll("<[^>]*>", "").replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]", "").trim();
+        if (clean.length() > maxLength) {
+            clean = clean.substring(0, maxLength).trim();
+        }
+        return clean;
+    }
+
     @Transactional
     public Map<String, Object> createComplaint(ComplaintRequest request) {
         String randomSuffix = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         int year = java.time.Year.now().getValue();
         String complaintId = "GRV-" + year + "-" + randomSuffix;
 
-        // Perform AI Triage
+        // Sanitize all incoming user inputs
+        String safeSubject = sanitizeInput(request.getSubject(), 200);
+        String safeDescription = sanitizeInput(request.getDescription(), 2500);
+        String safeLocation = sanitizeInput(request.getLocation(), 250);
+        String safeEmail = sanitizeInput(request.getUserEmail(), 150).toLowerCase();
+
+        // Perform AI Triage with sanitized inputs
         GeminiTriageService.TriageResult triage = geminiTriageService.classifyComplaint(
-                request.getSubject(),
-                request.getDescription(),
-                request.getLocation()
+                safeSubject,
+                safeDescription,
+                safeLocation
         );
 
         Complaint complaint = new Complaint();
         complaint.setId(complaintId);
-        complaint.setSubject(request.getSubject());
-        complaint.setDescription(request.getDescription());
-        complaint.setLocation(request.getLocation() != null ? request.getLocation() : "");
+        complaint.setSubject(safeSubject);
+        complaint.setDescription(safeDescription);
+        complaint.setLocation(safeLocation);
         complaint.setCategory(triage.getCategory());
         complaint.setPriority(triage.getPriority());
         complaint.setStatus("Pending");
-        complaint.setUserEmail(request.getUserEmail() != null ? request.getUserEmail().toLowerCase().trim() : "");
-        complaint.setAttachmentCount(request.getAttachmentCount() != null ? request.getAttachmentCount() : 0);
+        complaint.setUserEmail(safeEmail);
+        complaint.setAttachmentCount(request.getAttachmentCount() != null ? Math.max(0, Math.min(10, request.getAttachmentCount())) : 0);
         complaint.setAiReasoning(triage.getReasoning());
 
         // Save to PostgreSQL via Spring Data JPA

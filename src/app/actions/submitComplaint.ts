@@ -22,14 +22,25 @@ export async function submitComplaintServerAction(params: SubmitComplaintParams)
     };
   }
 
-  const cleanSubject = (params.subject || "").trim().slice(0, 200);
-  const cleanDescription = (params.description || "").trim().slice(0, 2500);
-  const cleanLocation = (params.location || "").trim().slice(0, 250);
-  const cleanEmail = (params.email || "").toLowerCase().trim().slice(0, 150);
+  /**
+   * Strips all HTML tags and non-printable control characters to prevent Stored XSS
+   */
+  function sanitizeText(input: string): string {
+    if (!input) return "";
+    return input
+      .replace(/<[^>]*>/g, "") // strip all HTML tags
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip non-printable ASCII control characters
+      .trim();
+  }
+
+  const cleanSubject = sanitizeText(params.subject || "").slice(0, 200);
+  const cleanDescription = sanitizeText(params.description || "").slice(0, 2500);
+  const cleanLocation = sanitizeText(params.location || "").slice(0, 250);
+  const cleanEmail = sanitizeText(params.email || "").toLowerCase().slice(0, 150);
   const attachmentCount = Math.max(0, Math.min(10, params.attachmentCount || 0));
 
   if (!cleanSubject || !cleanDescription) {
-    return { success: false, error: "Subject and description are required." };
+    return { success: false, error: "Subject and description must contain valid text." };
   }
 
   const subject = cleanSubject;
