@@ -8,13 +8,36 @@ import com.aigrievance.system.service.GeminiTriageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/complaints")
 public class ComplaintController {
+
+    /** Strict whitelist — any status string outside this set is rejected with HTTP 400. */
+    private static final Set<String> VALID_STATUSES = Set.of(
+            "Pending", "In Progress", "Under Review", "Resolved", "Escalated", "Rejected"
+    );
+
+    /** Emit a structured security audit log line. */
+    private static void auditLog(HttpServletRequest req, String event, String actor, String outcome) {
+        String ip = resolveClientIp(req);
+        System.out.printf("SECURITY_AUDIT: timestamp=%s ip=%s user=%s event=%s outcome=%s%n",
+                Instant.now(), ip, actor, event, outcome);
+    }
+
+    private static String resolveClientIp(HttpServletRequest req) {
+        String forwarded = req.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return req.getRemoteAddr();
+    }
 
     @Autowired
     private ComplaintService complaintService;
@@ -56,7 +79,8 @@ public class ComplaintController {
     }
 
     @GetMapping("/user/{email}")
-    public ResponseEntity<List<Complaint>> getComplaintsByUser(@PathVariable String email) {
+    public ResponseEntity<List<Complaint>> getComplaintsByUser(@PathVariable String email,
+                                                               HttpServletRequest req) {
         if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
@@ -69,6 +93,7 @@ public class ComplaintController {
                 org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
 
         if (auth == null || !auth.isAuthenticated()) {
+            auditLog(req, "IDOR_PROBE_COMPLAINTS", "anonymous", "BLOCKED_401");
             return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).build();
         }
 
@@ -81,6 +106,7 @@ public class ComplaintController {
             String authenticatedEmail = auth.getName();
             if (authenticatedEmail == null || !authenticatedEmail.equalsIgnoreCase(email.trim())) {
                 // Return 403 — never reveal whether the other user's complaints even exist
+                auditLog(req, "IDOR_PROBE_COMPLAINTS", authenticatedEmail + "->target:" + email, "BLOCKED_403");
                 return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
             }
         }
@@ -137,10 +163,32 @@ public class ComplaintController {
     }
 
     @PostMapping("/update-status")
-    public ResponseEntity<Map<String, Object>> updateStatus(@RequestBody StatusUpdateRequest request) {
+    public ResponseEntity<Map<String, Object>> updateStatus(@RequestBody StatusUpdateRequest request,
+                                                            HttpServletRequest req) {
         if (request.getId() == null || request.getStatus() == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Missing ID or status"));
         }
+
+        // ── Status Whitelist Validation ─────────────────────────────────────────
+        // Reject any status value that is not in the approved workflow set.
+        if (!VALID_STATUSES.contains(request.getStatus())) {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String actor = auth != null ? auth.getName() : "anonymous";
+            auditLog(req, "INVALID_STATUS_INJECTION", actor, "BLOCKED_400: " + request.getStatus());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Invalid status value. Allowed values: Pending, In Progress, Under Review, Resolved, Escalated, Rejected"
+            ));
+        }
+
+        // Structured audit trail for all legitimate status changes
+        {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String actor = auth != null ? auth.getName() : "anonymous";
+            auditLog(req, "STATUS_UPDATE id=" + request.getId() + " newStatus=" + request.getStatus(), actor, "ALLOWED");
+        }
+
         Complaint updated = complaintService.updateStatus(request.getId(), request.getStatus());
         if (updated == null) {
             return ResponseEntity.notFound().build();

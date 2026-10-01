@@ -1,6 +1,7 @@
 package com.aigrievance.system.config;
 
 import com.aigrievance.system.security.JwtAuthenticationFilter;
+import com.aigrievance.system.security.RateLimitingFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Autowired
+    private RateLimitingFilter rateLimitingFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -38,6 +42,8 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
+                // RateLimitingFilter runs before JWT processing so abusive IPs are rejected early
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

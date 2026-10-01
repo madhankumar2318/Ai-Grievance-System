@@ -9,10 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.Set;
 
 @Service
 public class ComplaintService {
+
+    /** Workflow status whitelist — enforced at both controller and service layer. */
+    public static final Set<String> VALID_STATUSES = Set.of(
+            "Pending", "In Progress", "Under Review", "Resolved", "Escalated", "Rejected"
+    );
 
     @Autowired
     private ComplaintRepository complaintRepository;
@@ -108,6 +113,11 @@ public class ComplaintService {
 
     @Transactional
     public Complaint updateStatus(String id, String newStatus) {
+        // ── Service-layer whitelist guard (defence-in-depth) ──────────────────
+        if (newStatus == null || !VALID_STATUSES.contains(newStatus)) {
+            throw new IllegalArgumentException("Invalid status value: " + newStatus);
+        }
+
         Complaint complaint = complaintRepository.findById(id).orElse(null);
         if (complaint != null) {
             complaint.setStatus(newStatus);

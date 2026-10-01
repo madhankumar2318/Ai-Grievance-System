@@ -35,7 +35,7 @@ export async function signJWT(payload: { email: string; username: string; role: 
   const fullPayload = {
     ...payload,
     iat: now,
-    exp: now + 7 * 24 * 60 * 60, // 7 days
+    exp: now + 24 * 60 * 60, // 24 hours — reduced from 7 days for security hardening
   };
   const encodedPayload = base64urlEncode(JSON.stringify(fullPayload));
 
@@ -65,7 +65,7 @@ async function setAuthCookie(user: { email: string; username: string; role: stri
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60,
+      maxAge: 24 * 60 * 60, // 24 hours — matches JWT expiry
     });
   } catch (err) {
     console.error("Failed to set auth cookie:", err);
@@ -375,14 +375,23 @@ export async function loginUserServerAction(credentials: {
             role: user.role,
           };
           await setAuthCookie(authUser);
+          console.log(
+            `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=LOGIN_SUCCESS user=${email} role=${role} outcome=ALLOWED`
+          );
           return {
             success: true,
             user: authUser,
           };
         } else {
+          console.log(
+            `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=LOGIN_FAILED user=${email} role=${role} outcome=BLOCKED_401: wrong_password`
+          );
           return { success: false, error: "Incorrect password. Please try again." };
         }
       } else {
+        console.log(
+          `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=LOGIN_FAILED user=${email} role=${role} outcome=BLOCKED_401: user_not_found`
+        );
         return { success: false, error: `No ${role} account found for this email. Please create an account first.` };
       }
     }

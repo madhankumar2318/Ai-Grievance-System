@@ -75,10 +75,11 @@ async function verifyJWTEdge(token: string, secret: string): Promise<JWTPayload 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    const isAdminRoute = pathname.startsWith("/admin");
-    const isChiefRoute = pathname.startsWith("/chief");
+    const isAdminRoute   = pathname.startsWith("/admin");
+    const isChiefRoute   = pathname.startsWith("/chief");
+    const isProfileRoute = pathname.startsWith("/profile");
 
-    if (isAdminRoute || isChiefRoute) {
+    if (isAdminRoute || isChiefRoute || isProfileRoute) {
         const token = request.cookies.get("auth_token")?.value;
 
         // Strictly require token for protected routes
@@ -106,6 +107,8 @@ export async function proxy(request: NextRequest) {
         if (isAdminRoute && payload.role !== "authority" && payload.role !== "chief") {
             return NextResponse.redirect(new URL("/", request.url));
         }
+
+        // /profile is allowed for any authenticated role — no further check needed
     }
 
     return NextResponse.next();
@@ -115,5 +118,5 @@ export async function proxy(request: NextRequest) {
 export const middleware = proxy;
 
 export const config = {
-    matcher: ["/admin/:path*", "/chief/:path*"],
+    matcher: ["/admin/:path*", "/chief/:path*", "/profile/:path*"],
 };

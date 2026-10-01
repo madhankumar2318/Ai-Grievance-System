@@ -136,28 +136,84 @@ export async function getComplaintsServerAction(): Promise<{
 
 /**
  * Update complaint status (Resolved / Rejected / In Progress)
+/**
+ * Approved complaint workflow statuses.
+ * Any value outside this set is rejected immediately with a 400-equivalent error.
+ */
+const VALID_COMPLAINT_STATUSES = new Set([
+  "Pending",
+  "In Progress",
+  "Under Review",
+  "Resolved",
+  "Escalated",
+  "Rejected",
+]);
+
+/**
+ * Update complaint status (Resolved / Rejected / In Progress / etc.)
+ * Security:
+ *  1. Status whitelist — only approved enum values accepted (prevents arbitrary string injection).
+ *  2. Role enforcement — only authority / chief may call this action.
+ *  3. Rate limiting — 30 updates per minute per IP (anti-mass-tampering).
+ *  4. Structured security audit log on every call (allowed or blocked).
  */
 export async function updateComplaintStatusServerAction(
   id: string,
-  newStatus: "Pending" | "In Progress" | "Resolved" | "Rejected"
+  newStatus: "Pending" | "In Progress" | "Under Review" | "Resolved" | "Escalated" | "Rejected"
 ): Promise<{ success: boolean; error?: string }> {
+  const ip = await getClientIp();
+
+  // 1. Rate limit: 30 status updates per minute per IP
+  const rateResult = checkRateLimit(ip, "update_status", 30, 60000);
+  if (!rateResult.success) {
+    console.log(
+      `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=STATUS_UPDATE_RATE_LIMITED outcome=BLOCKED_429`
+    );
+    return {
+      success: false,
+      error: `Rate limit exceeded. Please wait ${rateResult.retryAfterSeconds}s before updating another complaint.`,
+    };
+  }
+
   if (!id || !newStatus) {
     return { success: false, error: "Complaint ID and status are required." };
   }
 
-  // Enforce server-side authorization check: only officers or chiefs can update status
+  // 2. Status whitelist validation
+  if (!VALID_COMPLAINT_STATUSES.has(newStatus)) {
+    console.log(
+      `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=INVALID_STATUS_INJECTION outcome=BLOCKED_400 value=${newStatus}`
+    );
+    return {
+      success: false,
+      error: `Invalid status value. Allowed: Pending, In Progress, Under Review, Resolved, Escalated, Rejected`,
+    };
+  }
+
+  // 3. Enforce server-side authorization check: only officers or chiefs can update status
   const session = await getVerifiedSessionServerAction();
   if (!session.authenticated || !session.user) {
+    console.log(
+      `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=STATUS_UPDATE_UNAUTHORIZED outcome=BLOCKED_401`
+    );
     return { success: false, error: "Unauthorized: Please log in with authorized credentials." };
   }
 
   if (session.user.role !== "authority" && session.user.role !== "chief") {
+    console.log(
+      `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=STATUS_UPDATE_FORBIDDEN user=${session.user.email} role=${session.user.role} outcome=BLOCKED_403`
+    );
     return { success: false, error: "Access Denied: Only field officers and chief administrators can update complaint status." };
   }
 
+  // 4. Audit log — legitimate operation proceeding
+  console.log(
+    `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=STATUS_UPDATE user=${session.user.email} id=${id} newStatus=${newStatus} outcome=ALLOWED`
+  );
+
   const now = new Date().toISOString();
 
-  // 1. Try Java Spring Boot REST API
+  // 5. Try Java Spring Boot REST API
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
@@ -194,7 +250,7 @@ export async function updateComplaintStatusServerAction(
     // Spring Boot offline
   }
 
-  // 2. Direct Supabase Cloud REST API Update
+  // 6. Direct Supabase Cloud REST API Update
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}`,
