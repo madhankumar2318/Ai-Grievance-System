@@ -24,6 +24,14 @@ public class ComplaintController {
             "Pending", "In Progress", "Under Review", "Resolved", "Escalated", "Rejected"
     );
 
+    /** Maximum allowed Base64 photo string length (5MB) to prevent JVM Heap exhaustion / DoS. */
+    private static final int MAX_BASE64_LENGTH = 5 * 1024 * 1024;
+
+    /** Strict image MIME type whitelist. */
+    private static final Set<String> ALLOWED_IMAGE_MIMES = Set.of(
+            "image/jpeg", "image/jpg", "image/png", "image/webp"
+    );
+
     /** Emit a structured security audit log line. */
     private static void auditLog(HttpServletRequest req, String event, String actor, String outcome) {
         String ip = resolveClientIp(req);
@@ -46,14 +54,37 @@ public class ComplaintController {
     private GeminiTriageService geminiTriageService;
 
     @PostMapping("/analyze-photo")
-    public ResponseEntity<Map<String, Object>> analyzePhoto(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, Object>> analyzePhoto(@RequestBody Map<String, String> request,
+                                                            HttpServletRequest req) {
         String base64 = request.get("base64");
         if (base64 == null || base64.isBlank()) {
             base64 = request.get("dataUrl");
         }
-        String mimeType = request.getOrDefault("mimeType", "image/jpeg");
         if (base64 == null || base64.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Missing image data"));
+        }
+
+        // 1. Enforce payload size limit (5MB cap) to prevent JVM heap exhaustion (DoS defense)
+        if (base64.length() > MAX_BASE64_LENGTH) {
+            auditLog(req, "ANALYZE_PHOTO_OVERSIZED", "anonymous", "BLOCKED_400: size=" + base64.length());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Image payload exceeds 5MB limit. Please upload a smaller or compressed photo."
+            ));
+        }
+
+        // 2. Enforce strict MIME whitelist
+        String rawMime = request.getOrDefault("mimeType", "image/jpeg");
+        String mimeType = rawMime != null ? rawMime.toLowerCase().trim() : "image/jpeg";
+        if (!ALLOWED_IMAGE_MIMES.contains(mimeType)) {
+            auditLog(req, "ANALYZE_PHOTO_INVALID_MIME", "anonymous", "BLOCKED_400: mime=" + mimeType);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "Unsupported image format. Allowed formats: JPEG, PNG, WEBP."
+            ));
+        }
+
+        // Strip data URL prefix if present
+        if (base64.contains(",")) {
+            base64 = base64.substring(base64.indexOf(",") + 1);
         }
 
         GeminiTriageService.TriageResult result = geminiTriageService.analyzePhotoVision(base64, mimeType);

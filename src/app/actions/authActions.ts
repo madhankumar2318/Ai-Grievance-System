@@ -386,13 +386,13 @@ export async function loginUserServerAction(credentials: {
           console.log(
             `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=LOGIN_FAILED user=${email} role=${role} outcome=BLOCKED_401: wrong_password`
           );
-          return { success: false, error: "Incorrect password. Please try again." };
+          return { success: false, error: "Invalid email, password, or role combination. Please verify your credentials." };
         }
       } else {
         console.log(
           `SECURITY_AUDIT: timestamp=${new Date().toISOString()} ip=${ip} event=LOGIN_FAILED user=${email} role=${role} outcome=BLOCKED_401: user_not_found`
         );
-        return { success: false, error: `No ${role} account found for this email. Please create an account first.` };
+        return { success: false, error: "Invalid email, password, or role combination. Please verify your credentials." };
       }
     }
   } catch (err) {
@@ -468,11 +468,32 @@ export async function syncSessionCookieServerAction(_untrustedUser: { email: str
 }
 
 /**
- * Clear auth cookie on logout
+ * Clear auth cookie on logout and actively invalidate token in Spring Boot blacklist
  */
 export async function logoutServerAction() {
   try {
     const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+
+    // Actively notify Spring Boot backend to blacklist the token until expiry
+    if (token) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        await fetch(`${SPRING_BOOT_URL}/api/auth/logout`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch {
+        // Backend offline or unreachable — proceed with cookie deletion
+      }
+    }
+
     cookieStore.delete("auth_token");
     return { success: true };
   } catch (err) {

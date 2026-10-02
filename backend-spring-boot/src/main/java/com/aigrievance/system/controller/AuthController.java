@@ -18,6 +18,9 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private com.aigrievance.system.security.TokenBlacklistService tokenBlacklistService;
+
     /** Emit a structured security audit log line. */
     private static void auditLog(HttpServletRequest req, String event, String actor, String outcome) {
         String ip = resolveClientIp(req);
@@ -60,7 +63,15 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, Object>> logout() {
+    public ResponseEntity<Map<String, Object>> logout(HttpServletRequest req) {
+        String bearer = req.getHeader("Authorization");
+        if (bearer != null && bearer.startsWith("Bearer ")) {
+            String token = bearer.substring(7);
+            tokenBlacklistService.blacklistToken(token);
+            auditLog(req, "LOGOUT", "token_revoked", "SUCCESS");
+        } else {
+            auditLog(req, "LOGOUT", "session_cleared", "SUCCESS");
+        }
         return ResponseEntity.ok(Map.of("success", true));
     }
 }
