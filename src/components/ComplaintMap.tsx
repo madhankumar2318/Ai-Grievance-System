@@ -36,6 +36,16 @@ interface Props {
     initialComplaints?: any[];
 }
 
+function escapeHtml(str: string): string {
+    if (!str) return "";
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 function parseCoords(c: { id: string; location?: string | null }): { lat: number; lng: number } {
     let lat = 13.0827; // Default Chennai coordinates
     let lng = 80.2707;
@@ -262,9 +272,9 @@ export default function ComplaintMap({
                 });
 
                 marker.bindTooltip(`
-                    <div style="font-weight:700;font-size:0.8rem;margin-bottom:2px;">${pin.id}</div>
-                    <div style="font-size:0.75rem;color:#334155;margin-bottom:2px;">${pin.subject}</div>
-                    <div style="font-weight:700;font-size:0.72rem;color:${color};">${pin.priority} • ${pin.status}</div>
+                    <div style="font-weight:700;font-size:0.8rem;margin-bottom:2px;">${escapeHtml(pin.id)}</div>
+                    <div style="font-size:0.75rem;color:#334155;margin-bottom:2px;">${escapeHtml(pin.subject)}</div>
+                    <div style="font-weight:700;font-size:0.72rem;color:${color};">${escapeHtml(pin.priority)} • ${escapeHtml(pin.status)}</div>
                 `, {
                     direction: "top",
                     className: "leaflet-tooltip-custom",

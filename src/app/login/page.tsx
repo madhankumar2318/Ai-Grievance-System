@@ -416,9 +416,25 @@ export default function LoginPage() {
 
             if (res.success && res.user) {
                 login({ username: res.user.username, email: res.user.email, role: res.user.role as UserRole });
-                if (res.user.role === "user") router.push("/");
-                else if (res.user.role === "authority") router.push("/admin");
-                else router.push("/chief");
+
+                // Safe post-login redirect with whitelist validation against open redirect attacks
+                let target = res.user.role === "user" ? "/" : res.user.role === "authority" ? "/admin" : "/chief";
+                if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    const redirectParam = params.get("redirect");
+                    const ALLOWED_REDIRECTS = ["/", "/profile", "/admin", "/chief", "/track"];
+                    if (redirectParam && ALLOWED_REDIRECTS.includes(redirectParam)) {
+                        // Role-based privilege boundary check
+                        if (redirectParam === "/chief" && res.user.role !== "chief") {
+                            // ignore unauthorized chief destination
+                        } else if (redirectParam === "/admin" && res.user.role !== "authority" && res.user.role !== "chief") {
+                            // ignore unauthorized admin destination
+                        } else {
+                            target = redirectParam;
+                        }
+                    }
+                }
+                router.push(target);
             } else {
                 setLoginError(res.error || "Invalid email or password.");
             }

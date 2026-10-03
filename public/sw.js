@@ -31,7 +31,11 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     if (event.action === 'track' || event.action === '') {
-        const url = event.notification.data?.url || '/track';
+        const rawUrl = event.notification.data?.url;
+        // Open-redirect hardening: strictly permit only relative same-origin paths
+        const url = (typeof rawUrl === 'string' && rawUrl.startsWith('/') && !rawUrl.startsWith('//') && !rawUrl.includes('\\'))
+            ? rawUrl
+            : '/track';
         event.waitUntil(
             self.clients.matchAll({ type: 'window' }).then((clients) => {
                 for (const client of clients) {
