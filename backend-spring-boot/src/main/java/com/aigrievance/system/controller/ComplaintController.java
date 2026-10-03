@@ -102,15 +102,20 @@ public class ComplaintController {
             auditLog(req, "COMPLAINT_SUBMISSION_REJECTED", "anonymous", "BLOCKED_400: missing required fields");
             return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
         }
-        Map<String, Object> result = complaintService.createComplaint(request);
-        String actor = (request.getUserEmail() != null && !request.getUserEmail().isBlank())
-                ? request.getUserEmail().trim().toLowerCase()
-                : "anonymous";
-        @SuppressWarnings("unchecked")
-        Map<String, Object> data = (Map<String, Object>) result.get("data");
-        String complaintId = (data != null && data.get("id") != null) ? data.get("id").toString() : "unknown";
-        auditLog(req, "COMPLAINT_CREATED id=" + complaintId, actor, "SUCCESS");
-        return ResponseEntity.ok(result);
+        try {
+            Map<String, Object> result = complaintService.createComplaint(request);
+            String actor = (request.getUserEmail() != null && !request.getUserEmail().isBlank())
+                    ? request.getUserEmail().trim().toLowerCase()
+                    : "anonymous";
+            @SuppressWarnings("unchecked")
+            Map<String, Object> data = (Map<String, Object>) result.get("data");
+            String complaintId = (data != null && data.get("id") != null) ? data.get("id").toString() : "unknown";
+            auditLog(req, "COMPLAINT_CREATED id=" + complaintId, actor, "SUCCESS");
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException ex) {
+            auditLog(req, "COMPLAINT_SUBMISSION_REJECTED", "anonymous", "BLOCKED_400: " + ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
     }
 
     @GetMapping

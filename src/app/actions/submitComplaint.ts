@@ -43,6 +43,12 @@ export async function submitComplaintServerAction(params: SubmitComplaintParams)
     return { success: false, error: "Subject and description must contain valid text." };
   }
 
+  // RFC-compliant email regex check if email is provided
+  const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (cleanEmail && !EMAIL_REGEX.test(cleanEmail)) {
+    return { success: false, error: "Please provide a valid email address (e.g. citizen@domain.com)." };
+  }
+
   const subject = cleanSubject;
   const description = cleanDescription;
   const location = cleanLocation;

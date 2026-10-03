@@ -14,36 +14,36 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Servlet filter that enforces per-IP rate limits directly at the Spring Boot layer.
  *
  * Protects against:
- *  - Direct-to-backend brute-force login attempts on POST /api/auth/login
- *  - Gemini Vision AI quota exhaustion via POST /api/complaints/analyze-photo
- *  - Complaint submission spam via POST /api/complaints
- *
- * Limits (sliding 60-second windows):
- *  - /api/auth/login          → 10 requests / 60 s per IP
- *  - /api/auth/register       → 5  requests / 60 s per IP
- *  - /api/complaints (POST)   → 20 requests / 60 s per IP
- *  - /api/complaints/analyze-photo → 10 requests / 60 s per IP
+ *  - Direct-to-backend brute-force login attempts on POST /api/auth/login (10/min)
+ *  - Rapid registration spam on POST /api/auth/register (5/min)
+ *  - Gemini Vision AI quota exhaustion via POST /api/complaints/analyze-photo (10/min)
+ *  - Complaint submission spam via POST /api/complaints (20/min)
+ *  - Complaint ID enumeration and brute-force via GET /api/complaints/{id} (30/min)
+ *  - Status modification flooding via POST /api/complaints/update-status (30/min)
+ *  - Citizen history scraping via GET /api/complaints/user/{email} (30/min)
  */
 @Component
 public class RateLimitingFilter implements Filter {
 
     private static final long WINDOW_MS = 60_000L; // 1-minute sliding window
 
-    /** Endpoint-specific limits: path-suffix → max requests per window */
+    /** Endpoint-specific limits: static path -> max requests per window */
     private static final Map<String, Integer> ENDPOINT_LIMITS = Map.of(
-            "/api/auth/login",                10,
-            "/api/auth/register",             5,
-            "/api/complaints/analyze-photo",  10
+            "/api/auth/login",                 10,
+            "/api/auth/register",              5,
+            "/api/complaints/analyze-photo",   10,
+            "/api/complaints/update-status",   30
     );
     private static final int COMPLAINTS_POST_LIMIT = 20;
+    private static final int COMPLAINT_LOOKUP_LIMIT = 30;
+    private static final int USER_COMPLAINTS_LIMIT = 30;
 
-    /** Key: "ip|path" → [count, windowStartEpochMs] */
+    /** Key: "ip|bucket" -> [count, windowStartEpochMs] */
     private final ConcurrentHashMap<String, long[]> counters = new ConcurrentHashMap<>();
 
     @Override
@@ -63,7 +63,7 @@ public class RateLimitingFilter implements Filter {
         Integer limit = resolveLimit(path, method);
         if (limit != null) {
             String ip  = resolveClientIp(req);
-            String key = ip + "|" + normaliseKey(path);
+            String key = resolveRateKey(ip, path, method);
 
             if (isRateLimited(key, limit)) {
                 auditLog(req, ip, path, "RATE_LIMITED");
@@ -85,17 +85,39 @@ public class RateLimitingFilter implements Filter {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private Integer resolveLimit(String path, String method) {
+        String cleanPath = normaliseKey(path);
+
         // Exact-match specific paths first
         for (Map.Entry<String, Integer> entry : ENDPOINT_LIMITS.entrySet()) {
-            if (path.equals(entry.getKey())) {
+            if (cleanPath.equals(entry.getKey())) {
                 return entry.getValue();
             }
         }
         // Catch POST /api/complaints (complaint submission)
-        if ("POST".equalsIgnoreCase(method) && path.equals("/api/complaints")) {
+        if ("POST".equalsIgnoreCase(method) && cleanPath.equals("/api/complaints")) {
             return COMPLAINTS_POST_LIMIT;
         }
+        // Catch GET /api/complaints/user/{email} (citizen grievance history)
+        if ("GET".equalsIgnoreCase(method) && cleanPath.startsWith("/api/complaints/user/")) {
+            return USER_COMPLAINTS_LIMIT;
+        }
+        // Catch GET /api/complaints/{id} (single grievance tracking lookup)
+        if ("GET".equalsIgnoreCase(method) && cleanPath.matches("^/api/complaints/[^/]+$") && !cleanPath.equals("/api/complaints")) {
+            return COMPLAINT_LOOKUP_LIMIT;
+        }
         return null; // no rate limit for this path
+    }
+
+    private String resolveRateKey(String ip, String path, String method) {
+        String cleanPath = normaliseKey(path);
+        // Group all grievance lookups under a shared per-IP bucket so cycling IDs does not evade limits
+        if ("GET".equalsIgnoreCase(method) && cleanPath.matches("^/api/complaints/[^/]+$") && !cleanPath.equals("/api/complaints")) {
+            return ip + "|complaint_lookup";
+        }
+        if ("GET".equalsIgnoreCase(method) && cleanPath.startsWith("/api/complaints/user/")) {
+            return ip + "|user_complaints";
+        }
+        return ip + "|" + cleanPath;
     }
 
     private String normaliseKey(String path) {

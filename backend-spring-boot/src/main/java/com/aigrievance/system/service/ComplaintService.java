@@ -38,6 +38,9 @@ public class ComplaintService {
         return clean;
     }
 
+    private static final java.util.regex.Pattern EMAIL_PATTERN =
+            java.util.regex.Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+
     @Transactional
     public Map<String, Object> createComplaint(ComplaintRequest request) {
         String randomSuffix = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
@@ -49,6 +52,11 @@ public class ComplaintService {
         String safeDescription = sanitizeInput(request.getDescription(), 2500);
         String safeLocation = sanitizeInput(request.getLocation(), 250);
         String safeEmail = sanitizeInput(request.getUserEmail(), 150).toLowerCase();
+
+        // Validate email format if provided
+        if (!safeEmail.isBlank() && !EMAIL_PATTERN.matcher(safeEmail).matches()) {
+            throw new IllegalArgumentException("Invalid email address format: " + safeEmail);
+        }
 
         // Perform AI Triage with sanitized inputs
         GeminiTriageService.TriageResult triage = geminiTriageService.classifyComplaint(
