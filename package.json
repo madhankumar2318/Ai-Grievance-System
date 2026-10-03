@@ -1,29 +1,16 @@
 {
-  "name": "ai-grievance-system",
-  "version": "0.1.0",
+  "name": "ai-grievance-system-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "description": "AI Grievance System - Monorepo containing Next.js Frontend and Spring Boot Backend",
   "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/leaflet": "^1.9.21",
-    "bcryptjs": "^3.0.3",
-    "leaflet": "^1.9.4",
-    "next": "16.3.8",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "recharts": "^3.7.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.8",
-    "typescript": "^5"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix frontend run start",
+    "lint": "npm --prefix frontend run lint",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "dev:backend": "mvn -f backend/pom.xml spring-boot:run",
+    "build:backend": "mvn -f backend/pom.xml test-compile"
   }
 }

@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏛️ AI Grievance System
 
-## Getting Started
+Enterprise civic grievance reporting and triage portal powered by **Next.js 16 (Frontend)**, **Java Spring Boot 3.2 (Backend)**, **Google Gemini AI**, and **PostgreSQL / Supabase**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 📁 Project Structure
+
+```
+ai-grievance-system/
+├── frontend/             # Next.js 16.3.8 Application (Port 3000)
+│   ├── src/              # App router, components, context, and server actions
+│   ├── public/           # Static assets, icons, and service workers
+│   ├── next.config.ts    # CSP headers, HSTS, and image domain config
+│   ├── tsconfig.json     # TypeScript configuration
+│   └── package.json      # Frontend dependencies
+│
+├── backend/              # Enterprise Java Spring Boot Backend (Port 8080)
+│   ├── src/              # Controllers, services, JPA models, and security filters
+│   ├── pom.xml           # Maven dependencies (Spring Boot 3.2.12)
+│   └── ...
+│
+├── package.json          # Root Monorepo runner scripts
+├── .gitignore            # Git ignore rules for both frontend & backend
+└── README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Running the Project
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Option A: From the Root Directory
 
-## Learn More
+You can run commands directly from the root of the project:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Start Next.js Frontend (http://localhost:3000)
+npm run dev
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Build Frontend
+npm run build
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Start Spring Boot Backend (http://localhost:8080)
+npm run backend:dev
 
-## Deploy on Vercel
+# Compile Spring Boot Backend
+npm run backend:build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Option B: Running in Individual Folders
+
+#### 1. Frontend (Next.js)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+#### 2. Backend (Spring Boot)
+```bash
+cd backend
+mvn spring-boot:run
+```
+Backend API will be live at [http://localhost:8080](http://localhost:8080).
+
+---
+
+## 🛡️ Enterprise Security Highlights
+- **Edge Route Guards & RBAC:** Cryptographic HMAC-SHA256 JWT checks at the edge (`proxy.ts`).
+- **Active Token Revocation:** In-memory sliding-window token blacklist on logout (`TokenBlacklistService`).
+- **Dual-Layer Rate Limiting:** Sliding-window rate limiters on both Next.js Server Actions and Spring Boot servlet filters.
+- **Injection Immunities:** Stored XSS tag stripping, prompt injection XML quarantine, and Leaflet DOM-XSS entity escaping.
+- **Data Minimization:** High-entropy tracking IDs (`GRV-YYYY-XXXXXXXX`) and PII email masking (`r***r@gmail.com`).
+- **Encrypted Database Transport:** PostgreSQL TLS enforced via `?sslmode=require`.
