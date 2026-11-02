@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
@@ -510,8 +511,19 @@ function GpsCameraModal({
 
 /* ─── Main Complaint Page ────────────────────────────────── */
 export default function Home() {
+  const router = useRouter();
   const { t } = useLang();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      if (user.role === "chief") {
+        router.replace("/chief");
+      } else if (user.role === "authority") {
+        router.replace("/admin");
+      }
+    }
+  }, [user, isLoading, router]);
   const [formData, setFormData] = useState({ subject: "", description: "", location: "", email: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<SubmissionResponse | null>(null);
@@ -702,6 +714,17 @@ export default function Home() {
 
   const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
 
+  if (user?.role === "chief" || user?.role === "authority") {
+    return (
+      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "1rem" }}>
+        <div style={{ width: "40px", height: "40px", border: "3px solid rgba(236, 72, 153, 0.2)", borderTopColor: user.role === "chief" ? "#ec4899" : "#f97316", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+        <p style={{ color: "var(--text-muted)", fontSize: "0.95rem" }}>
+          Redirecting to {user.role === "chief" ? "Chief Administrator Dashboard" : "Authority Dashboard"}...
+        </p>
+      </div>
+    );
+  }
+
   if (result?.success) {
     return (
       <ProtectedRoute allowedRoles={["user", "authority", "chief"]}>
@@ -739,104 +762,6 @@ export default function Home() {
   return (
     <ProtectedRoute allowedRoles={["user", "authority", "chief"]}>
       {showGpsCamera && <GpsCameraModal onCapture={handleGpsCapture} onClose={() => setShowGpsCamera(false)} />}
-
-      {/* Authority quick-access dashboard banner */}
-      {user?.role === "authority" && (
-        <div className="container" style={{ paddingTop: "1.25rem", paddingBottom: "0" }}>
-          <div className="glass animate-fade-in" style={{
-            padding: "0.85rem 1.25rem",
-            borderRadius: "0.875rem",
-            border: "1px solid rgba(249, 115, 22, 0.35)",
-            background: "linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(249, 115, 22, 0.04))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-            flexWrap: "wrap",
-            boxShadow: "0 4px 16px rgba(249, 115, 22, 0.08)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <span style={{ fontSize: "1.3rem" }}>🛡️</span>
-              <div>
-                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#f97316" }}>
-                  Signed in as Authority ({user.username})
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                  You have access to the Authority Grievance Management Dashboard.
-                </div>
-              </div>
-            </div>
-            <Link
-              href="/admin"
-              className="btn btn-primary"
-              style={{
-                padding: "0.45rem 1.15rem",
-                fontSize: "0.82rem",
-                borderRadius: "0.5rem",
-                textDecoration: "none",
-                background: "linear-gradient(135deg, #f97316, #ea580c)",
-                border: "none",
-                color: "white",
-                fontWeight: "700",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.35rem",
-              }}
-            >
-              Open Authority Dashboard →
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Chief Administrator quick-access dashboard banner */}
-      {user?.role === "chief" && (
-        <div className="container" style={{ paddingTop: "1.25rem", paddingBottom: "0" }}>
-          <div className="glass animate-fade-in" style={{
-            padding: "0.85rem 1.25rem",
-            borderRadius: "0.875rem",
-            border: "1px solid rgba(236, 72, 153, 0.35)",
-            background: "linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(236, 72, 153, 0.04))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-            flexWrap: "wrap",
-            boxShadow: "0 4px 16px rgba(236, 72, 153, 0.08)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <span style={{ fontSize: "1.3rem" }}>⭐</span>
-              <div>
-                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#ec4899" }}>
-                  Signed in as Chief Administrator ({user.username})
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                  Access city-wide oversight, analytics, and departmental controls.
-                </div>
-              </div>
-            </div>
-            <Link
-              href="/chief"
-              className="btn btn-primary"
-              style={{
-                padding: "0.45rem 1.15rem",
-                fontSize: "0.82rem",
-                borderRadius: "0.5rem",
-                textDecoration: "none",
-                background: "linear-gradient(135deg, #ec4899, #db2777)",
-                border: "none",
-                color: "white",
-                fontWeight: "700",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.35rem",
-              }}
-            >
-              Open Chief Dashboard →
-            </Link>
-          </div>
-        </div>
-      )}
 
       <main>
         <section className="section" style={{ background: "radial-gradient(circle at top right, hsla(245,75%,60%,0.1), transparent)" }}>
