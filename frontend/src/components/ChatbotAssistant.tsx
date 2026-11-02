@@ -20,7 +20,7 @@ const BOT_RESPONSES: Record<string, string> = {
     long: "⏱️ Resolution times vary by priority: Critical (24-48 hrs), High (3-5 days), Medium (7-10 days), Low (14+ days). You'll get browser notifications on status changes.",
     file: "📝 To file a complaint:\n1️⃣ Fill the Subject field\n2️⃣ Describe the issue in detail\n3️⃣ Add your location or use GPS Camera\n4️⃣ Upload photos/videos (optional)\n5️⃣ Click Submit — AI will triage it instantly!",
     voice: "🎙️ Yes! Click the **Voice Input** button on the complaint form, speak your issue, and the text will be filled automatically. No typing needed!",
-    photo: "📸 Click **AI Analyze Photo** after uploading an image. Our AI will read what's in the photo and auto-fill the Subject and Category fields!",
+    photo: "📸 You can attach photos/videos as evidence using the upload box or the GPS Camera to capture geotagged photos with location stamps!",
     track: "🔍 Use your GRV- tracking ID (shown after submission) on the Track page. You can also enable browser notifications to get automatic status alerts.",
     login: "🔐 Account Access:\n• Citizens: Register using your email address on the Login page.\n• Field Officers & Chiefs: Contact your system administrator for official department credentials and onboarding passphrases.",
     hi: "👋 Hello! I'm here to help you with grievance filing. You can ask me about filing complaints, tracking status, or any category-specific info!",
@@ -42,7 +42,7 @@ function getBotReply(input: string): string {
     if (lower.includes("electric") || lower.includes("power") || lower.includes("current")) {
         return "⚡ Power/electricity issues go under **Infrastructure**. Mention your area, consumer number if possible, and duration of the outage.";
     }
-    return "🤔 I'm not sure about that specific query. Try asking about:\n• How to file a complaint\n• Water/road/hospital/pollution issues\n• Tracking your complaint status\n• Voice input or photo analysis features\n• Account access & registration";
+    return "🤔 I'm not sure about that specific query. Try asking about:\n• How to file a complaint\n• Water/road/hospital/pollution issues\n• Tracking your complaint status\n• Voice input or GPS camera features\n• Account access & registration";
 }
 
 export default function ChatbotAssistant() {
