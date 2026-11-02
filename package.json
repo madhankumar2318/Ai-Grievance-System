@@ -5,7 +5,7 @@
   "description": "AI Grievance System - Monorepo containing Next.js Frontend and Spring Boot Backend",
   "scripts": {
     "dev": "npm --prefix frontend run dev",
-    "build": "npm --prefix frontend run build",
+    "build": "npm --prefix frontend run build && node -e \"const fs=require('fs'); if (fs.existsSync('frontend/.next')) fs.cpSync('frontend/.next', '.next', { recursive: true });\"",
     "start": "npm --prefix frontend run start",
     "lint": "npm --prefix frontend run lint",
     "dev:frontend": "npm --prefix frontend run dev",
