@@ -291,10 +291,36 @@ export default function ChiefDashboard() {
                     </div>
                 </div>
 
-                {/* Print-only header */}
-                <div className="print-only" style={{ display: "none", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "2px solid #000" }}>
-                    <h2 style={{ fontSize: "1.5rem" }}>⭐ AI Grievance System — Chief Report</h2>
-                    <p style={{ fontSize: "0.85rem", color: "#666" }}>Generated on: {new Date().toLocaleString("en-IN")}</p>
+                {/* Executive Print-only Header */}
+                <div className="print-only chief-print-header" style={{ display: "none" }}>
+                    <div className="chief-print-top">
+                        <div className="chief-print-branding">
+                            <div className="chief-print-emblem">🏛️</div>
+                            <div>
+                                <h1 className="chief-print-title">
+                                    AI Grievance Redressal System — Chief Executive Audit Report
+                                </h1>
+                                <p className="chief-print-subtitle">
+                                    Office of the Chief Municipal Administrator · City-Wide Civic Intelligence Overview
+                                </p>
+                            </div>
+                        </div>
+                        <div className="chief-print-meta">
+                            <span className="chief-print-badge">OFFICIAL ADMINISTRATIVE RECORD</span>
+                            <div className="chief-print-date">
+                                Generated: <strong>{new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="chief-print-summary-strip">
+                        <div><span>Total Recorded Grievances:</span> <strong>{total}</strong></div>
+                        <div><span>Pending Action:</span> <strong style={{ color: "#d97706" }}>{pending}</strong></div>
+                        <div><span>Under Active Resolution:</span> <strong style={{ color: "#4f46e5" }}>{inProgress}</strong></div>
+                        <div><span>Resolved Cases:</span> <strong style={{ color: "#16a34a" }}>{resolved}</strong></div>
+                        <div><span>Critical Urgent Cases:</span> <strong style={{ color: "#dc2626" }}>{critical}</strong></div>
+                        <div><span>City Resolution Rate:</span> <strong style={{ color: "#0891b2" }}>{resolutionRate}%</strong></div>
+                    </div>
                 </div>
 
                 {/* ── Stat Cards ── */}
@@ -397,7 +423,7 @@ export default function ChiefDashboard() {
                         </div>
 
                         {/* Bar Chart — Priority Distribution */}
-                        <div className="glass" style={{ padding: "1.75rem", borderRadius: "1.25rem" }}>
+                        <div className="glass chief-priority-card" style={{ padding: "1.75rem", borderRadius: "1.25rem" }}>
                             <div style={{ fontWeight: "700", marginBottom: "0.3rem" }}>📊 Priority Distribution</div>
                             <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>Complaints grouped by urgency level (live)</div>
                             <ResponsiveContainer width="100%" height={180}>
@@ -514,8 +540,8 @@ export default function ChiefDashboard() {
                 )}
 
                 {/* ── All Complaints Table ── */}
-                <div className="glass" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
-                    <div style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
+                    <div className="chief-table-header-block" style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <h3>{t("chief_all_grievances")}</h3>
                         <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                             {loading ? "Loading..." : `${total} ${t("chief_complaints_total")}`}

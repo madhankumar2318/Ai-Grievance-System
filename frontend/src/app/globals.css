@@ -444,48 +444,6 @@ tbody tr:hover {
 ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
 /* ══════════════════════════════════════════════
-   Print / PDF Export
-══════════════════════════════════════════════ */
-@media print {
-  nav, .no-print    { display: none !important; }
-  .print-only       { display: block !important; }
-
-  body {
-    background: #ffffff !important;
-    color: #000000 !important;
-    font-size: 12px;
-    background-image: none !important;
-  }
-
-  .glass {
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-  }
-
-  .container { max-width: 100% !important; padding: 0 !important; }
-  main        { padding: 1rem !important; }
-
-  .print-stat { border: 1px solid #e2e8f0 !important; page-break-inside: avoid; }
-  table       { font-size: 11px; }
-  th, td      { padding: 0.5rem 0.75rem !important; }
-
-  span[style] {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  .gradient-text {
-    color: #6366f1 !important;
-    background: none !important;
-    -webkit-text-fill-color: #6366f1 !important;
-  }
-
-  @page { margin: 1.5cm; size: A4 landscape; }
-}
-
-/* ══════════════════════════════════════════════
    Mobile & Responsive System
 ══════════════════════════════════════════════ */
 
@@ -920,101 +878,361 @@ tbody tr:hover {
   padding-top: 0.75rem;
 }
 
-/* ── Premium PDF Export & Print Styles ── */
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM EXECUTIVE PDF EXPORT & PRINT SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 15mm;
+    size: A4 landscape;
+    margin: 10mm 12mm 12mm 12mm;
   }
-  
-  body {
+
+  *, *::before, *::after {
+    box-sizing: border-box !important;
+  }
+
+  html, body {
     background: #ffffff !important;
-    color: #111827 !important;
-    font-family: system-ui, -apple-system, sans-serif !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  
-  /* Hide non-printable/interactive elements */
+
+  /* ── 1. Hide interactive / non-printable UI elements ── */
   nav,
+  header,
+  footer,
   button,
   .no-print,
   .mobile-menu-drawer,
   .chatbot-container,
   #chatbot-toggle,
-  .desktop-only-control {
+  .desktop-only-control,
+  .print-stat > div:first-child /* decorative blur circle */ {
     display: none !important;
   }
 
-  /* Force visibility of print-only headers */
+  /* ── 2. Full width container without browser margins ── */
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* ── 3. Executive Chief Report Header ── */
   .print-only {
     display: block !important;
   }
 
-  /* Force table layout and hide mobile cards on print */
-  .chief-desktop-table, .admin-desktop-table {
-    display: block !important;
+  .chief-print-header {
+    margin-bottom: 0.85rem !important;
+    padding-bottom: 0.65rem !important;
+    border-bottom: 2px solid #0f172a !important;
   }
-  .chief-mobile-cards, .admin-mobile-cards {
+
+  .chief-print-top {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .chief-print-branding {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+  }
+
+  .chief-print-emblem {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 8px !important;
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.25rem !important;
+  }
+
+  .chief-print-title {
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  .chief-print-subtitle {
+    font-size: 0.72rem !important;
+    color: #475569 !important;
+    margin: 0.15rem 0 0 !important;
+    font-weight: 600 !important;
+  }
+
+  .chief-print-meta {
+    text-align: right !important;
+  }
+
+  .chief-print-badge {
+    display: inline-block !important;
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    font-size: 0.65rem !important;
+    font-weight: 800 !important;
+    padding: 0.2rem 0.5rem !important;
+    border-radius: 4px !important;
+    border: 1px solid #cbd5e1 !important;
+    letter-spacing: 0.04em !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  .chief-print-date {
+    font-size: 0.7rem !important;
+    color: #64748b !important;
+  }
+
+  .chief-print-summary-strip {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.72rem !important;
+    color: #334155 !important;
+  }
+
+  /* ── 4. Stats Scorecard Grid (Page 1) ── */
+  .chief-stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+
+  .print-stat {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 0.35rem !important;
+    text-align: center !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-stat div[style*="width: 42px"] {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+
+  .print-stat div[style*="font-size: 2.25rem"] {
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.1rem !important;
+  }
+
+  .print-stat div[style*="font-size: 0.78rem"] {
+    font-size: 0.68rem !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+  }
+
+  /* ── 5. Analytics Charts (Page 1) ── */
+  .chief-charts-grid {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr !important;
+    gap: 0.65rem !important;
+    margin-bottom: 0.65rem !important;
+  }
+
+  .chief-charts-grid > .glass,
+  .chief-priority-card {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 0.65rem 0.85rem !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .chief-priority-card {
+    margin-bottom: 0.65rem !important;
+  }
+
+  .recharts-responsive-container {
+    width: 100% !important;
+  }
+
+  /* ── 6. Category Breakdown & Authority Status (Page 1) ── */
+  .chief-info-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.65rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  .chief-info-grid > .glass {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 0.85rem !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .chief-info-grid h3 {
+    font-size: 0.88rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Authority officer cards */
+  .chief-info-grid [style*="border-radius: 0.75rem"] {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 0.35rem 0.6rem !important;
+    margin-bottom: 0.25rem !important;
+    box-shadow: none !important;
+  }
+
+  /* ── 7. Detailed Complaints Table (Cleanly starts on Page 2) ── */
+  .chief-table-card {
+    page-break-before: always !important;
+    break-before: page !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    overflow: visible !important;
+    margin-top: 0 !important;
+    box-shadow: none !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  .chief-table-header-block {
+    padding: 0.75rem 1rem !important;
+    background: #f8fafc !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+  }
+
+  .chief-table-header-block h3 {
+    font-size: 1.1rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+  }
+
+  .chief-desktop-table {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .chief-mobile-cards {
     display: none !important;
   }
 
-
-  /* Convert dark-mode cards to elegant white boxes */
-  .glass, .card-hover, .chief-mobile-card, .admin-mobile-card {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    box-shadow: none !important;
-    color: #111827 !important;
-    border-radius: 0.75rem !important;
-    padding: 1.25rem !important;
-  }
-
-  /* Optimize text contrast for high-quality printing */
-  h1, h2, h3, h4, h5, h6 {
-    color: #0f172a !important;
-  }
-
-  p, span, div, td, th {
-    color: #374151 !important;
-  }
-
-  /* Remove gradient background fills and replace with solid colors for text */
-  .gradient-text {
-    background: none !important;
-    -webkit-text-fill-color: initial !important;
-    color: #4f46e5 !important; /* Elegant dark indigo */
-    font-weight: 800 !important;
-  }
-
-  /* Tables styling on print */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
-    margin-top: 1rem !important;
+    font-size: 9.5px !important;
+    table-layout: fixed !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f8fafc !important;
   }
 
   th {
     background: #f1f5f9 !important;
-    color: #1e293b !important;
-    border-bottom: 2px solid #cbd5e1 !important;
-    padding: 0.75rem !important;
-    font-weight: 700 !important;
+    color: #0f172a !important;
+    font-size: 8.5px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 5px 7px !important;
+    text-align: left !important;
   }
 
   td {
-    border-bottom: 1px solid #e2e8f0 !important;
-    padding: 0.75rem !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 5px 7px !important;
     color: #334155 !important;
+    vertical-align: middle !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    line-height: 1.3 !important;
   }
 
-  /* Keep charts aligned and fully visible */
-  .recharts-responsive-container {
-    width: 100% !important;
-    height: auto !important;
+  /* Specific column width allocations in landscape */
+  th:nth-child(1), td:nth-child(1) { width: 11% !important; font-weight: 700 !important; font-family: monospace !important; color: #4338ca !important; } /* ID */
+  th:nth-child(2), td:nth-child(2) { width: 29% !important; } /* Subject & Category */
+  th:nth-child(3), td:nth-child(3) { width: 17% !important; color: #475569 !important; } /* Citizen */
+  th:nth-child(4), td:nth-child(4) { width: 17% !important; color: #475569 !important; } /* Location */
+  th:nth-child(5), td:nth-child(5) { width: 9% !important; text-align: center !important; }  /* Priority */
+  th:nth-child(6), td:nth-child(6) { width: 9% !important; text-align: center !important; }  /* Status */
+  th:nth-child(7), td:nth-child(7) { width: 8% !important; text-align: center !important; font-size: 8.5px !important; }  /* Date */
+
+  /* Priority & Status Badges Styling in Print */
+  span[style*="border-radius: 99px"] {
+    display: inline-block !important;
+    padding: 1px 5px !important;
+    font-size: 8px !important;
+    font-weight: 800 !important;
+    border-radius: 4px !important;
+    border: 1px solid #cbd5e1 !important;
+    text-align: center !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Prevent awkward page breaks inside components */
-  .glass, tr, table, .chief-mobile-card, .admin-mobile-card {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+  .gradient-text {
+    background: none !important;
+    -webkit-text-fill-color: initial !important;
+    color: #4f46e5 !important;
+    font-weight: 800 !important;
+  }
+
+  .glass {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
   }
 }
