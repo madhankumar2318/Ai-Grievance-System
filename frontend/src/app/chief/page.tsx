@@ -151,6 +151,26 @@ export default function ChiefDashboard() {
     const [complaints, setComplaints] = useState<ChiefComplaint[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+    const [isPrinting, setIsPrinting] = useState(false);
+
+    useEffect(() => {
+        const handleBeforePrint = () => setIsPrinting(true);
+        const handleAfterPrint = () => setIsPrinting(false);
+        window.addEventListener("beforeprint", handleBeforePrint);
+        window.addEventListener("afterprint", handleAfterPrint);
+        return () => {
+            window.removeEventListener("beforeprint", handleBeforePrint);
+            window.removeEventListener("afterprint", handleAfterPrint);
+        };
+    }, []);
+
+    const handleExportPDF = () => {
+        setIsPrinting(true);
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => setIsPrinting(false), 1000);
+        }, 150);
+    };
 
     /* ── Fetch from Supabase / Spring Boot ────────────────────────────────────────────── */
     const fetchComplaints = async () => {
@@ -273,7 +293,7 @@ export default function ChiefDashboard() {
                         </button>
                         {/* Export PDF */}
                         <button
-                            onClick={() => window.print()}
+                            onClick={handleExportPDF}
                             className="no-print btn"
                             style={{
                                 display: "flex", alignItems: "center", gap: "0.6rem",
@@ -351,60 +371,64 @@ export default function ChiefDashboard() {
                         <div className="chief-charts-grid">
 
                             {/* Area Chart — Real 7-day Trend */}
-                            <div className="glass card-hover" style={{ padding: "1.75rem", borderRadius: "1.25rem" }}>
-                                <div style={{ fontWeight: "700", marginBottom: "0.3rem" }}>📈 Complaints Over Time</div>
-                                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>
+                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.8rem" : "1.75rem", borderRadius: "1.25rem" }}>
+                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📈 Complaints Over Time</div>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.4rem" : "1.25rem" }}>
                                     Last 7 days — filed vs resolved (live data)
                                 </div>
-                                <ResponsiveContainer width="100%" height={220}>
-                                    <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="gradFiled" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                            </linearGradient>
-                                            <linearGradient id="gradResolved" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                                        <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(99, 102, 241, 0.35)", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
-                                        <Area type="monotone" dataKey="Filed"    stroke="#6366f1" strokeWidth={2.5} fill="url(#gradFiled)"    dot={{ fill: "#6366f1", r: 4 }} activeDot={{ r: 6 }} />
-                                        <Area type="monotone" dataKey="Resolved" stroke="#10b981" strokeWidth={2.5} fill="url(#gradResolved)" dot={{ fill: "#10b981", r: 4 }} activeDot={{ r: 6 }} />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                                <div style={{ width: "100%", height: isPrinting ? 110 : 220 }}>
+                                    <ResponsiveContainer key={isPrinting ? "p-area" : "s-area"} width="100%" height="100%">
+                                        <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="gradFiled" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                                </linearGradient>
+                                                <linearGradient id="gradResolved" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                            <XAxis dataKey="day" tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(99, 102, 241, 0.35)", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
+                                            <Area type="monotone" dataKey="Filed"    stroke="#6366f1" strokeWidth={2.5} fill="url(#gradFiled)"    dot={{ fill: "#6366f1", r: 3 }} activeDot={{ r: 5 }} />
+                                            <Area type="monotone" dataKey="Resolved" stroke="#10b981" strokeWidth={2.5} fill="url(#gradResolved)" dot={{ fill: "#10b981", r: 3 }} activeDot={{ r: 5 }} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
 
                             {/* Pie Chart — Category Breakdown */}
-                            <div className="glass card-hover" style={{ padding: "1.75rem", borderRadius: "1.25rem" }}>
-                                <div style={{ fontWeight: "700", marginBottom: "0.3rem" }}>🍩 Category Breakdown</div>
-                                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "1rem" }}>Distribution by complaint type</div>
+                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.8rem" : "1.75rem", borderRadius: "1.25rem" }}>
+                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>🍩 Category Breakdown</div>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.4rem" : "1rem" }}>Distribution by complaint type</div>
                                 {pieData.length > 0 ? (
                                     <>
-                                        <ResponsiveContainer width="100%" height={160}>
-                                            <PieChart>
-                                                <Pie
-                                                    data={pieData} cx="50%" cy="50%"
-                                                    innerRadius={36} outerRadius={60}
-                                                    dataKey="value" paddingAngle={3}
-                                                    onMouseEnter={(_, index) => setActiveIndex(index)}
-                                                    onMouseLeave={() => setActiveIndex(null)}
-                                                >
-                                                    {pieData.map((entry, index) => (
-                                                        <Cell
-                                                            key={entry.name}
-                                                            fill={CATEGORY_COLORS[entry.name] || "#6366f1"}
-                                                            opacity={activeIndex === null || activeIndex === index ? 1 : 0.5}
-                                                            stroke="none"
-                                                        />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip content={<CustomTooltip />} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
+                                        <div style={{ width: "100%", height: isPrinting ? 110 : 160 }}>
+                                            <ResponsiveContainer key={isPrinting ? "p-pie" : "s-pie"} width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={pieData} cx="50%" cy="50%"
+                                                        innerRadius={isPrinting ? 26 : 36} outerRadius={isPrinting ? 48 : 60}
+                                                        dataKey="value" paddingAngle={3}
+                                                        onMouseEnter={(_, index) => setActiveIndex(index)}
+                                                        onMouseLeave={() => setActiveIndex(null)}
+                                                    >
+                                                        {pieData.map((entry, index) => (
+                                                            <Cell
+                                                                key={entry.name}
+                                                                fill={CATEGORY_COLORS[entry.name] || "#6366f1"}
+                                                                opacity={activeIndex === null || activeIndex === index ? 1 : 0.5}
+                                                                stroke="none"
+                                                            />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip content={<CustomTooltip />} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
                                         <div className="chief-pie-legend no-print" style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
                                             {pieData.map(entry => (
                                                 <div key={entry.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.75rem" }}>
@@ -423,23 +447,25 @@ export default function ChiefDashboard() {
                             </div>
 
                             {/* Bar Chart — Priority Distribution */}
-                        <div className="glass chief-priority-card" style={{ padding: "1.75rem", borderRadius: "1.25rem" }}>
-                            <div style={{ fontWeight: "700", marginBottom: "0.3rem" }}>📊 Priority Distribution</div>
-                            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>Complaints grouped by urgency level (live)</div>
-                            <ResponsiveContainer width="100%" height={180}>
-                                <BarChart data={priorityBarData} margin={{ top: 4, right: 6, left: -24, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} interval={0} axisLine={false} tickLine={false} />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(99, 102, 241, 0.08)", rx: 8, ry: 8 }} />
-                                    <Bar dataKey="count" name="Complaints" radius={[4, 4, 0, 0]} maxBarSize={30}>
-                                        {priorityBarData.map(entry => (
-                                            <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                            <div className="glass chief-priority-card" style={{ padding: isPrinting ? "0.6rem 0.8rem" : "1.75rem", borderRadius: "1.25rem" }}>
+                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📊 Priority Distribution</div>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.4rem" : "1.25rem" }}>Complaints grouped by urgency level (live)</div>
+                                <div style={{ width: "100%", height: isPrinting ? 110 : 180 }}>
+                                    <ResponsiveContainer key={isPrinting ? "p-bar" : "s-bar"} width="100%" height="100%">
+                                        <BarChart data={priorityBarData} margin={{ top: 4, right: 6, left: -24, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                                            <XAxis dataKey="name" tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} interval={0} axisLine={false} tickLine={false} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(99, 102, 241, 0.08)", rx: 8, ry: 8 }} />
+                                            <Bar dataKey="count" name="Complaints" radius={[4, 4, 0, 0]} maxBarSize={isPrinting ? 24 : 30}>
+                                                {priorityBarData.map(entry => (
+                                                    <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

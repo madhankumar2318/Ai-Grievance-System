@@ -1076,14 +1076,12 @@ tbody tr:hover {
     width: 100% !important;
   }
 
-  .chief-charts-grid > * {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
+  .chief-charts-grid > .glass,
+  .chief-priority-card {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 6px !important;
-    padding: 0.4rem 0.6rem !important;
+    padding: 0.45rem 0.65rem !important;
     box-shadow: none !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
@@ -1095,28 +1093,17 @@ tbody tr:hover {
   }
 
   .chief-charts-grid [style*="font-weight: 700"] {
-    font-size: 0.78rem !important;
+    font-size: 0.82rem !important;
     font-weight: 700 !important;
     color: #0f172a !important;
     margin-bottom: 0.1rem !important;
   }
 
-  .chief-charts-grid [style*="font-size: 0.78rem"] {
+  .chief-charts-grid [style*="font-size: 0.78rem"],
+  .chief-charts-grid [style*="font-size: 0.75rem"] {
     font-size: 0.62rem !important;
     color: #64748b !important;
     margin-bottom: 0.35rem !important;
-  }
-
-  .chief-charts-grid .recharts-responsive-container {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: 100px !important;
-    max-height: 100px !important;
-  }
-
-  .chief-charts-grid .recharts-wrapper {
-    width: 100% !important;
-    max-width: 100% !important;
   }
 
   /* ── 6. Category Breakdown & Authority Status (Page 1) ── */
@@ -1284,8 +1271,8 @@ tbody tr:hover {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    margin-top: 0.45rem !important;
-    margin-bottom: 0.45rem !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.55rem !important;
     padding: 0.45rem 0.85rem !important;
     background: #f8fafc !important;
     border: 1px solid #cbd5e1 !important;
@@ -1341,10 +1328,11 @@ tbody tr:hover {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    padding: 0.35rem 0.2rem 0 !important;
-    margin-top: 0.35rem !important;
+    padding: 0.45rem 0.2rem 0 !important;
+    margin-top: 0.6rem !important;
     border-top: 1px solid #cbd5e1 !important;
     font-size: 0.62rem !important;
     color: #64748b !important;
+    clear: both !important;
   }
 }
