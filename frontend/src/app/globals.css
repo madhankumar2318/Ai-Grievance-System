@@ -783,6 +783,10 @@ tbody tr:hover {
   margin-bottom: 1.5rem;
 }
 
+.chief-priority-card {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 768px) {
   .chief-charts-grid {
     grid-template-columns: 1fr;
@@ -1057,12 +1061,23 @@ tbody tr:hover {
     letter-spacing: 0.03em !important;
   }
 
-  /* ── 5. Analytics Charts (Page 1) ── */
+  /* Page 1 Wrapper guarantees clean break after Page 1 */
+  .chief-page-1-wrapper {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* ── 5. Analytics Charts (Page 1 - 3-in-1 Compact Row) ── */
   .chief-charts-grid {
     display: grid !important;
-    grid-template-columns: 2fr 1fr !important;
-    gap: 0.65rem !important;
-    margin-bottom: 0.65rem !important;
+    grid-template-columns: 1.35fr 1fr 1fr !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .chief-priority-card {
+    grid-column: auto !important;
+    margin-bottom: 0 !important;
   }
 
   .chief-charts-grid > .glass,
@@ -1070,25 +1085,22 @@ tbody tr:hover {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 8px !important;
-    padding: 0.65rem 0.85rem !important;
+    padding: 0.45rem 0.65rem !important;
     box-shadow: none !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  .chief-priority-card {
-    margin-bottom: 0.65rem !important;
-  }
-
-  .recharts-responsive-container {
-    width: 100% !important;
+  .chief-charts-grid .recharts-responsive-container {
+    height: 110px !important;
+    max-height: 110px !important;
   }
 
   /* ── 6. Category Breakdown & Authority Status (Page 1) ── */
   .chief-info-grid {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 0.65rem !important;
+    gap: 0.5rem !important;
     margin-bottom: 0 !important;
   }
 
@@ -1096,25 +1108,25 @@ tbody tr:hover {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 8px !important;
-    padding: 0.75rem 0.85rem !important;
+    padding: 0.55rem 0.75rem !important;
     box-shadow: none !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
   .chief-info-grid h3 {
-    font-size: 0.88rem !important;
+    font-size: 0.85rem !important;
     font-weight: 800 !important;
     color: #0f172a !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.35rem !important;
   }
 
   /* Authority officer cards */
   .chief-info-grid [style*="border-radius: 0.75rem"] {
     background: #f8fafc !important;
     border: 1px solid #e2e8f0 !important;
-    padding: 0.35rem 0.6rem !important;
-    margin-bottom: 0.25rem !important;
+    padding: 0.25rem 0.5rem !important;
+    margin-bottom: 0.2rem !important;
     box-shadow: none !important;
   }
 
@@ -1133,7 +1145,7 @@ tbody tr:hover {
   }
 
   .chief-table-header-block {
-    padding: 0.75rem 1rem !important;
+    padding: 0.65rem 0.85rem !important;
     background: #f8fafc !important;
     border-bottom: 2px solid #cbd5e1 !important;
   }
@@ -1234,5 +1246,73 @@ tbody tr:hover {
   .glass {
     box-shadow: none !important;
     backdrop-filter: none !important;
+  }
+
+  /* ── 8. Official Sign-off and Ledger Footer (Page 2) ── */
+  .chief-print-signoff {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    margin-top: 0.85rem !important;
+    padding: 0.65rem 1rem !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .chief-signoff-left {
+    flex: 1.3 !important;
+  }
+
+  .chief-signoff-badge {
+    display: inline-block !important;
+    background: #e0e7ff !important;
+    color: #3730a3 !important;
+    font-size: 0.62rem !important;
+    font-weight: 800 !important;
+    padding: 0.15rem 0.45rem !important;
+    border-radius: 4px !important;
+    border: 1px solid #c7d2fe !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .chief-signoff-center {
+    flex: 0.8 !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+
+  .chief-seal-box {
+    text-align: center !important;
+    border: 2px dashed #94a3b8 !important;
+    padding: 0.25rem 0.65rem !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+  }
+
+  .chief-signoff-right {
+    flex: 1.1 !important;
+    text-align: right !important;
+  }
+
+  .chief-signature-line {
+    width: 140px !important;
+    height: 1px !important;
+    background: #0f172a !important;
+    margin-left: auto !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .chief-print-footer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.4rem 0.25rem 0 !important;
+    margin-top: 0.4rem !important;
+    border-top: 1px solid #e2e8f0 !important;
+    font-size: 0.65rem !important;
+    color: #64748b !important;
   }
 }

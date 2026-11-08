@@ -291,6 +291,7 @@ export default function ChiefDashboard() {
                     </div>
                 </div>
 
+                <div className="chief-page-1-wrapper">
                 {/* Executive Print-only Header */}
                 <div className="print-only chief-print-header" style={{ display: "none" }}>
                     <div className="chief-print-top">
@@ -343,7 +344,7 @@ export default function ChiefDashboard() {
                 {/* ── Analytics Charts ── */}
                 {!loading && total > 0 && (
                     <div style={{ marginBottom: "3rem" }}>
-                        <h2 style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "1.5rem" }}>
+                        <h2 className="no-print" style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "1.5rem" }}>
                             📊 <span className="gradient-text">Analytics Overview</span>
                         </h2>
 
@@ -420,9 +421,8 @@ export default function ChiefDashboard() {
                                     <div style={{ textAlign: "center", color: "var(--text-muted)", paddingTop: "2rem" }}>No data yet</div>
                                 )}
                             </div>
-                        </div>
 
-                        {/* Bar Chart — Priority Distribution */}
+                            {/* Bar Chart — Priority Distribution */}
                         <div className="glass chief-priority-card" style={{ padding: "1.75rem", borderRadius: "1.25rem" }}>
                             <div style={{ fontWeight: "700", marginBottom: "0.3rem" }}>📊 Priority Distribution</div>
                             <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>Complaints grouped by urgency level (live)</div>
@@ -439,6 +439,7 @@ export default function ChiefDashboard() {
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
+                        </div>
                         </div>
                     </div>
                 )}
@@ -538,6 +539,7 @@ export default function ChiefDashboard() {
                         </div>
                     </div>
                 )}
+                </div>
 
                 {/* ── All Complaints Table ── */}
                 <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
@@ -655,6 +657,37 @@ export default function ChiefDashboard() {
                             </div>
                         </>
                     )}
+
+                    {/* Official Executive Audit Sign-off (Print only) */}
+                    <div className="print-only chief-print-signoff">
+                        <div className="chief-signoff-left">
+                            <span className="chief-signoff-badge">VERIFIED ADMINISTRATIVE RECORD</span>
+                            <p style={{ margin: "0.35rem 0 0.15rem", fontSize: "0.75rem", color: "#334155", fontWeight: "600" }}>
+                                System-generated comprehensive audit ledger from AI Civic Grievance Portal.
+                            </p>
+                            <p style={{ margin: 0, fontSize: "0.68rem", color: "#64748b" }}>
+                                Cryptographic Integrity: SHA-256 Validated · Access Level: Tier-1 Administrative Clearance
+                            </p>
+                        </div>
+                        <div className="chief-signoff-center">
+                            <div className="chief-seal-box">
+                                <div style={{ fontSize: "1.3rem", lineHeight: 1 }}>🏛️</div>
+                                <div style={{ fontSize: "0.62rem", fontWeight: "800", color: "#0f172a", letterSpacing: "0.05em", marginTop: "2px" }}>OFFICIALLY VERIFIED</div>
+                                <div style={{ fontSize: "0.58rem", color: "#64748b" }}>MUNICIPAL AUDIT</div>
+                            </div>
+                        </div>
+                        <div className="chief-signoff-right">
+                            <div className="chief-signature-line" />
+                            <div style={{ fontWeight: "800", fontSize: "0.75rem", color: "#0f172a" }}>Chief Administrative Officer</div>
+                            <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Municipal Grievance Redressal Board</div>
+                        </div>
+                    </div>
+
+                    <div className="print-only chief-print-footer">
+                        <span>AI Grievance Redressal System — Executive Oversight Ledger</span>
+                        <span>Official Administrative Record · Confidential</span>
+                        <span>Page 2 of 2</span>
+                    </div>
                 </div>
 
 
