@@ -388,7 +388,7 @@ export default function ChiefDashboard() {
                                             <PieChart>
                                                 <Pie
                                                     data={pieData} cx="50%" cy="50%"
-                                                    innerRadius={40} outerRadius={70}
+                                                    innerRadius={36} outerRadius={60}
                                                     dataKey="value" paddingAngle={3}
                                                     onMouseEnter={(_, index) => setActiveIndex(index)}
                                                     onMouseLeave={() => setActiveIndex(null)}
@@ -405,7 +405,7 @@ export default function ChiefDashboard() {
                                                 <Tooltip content={<CustomTooltip />} />
                                             </PieChart>
                                         </ResponsiveContainer>
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+                                        <div className="chief-pie-legend no-print" style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
                                             {pieData.map(entry => (
                                                 <div key={entry.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.75rem" }}>
                                                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
@@ -427,12 +427,12 @@ export default function ChiefDashboard() {
                             <div style={{ fontWeight: "700", marginBottom: "0.3rem" }}>📊 Priority Distribution</div>
                             <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>Complaints grouped by urgency level (live)</div>
                             <ResponsiveContainer width="100%" height={180}>
-                                <BarChart data={priorityBarData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                                <BarChart data={priorityBarData} margin={{ top: 4, right: 6, left: -24, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748b" }} interval={0} axisLine={false} tickLine={false} />
+                                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(99, 102, 241, 0.08)", rx: 8, ry: 8 }} />
-                                    <Bar dataKey="count" name="Complaints" radius={[6, 6, 0, 0]} maxBarSize={60}>
+                                    <Bar dataKey="count" name="Complaints" radius={[4, 4, 0, 0]} maxBarSize={30}>
                                         {priorityBarData.map(entry => (
                                             <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
                                         ))}
@@ -539,16 +539,25 @@ export default function ChiefDashboard() {
                         </div>
                     </div>
                 )}
+
+                    {/* Page 1 Print Footer */}
+                    <div className="print-only chief-print-footer">
+                        <span>AI Grievance Redressal System — Executive Oversight Dossier</span>
+                        <span>Official Administrative Record · Confidential</span>
+                        <span>Page 1 of 2</span>
+                    </div>
                 </div>
 
-                {/* ── All Complaints Table ── */}
-                <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
-                    <div className="chief-table-header-block" style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <h3>{t("chief_all_grievances")}</h3>
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                            {loading ? "Loading..." : `${total} ${t("chief_complaints_total")}`}
-                        </span>
-                    </div>
+                {/* ── Page 2 Wrapper: Complete Grievance Audit Ledger & Sign-off ── */}
+                <div className="chief-page-2-wrapper">
+                    {/* All Complaints Table Card */}
+                    <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
+                        <div className="chief-table-header-block" style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <h3>{t("chief_all_grievances")}</h3>
+                            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                                {loading ? "Loading..." : `${total} ${t("chief_complaints_total")}`}
+                            </span>
+                        </div>
 
                     {loading && (
                         <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
@@ -657,6 +666,7 @@ export default function ChiefDashboard() {
                             </div>
                         </>
                     )}
+                    </div>
 
                     {/* Official Executive Audit Sign-off (Print only) */}
                     <div className="print-only chief-print-signoff">
