@@ -363,50 +363,71 @@ export default function ChiefDashboard() {
 
                 {/* ── Analytics Charts ── */}
                 {!loading && total > 0 && (
-                    <div style={{ marginBottom: "3rem" }}>
+                    <div className="chief-analytics-section" style={{ marginBottom: "3rem" }}>
                         <h2 className="no-print" style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "1.5rem" }}>
                             📊 <span className="gradient-text">Analytics Overview</span>
                         </h2>
 
-                        <div className="chief-charts-grid">
+                        {/* Area Chart — Real 7-day Trend (Full Width in Print) */}
+                        <div className="glass card-hover chief-trend-card" style={{ padding: isPrinting ? "0.6rem 0.85rem" : "1.75rem", borderRadius: "1.25rem", marginBottom: "1.5rem" }}>
+                            <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📈 Complaints Over Time</div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.35rem" : "1.25rem" }}>
+                                Last 7 days — filed vs resolved velocity (live data)
+                            </div>
+                            <div style={{ width: "100%", height: isPrinting ? 120 : 220 }}>
+                                <ResponsiveContainer key={isPrinting ? "p-area" : "s-area"} width="100%" height="100%">
+                                    <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="gradFiled" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="gradResolved" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                        <XAxis dataKey="day" tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                        <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(99, 102, 241, 0.35)", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
+                                        <Area type="monotone" dataKey="Filed"    stroke="#6366f1" strokeWidth={2.5} fill="url(#gradFiled)"    dot={{ fill: "#6366f1", r: 3 }} activeDot={{ r: 5 }} />
+                                        <Area type="monotone" dataKey="Resolved" stroke="#10b981" strokeWidth={2.5} fill="url(#gradResolved)" dot={{ fill: "#10b981", r: 3 }} activeDot={{ r: 5 }} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
 
-                            {/* Area Chart — Real 7-day Trend */}
-                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.8rem" : "1.75rem", borderRadius: "1.25rem" }}>
-                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📈 Complaints Over Time</div>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.4rem" : "1.25rem" }}>
-                                    Last 7 days — filed vs resolved (live data)
-                                </div>
-                                <div style={{ width: "100%", height: isPrinting ? 110 : 220 }}>
-                                    <ResponsiveContainer key={isPrinting ? "p-area" : "s-area"} width="100%" height="100%">
-                                        <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                                            <defs>
-                                                <linearGradient id="gradFiled" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                                </linearGradient>
-                                                <linearGradient id="gradResolved" x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
-                                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                                            <XAxis dataKey="day" tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                            <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(99, 102, 241, 0.35)", strokeWidth: 1.5, strokeDasharray: "4 4" }} />
-                                            <Area type="monotone" dataKey="Filed"    stroke="#6366f1" strokeWidth={2.5} fill="url(#gradFiled)"    dot={{ fill: "#6366f1", r: 3 }} activeDot={{ r: 5 }} />
-                                            <Area type="monotone" dataKey="Resolved" stroke="#10b981" strokeWidth={2.5} fill="url(#gradResolved)" dot={{ fill: "#10b981", r: 3 }} activeDot={{ r: 5 }} />
-                                        </AreaChart>
+                        {/* 2-Column Row: Priority Bar Chart & Category Pie Chart */}
+                        <div className="chief-charts-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                            {/* Bar Chart — Priority Distribution */}
+                            <div className="glass chief-priority-card" style={{ padding: isPrinting ? "0.6rem 0.85rem" : "1.75rem", borderRadius: "1.25rem" }}>
+                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📊 Priority Distribution</div>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.35rem" : "1.25rem" }}>Complaints grouped by urgency level (live)</div>
+                                <div style={{ width: "100%", height: isPrinting ? 115 : 180 }}>
+                                    <ResponsiveContainer key={isPrinting ? "p-bar" : "s-bar"} width="100%" height="100%">
+                                        <BarChart data={priorityBarData} margin={{ top: 4, right: 6, left: -24, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                                            <XAxis dataKey="name" tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} interval={0} axisLine={false} tickLine={false} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(99, 102, 241, 0.08)", rx: 8, ry: 8 }} />
+                                            <Bar dataKey="count" name="Complaints" radius={[4, 4, 0, 0]} maxBarSize={isPrinting ? 28 : 40}>
+                                                {priorityBarData.map(entry => (
+                                                    <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
+                                                ))}
+                                            </Bar>
+                                        </BarChart>
                                     </ResponsiveContainer>
                                 </div>
                             </div>
 
                             {/* Pie Chart — Category Breakdown */}
-                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.8rem" : "1.75rem", borderRadius: "1.25rem" }}>
+                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.85rem" : "1.75rem", borderRadius: "1.25rem" }}>
                                 <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>🍩 Category Breakdown</div>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.4rem" : "1rem" }}>Distribution by complaint type</div>
+                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.35rem" : "1rem" }}>Distribution by complaint type</div>
                                 {pieData.length > 0 ? (
                                     <>
-                                        <div style={{ width: "100%", height: isPrinting ? 110 : 160 }}>
+                                        <div style={{ width: "100%", height: isPrinting ? 115 : 160 }}>
                                             <ResponsiveContainer key={isPrinting ? "p-pie" : "s-pie"} width="100%" height="100%">
                                                 <PieChart>
                                                     <Pie
@@ -444,27 +465,6 @@ export default function ChiefDashboard() {
                                 ) : (
                                     <div style={{ textAlign: "center", color: "var(--text-muted)", paddingTop: "2rem" }}>No data yet</div>
                                 )}
-                            </div>
-
-                            {/* Bar Chart — Priority Distribution */}
-                            <div className="glass chief-priority-card" style={{ padding: isPrinting ? "0.6rem 0.8rem" : "1.75rem", borderRadius: "1.25rem" }}>
-                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📊 Priority Distribution</div>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.4rem" : "1.25rem" }}>Complaints grouped by urgency level (live)</div>
-                                <div style={{ width: "100%", height: isPrinting ? 110 : 180 }}>
-                                    <ResponsiveContainer key={isPrinting ? "p-bar" : "s-bar"} width="100%" height="100%">
-                                        <BarChart data={priorityBarData} margin={{ top: 4, right: 6, left: -24, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                            <XAxis dataKey="name" tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} interval={0} axisLine={false} tickLine={false} />
-                                            <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(99, 102, 241, 0.08)", rx: 8, ry: 8 }} />
-                                            <Bar dataKey="count" name="Complaints" radius={[4, 4, 0, 0]} maxBarSize={isPrinting ? 24 : 30}>
-                                                {priorityBarData.map(entry => (
-                                                    <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
                             </div>
                         </div>
                     </div>
