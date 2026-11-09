@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ComplaintMap from "@/components/ComplaintMap";
+import ChiefPrintReport from "@/components/ChiefPrintReport";
 import { useLang } from "@/context/LanguageContext";
 import { getComplaintsServerAction } from "@/app/actions/complaintActions";
 import {
@@ -226,6 +227,12 @@ export default function ChiefDashboard() {
         })),
     [complaints]);
 
+    const priorityCounts = useMemo(() =>
+        complaints.reduce<Record<string, number>>((acc, c) => {
+            acc[c.priority] = (acc[c.priority] || 0) + 1; return acc;
+        }, {}),
+    [complaints]);
+
     /* ── Build real 7-day trend from actual complaint timestamps ───────── */
     const trendData = useMemo(() => {
         const days = lastNDays(7);
@@ -259,6 +266,7 @@ export default function ChiefDashboard() {
     return (
         <ProtectedRoute allowedRoles={["chief"]}>
             <main className="container section">
+                <div className="chief-screen-content">
 
                 {/* ── Header ── */}
                 <div className="no-print" style={{ marginBottom: "2.5rem", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
@@ -308,39 +316,6 @@ export default function ChiefDashboard() {
                         >
                             📄 {t("chief_export_pdf")}
                         </button>
-                    </div>
-                </div>
-
-                <div className="chief-page-1-wrapper">
-                {/* Executive Print-only Header */}
-                <div className="print-only chief-print-header" style={{ display: "none" }}>
-                    <div className="chief-print-top">
-                        <div className="chief-print-branding">
-                            <div className="chief-print-emblem">🏛️</div>
-                            <div>
-                                <h1 className="chief-print-title">
-                                    AI Grievance Redressal System — Chief Executive Audit Report
-                                </h1>
-                                <p className="chief-print-subtitle">
-                                    Office of the Chief Municipal Administrator · City-Wide Civic Intelligence Overview
-                                </p>
-                            </div>
-                        </div>
-                        <div className="chief-print-meta">
-                            <span className="chief-print-badge">OFFICIAL ADMINISTRATIVE RECORD</span>
-                            <div className="chief-print-date">
-                                Generated: <strong>{new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="chief-print-summary-strip">
-                        <div><span>Total Recorded Grievances:</span> <strong>{total}</strong></div>
-                        <div><span>Pending Action:</span> <strong style={{ color: "#d97706" }}>{pending}</strong></div>
-                        <div><span>Under Active Resolution:</span> <strong style={{ color: "#4f46e5" }}>{inProgress}</strong></div>
-                        <div><span>Resolved Cases:</span> <strong style={{ color: "#16a34a" }}>{resolved}</strong></div>
-                        <div><span>Critical Urgent Cases:</span> <strong style={{ color: "#dc2626" }}>{critical}</strong></div>
-                        <div><span>City Resolution Rate:</span> <strong style={{ color: "#0891b2" }}>{resolutionRate}%</strong></div>
                     </div>
                 </div>
 
@@ -566,24 +541,14 @@ export default function ChiefDashboard() {
                     </div>
                 )}
 
-                    {/* Page 1 Print Footer */}
-                    <div className="print-only chief-print-footer">
-                        <span>AI Grievance Redressal System — Executive Oversight Dossier</span>
-                        <span>Official Administrative Record · Confidential</span>
-                        <span>Page 1 of 2</span>
+                {/* ── All Complaints Table ── */}
+                <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
+                    <div className="chief-table-header-block" style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h3>{t("chief_all_grievances")}</h3>
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                            {loading ? "Loading..." : `${total} ${t("chief_complaints_total")}`}
+                        </span>
                     </div>
-                </div>
-
-                {/* ── Page 2 Wrapper: Complete Grievance Audit Ledger & Sign-off ── */}
-                <div className="chief-page-2-wrapper">
-                    {/* All Complaints Table Card */}
-                    <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
-                        <div className="chief-table-header-block" style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <h3>{t("chief_all_grievances")}</h3>
-                            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                                {loading ? "Loading..." : `${total} ${t("chief_complaints_total")}`}
-                            </span>
-                        </div>
 
                     {loading && (
                         <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
@@ -693,41 +658,23 @@ export default function ChiefDashboard() {
                         </>
                     )}
                     </div>
-
-                    {/* Official Executive Audit Sign-off (Print only) */}
-                    <div className="print-only chief-print-signoff">
-                        <div className="chief-signoff-left">
-                            <span className="chief-signoff-badge">VERIFIED ADMINISTRATIVE RECORD</span>
-                            <p style={{ margin: "0.35rem 0 0.15rem", fontSize: "0.75rem", color: "#334155", fontWeight: "600" }}>
-                                System-generated comprehensive audit ledger from AI Civic Grievance Portal.
-                            </p>
-                            <p style={{ margin: 0, fontSize: "0.68rem", color: "#64748b" }}>
-                                Cryptographic Integrity: SHA-256 Validated · Access Level: Tier-1 Administrative Clearance
-                            </p>
-                        </div>
-                        <div className="chief-signoff-center">
-                            <div className="chief-seal-box">
-                                <div style={{ fontSize: "1.3rem", lineHeight: 1 }}>🏛️</div>
-                                <div style={{ fontSize: "0.62rem", fontWeight: "800", color: "#0f172a", letterSpacing: "0.05em", marginTop: "2px" }}>OFFICIALLY VERIFIED</div>
-                                <div style={{ fontSize: "0.58rem", color: "#64748b" }}>MUNICIPAL AUDIT</div>
-                            </div>
-                        </div>
-                        <div className="chief-signoff-right">
-                            <div className="chief-signature-line" />
-                            <div style={{ fontWeight: "800", fontSize: "0.75rem", color: "#0f172a" }}>Chief Administrative Officer</div>
-                            <div style={{ fontSize: "0.68rem", color: "#64748b" }}>Municipal Grievance Redressal Board</div>
-                        </div>
-                    </div>
-
-                    <div className="print-only chief-print-footer">
-                        <span>AI Grievance Redressal System — Executive Oversight Ledger</span>
-                        <span>Official Administrative Record · Confidential</span>
-                        <span>Page 2 of 2</span>
-                    </div>
                 </div>
 
+            {/* ── Official Print-Only Executive Dossier (Bulletproof Native Vector SVG & HTML) ── */}
+            <ChiefPrintReport
+                total={total}
+                pending={pending}
+                inProgress={inProgress}
+                resolved={resolved}
+                critical={critical}
+                resolutionRate={resolutionRate}
+                complaints={complaints}
+                categoryCounts={categoryCounts}
+                trendData={trendData}
+                priorityCounts={priorityCounts}
+            />
 
-            </main>
+        </main>
 
             <style>{`
                 @keyframes pulse {

@@ -882,13 +882,18 @@ tbody tr:hover {
   padding-top: 0.75rem;
 }
 
+/* Screen: Hide print dossier */
+.chief-print-dossier {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    PREMIUM EXECUTIVE PDF EXPORT & PRINT SYSTEM (A4 PORTRAIT)
    ═══════════════════════════════════════════════════════════════ */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 15mm 15mm 15mm 15mm;
+    margin: 14mm 15mm 14mm 15mm;
   }
 
   *, *::before, *::after {
@@ -909,7 +914,7 @@ tbody tr:hover {
     width: 100% !important;
   }
 
-  /* ── 1. Hide interactive / non-printable UI elements ── */
+  /* ── 1. Hide interactive screen content ── */
   nav,
   header,
   footer,
@@ -919,308 +924,274 @@ tbody tr:hover {
   .chatbot-container,
   #chatbot-toggle,
   .desktop-only-control,
-  .chief-print-summary-strip,
-  .chief-pie-legend,
-  .print-stat > div:first-child /* decorative blur circle */ {
+  .chief-screen-content {
     display: none !important;
   }
 
-  /* ── 2. Full width container with crisp box model ── */
-  .container {
+  .container, main {
     max-width: 100% !important;
     width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
   }
 
-  main {
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-  }
-
-  /* ── 3. Executive Chief Report Header ── */
-  .print-only {
+  /* ── 2. Show dedicated Print Dossier ── */
+  .chief-print-dossier {
     display: block !important;
+    width: 100% !important;
+    background: #ffffff !important;
   }
 
-  .chief-print-header {
-    margin-bottom: 0.65rem !important;
-    padding-bottom: 0.5rem !important;
-    border-bottom: 2px solid #0f172a !important;
+  .chief-print-page {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
   }
 
-  .chief-print-top {
+  .chief-page-1 {
+    page-break-after: always !important;
+    break-after: page !important;
+    min-height: 100% !important;
+  }
+
+  .chief-page-2 {
+    page-break-before: always !important;
+    break-before: page !important;
+    min-height: 100% !important;
+  }
+
+  /* ── 3. Dossier Header ── */
+  .dossier-header {
     display: flex !important;
     justify-content: space-between !important;
     align-items: flex-start !important;
-    margin-bottom: 0 !important;
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 0.65rem !important;
   }
 
-  .chief-print-branding {
+  .dossier-branding {
     display: flex !important;
     align-items: center !important;
     gap: 0.65rem !important;
   }
 
-  .chief-print-emblem {
-    width: 34px !important;
-    height: 34px !important;
+  .dossier-emblem {
+    width: 36px !important;
+    height: 36px !important;
     border-radius: 6px !important;
     background: #4f46e5 !important;
     color: #ffffff !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 1.2rem !important;
+    font-size: 1.25rem !important;
+    flex-shrink: 0 !important;
   }
 
-  .chief-print-title {
+  .dossier-super {
+    font-size: 0.58rem !important;
+    font-weight: 800 !important;
+    color: #4f46e5 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+  }
+
+  .dossier-title {
     font-size: 1.15rem !important;
     font-weight: 800 !important;
     color: #0f172a !important;
-    margin: 0 !important;
+    margin: 0.1rem 0 !important;
     line-height: 1.2 !important;
     letter-spacing: -0.01em !important;
   }
 
-  .chief-print-subtitle {
+  .dossier-sub {
     font-size: 0.68rem !important;
     color: #475569 !important;
-    margin: 0.15rem 0 0 !important;
     font-weight: 600 !important;
   }
 
-  .chief-print-meta {
+  .dossier-meta {
     text-align: right !important;
+    flex-shrink: 0 !important;
   }
 
-  .chief-print-badge {
+  .dossier-clearance {
     display: inline-block !important;
-    background: #e2e8f0 !important;
-    color: #0f172a !important;
-    font-size: 0.62rem !important;
+    background: #e0e7ff !important;
+    color: #3730a3 !important;
+    font-size: 0.6rem !important;
     font-weight: 800 !important;
     padding: 0.15rem 0.45rem !important;
     border-radius: 4px !important;
-    border: 1px solid #cbd5e1 !important;
+    border: 1px solid #c7d2fe !important;
     letter-spacing: 0.04em !important;
     margin-bottom: 0.15rem !important;
   }
 
-  .chief-print-date {
-    font-size: 0.68rem !important;
+  .dossier-date, .dossier-ref {
+    font-size: 0.65rem !important;
     color: #64748b !important;
+    line-height: 1.3 !important;
   }
 
-  /* ── 4. Stats Scorecard Grid (Page 1) ── */
-  .chief-stats-grid {
+  /* ── 4. Section Headings ── */
+  .dossier-section-title {
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    margin-bottom: 0.35rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+  }
+
+  .dossier-section-title span {
+    background: #0f172a !important;
+    color: #ffffff !important;
+    padding: 0.05rem 0.3rem !important;
+    border-radius: 3px !important;
+    font-size: 0.6rem !important;
+  }
+
+  /* ── 5. KPI Cards ── */
+  .dossier-kpi-grid {
     display: grid !important;
     grid-template-columns: repeat(6, 1fr) !important;
     gap: 0.45rem !important;
-    margin-bottom: 0.65rem !important;
+    margin-bottom: 0.6rem !important;
     width: 100% !important;
   }
 
-  .print-stat {
+  .dossier-kpi-card {
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 6px !important;
-    padding: 0.45rem 0.3rem !important;
+    padding: 0.4rem 0.3rem !important;
     text-align: center !important;
-    box-shadow: none !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
-  .print-stat div[style*="width: 42px"] {
+  .kpi-icon-wrap {
     width: 24px !important;
     height: 24px !important;
-    font-size: 0.82rem !important;
-    margin-bottom: 0.2rem !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto 0.2rem auto !important;
+    font-size: 0.8rem !important;
   }
 
-  .print-stat div[style*="font-size: 2.25rem"] {
+  .kpi-num {
     font-size: 1.35rem !important;
     font-weight: 800 !important;
     line-height: 1.15 !important;
     margin-bottom: 0.1rem !important;
   }
 
-  .print-stat div[style*="font-size: 0.78rem"] {
+  .kpi-label {
     font-size: 0.62rem !important;
-    color: #475569 !important;
     font-weight: 700 !important;
+    color: #0f172a !important;
     text-transform: uppercase !important;
     letter-spacing: 0.03em !important;
   }
 
-  /* Page 1 Wrapper guarantees clean break after Page 1 */
-  .chief-page-1-wrapper {
-    page-break-after: always !important;
-    break-after: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* ── 5. Analytics Charts (Sequential: Full-width trend + 2-col charts) ── */
-  .chief-analytics-section {
-    margin-bottom: 0.65rem !important;
-  }
-
-  .chief-trend-card {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    padding: 0.45rem 0.75rem !important;
-    margin-bottom: 0.55rem !important;
-    box-shadow: none !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .chief-charts-row {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 0.55rem !important;
-    margin-bottom: 0 !important;
-    width: 100% !important;
-  }
-
-  .chief-charts-row > .glass {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    padding: 0.45rem 0.75rem !important;
-    box-shadow: none !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .chief-trend-card [style*="font-weight: 700"],
-  .chief-charts-row [style*="font-weight: 700"] {
-    font-size: 0.82rem !important;
-    font-weight: 700 !important;
-    color: #0f172a !important;
-    margin-bottom: 0.1rem !important;
-  }
-
-  .chief-trend-card [style*="font-size: 0.75rem"],
-  .chief-charts-row [style*="font-size: 0.75rem"] {
-    font-size: 0.62rem !important;
+  .kpi-note {
+    font-size: 0.55rem !important;
     color: #64748b !important;
-    margin-bottom: 0.35rem !important;
   }
 
-  /* ── 6. Category Breakdown & Authority Status (Page 1) ── */
-  .chief-info-grid {
+  /* ── 6. Generic Dossier Card ── */
+  .dossier-card {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+  }
+
+  /* ── 7. Officer Grid ── */
+  .dossier-officer-grid {
     display: grid !important;
-    grid-template-columns: 1.15fr 0.85fr !important;
-    gap: 0.55rem !important;
-    margin-bottom: 0.55rem !important;
-    width: 100% !important;
-  }
-
-  .chief-info-grid > .glass {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    padding: 0.45rem 0.75rem !important;
-    box-shadow: none !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .chief-info-grid h3 {
-    font-size: 0.82rem !important;
-    font-weight: 800 !important;
-    color: #0f172a !important;
-    margin-bottom: 0.35rem !important;
-  }
-
-  /* Authority officer cards */
-  .chief-info-grid [style*="border-radius: 0.75rem"] {
-    background: #f8fafc !important;
-    border: 1px solid #e2e8f0 !important;
-    padding: 0.22rem 0.45rem !important;
-    margin-bottom: 0.18rem !important;
-    box-shadow: none !important;
-  }
-
-  /* Page 2 Wrapper */
-  .chief-page-2-wrapper {
-    page-break-before: always !important;
-    break-before: page !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* ── 7. Detailed Complaints Table (Page 2) ── */
-  .chief-table-card {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    overflow: hidden !important;
-    margin-top: 0 !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0.45rem !important;
     margin-bottom: 0.65rem !important;
-    box-shadow: none !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
-  .chief-table-header-block {
-    padding: 0.5rem 0.75rem !important;
+  .dossier-officer-card {
     background: #f8fafc !important;
-    border-bottom: 1.5px solid #cbd5e1 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 0.4rem 0.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.45rem !important;
   }
 
-  .chief-table-header-block h3 {
-    font-size: 0.95rem !important;
+  .officer-badge {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 50% !important;
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.65rem !important;
     font-weight: 800 !important;
-    color: #0f172a !important;
-    margin: 0 !important;
+    flex-shrink: 0 !important;
   }
 
-  .chief-desktop-table {
-    display: block !important;
-    overflow: visible !important;
+  /* ── 8. Table on Page 2 ── */
+  .ledger-header-box {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-end !important;
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 0.45rem !important;
+    margin-bottom: 0.65rem !important;
   }
 
-  .chief-mobile-cards {
-    display: none !important;
+  .ledger-count-badge {
+    display: inline-block !important;
+    background: #0f172a !important;
+    color: #ffffff !important;
+    font-size: 0.62rem !important;
+    font-weight: 800 !important;
+    padding: 0.15rem 0.5rem !important;
+    border-radius: 4px !important;
+    letter-spacing: 0.05em !important;
   }
 
-  table {
+  .dossier-table {
     width: 100% !important;
     border-collapse: collapse !important;
     font-size: 8.5px !important;
     table-layout: fixed !important;
+    margin-bottom: 0.75rem !important;
   }
 
-  thead {
+  .dossier-table thead {
     display: table-header-group !important;
   }
 
-  tbody {
+  .dossier-table tbody {
     display: table-row-group !important;
   }
 
-  tr {
+  .dossier-table tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  tbody tr:nth-child(even) {
+  .dossier-table tbody tr:nth-child(even) {
     background: #f8fafc !important;
   }
 
-  th {
+  .dossier-table th {
     background: #f1f5f9 !important;
     color: #0f172a !important;
     font-size: 8px !important;
@@ -1232,7 +1203,7 @@ tbody tr:hover {
     text-align: left !important;
   }
 
-  td {
+  .dossier-table td {
     border: 1px solid #e2e8f0 !important;
     padding: 4px 6px !important;
     color: #334155 !important;
@@ -1242,91 +1213,57 @@ tbody tr:hover {
     line-height: 1.25 !important;
   }
 
-  /* Specific column width allocations in portrait */
-  th:nth-child(1), td:nth-child(1) { width: 11% !important; font-weight: 700 !important; font-family: monospace !important; color: #4338ca !important; } /* ID */
-  th:nth-child(2), td:nth-child(2) { width: 28% !important; } /* Subject & Category */
-  th:nth-child(3), td:nth-child(3) { width: 16% !important; color: #475569 !important; } /* Citizen */
-  th:nth-child(4), td:nth-child(4) { width: 15% !important; color: #475569 !important; } /* Location */
-  th:nth-child(5), td:nth-child(5) { width: 11% !important; text-align: center !important; }  /* Priority */
-  th:nth-child(6), td:nth-child(6) { width: 11% !important; text-align: center !important; }  /* Status */
-  th:nth-child(7), td:nth-child(7) { width: 8% !important; text-align: center !important; font-size: 7.8px !important; }  /* Date */
-
-  /* Priority & Status Badges Styling in Print */
-  span[style*="border-radius: 99px"] {
-    display: inline-block !important;
-    padding: 1px 5px !important;
-    font-size: 7.5px !important;
-    font-weight: 800 !important;
-    border-radius: 4px !important;
-    border: 1px solid #cbd5e1 !important;
-    text-align: center !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  .gradient-text {
-    background: none !important;
-    -webkit-text-fill-color: initial !important;
-    color: #4f46e5 !important;
-    font-weight: 800 !important;
-  }
-
-  .glass {
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-  }
-
-  /* ── 8. Official Sign-off and Ledger Footer (Page 2) ── */
-  .chief-print-signoff {
+  /* ── 9. Official Sign-off Seal Box ── */
+  .dossier-signoff-box {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    margin-top: 0.65rem !important;
-    margin-bottom: 0.65rem !important;
     padding: 0.55rem 0.95rem !important;
     background: #f8fafc !important;
     border: 1px solid #cbd5e1 !important;
     border-radius: 6px !important;
+    margin-top: 0.65rem !important;
+    margin-bottom: 0.65rem !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  .chief-signoff-left {
+  .signoff-left {
     flex: 1.3 !important;
   }
 
-  .chief-signoff-badge {
+  .signoff-badge {
     display: inline-block !important;
     background: #e0e7ff !important;
     color: #3730a3 !important;
     font-size: 0.6rem !important;
     font-weight: 800 !important;
-    padding: 0.15rem 0.45rem !important;
+    padding: 0.12rem 0.45rem !important;
     border-radius: 4px !important;
     border: 1px solid #c7d2fe !important;
     letter-spacing: 0.05em !important;
   }
 
-  .chief-signoff-center {
+  .signoff-center {
     flex: 0.8 !important;
     display: flex !important;
     justify-content: center !important;
   }
 
-  .chief-seal-box {
+  .seal-box {
     text-align: center !important;
     border: 2px dashed #94a3b8 !important;
-    padding: 0.25rem 0.65rem !important;
+    padding: 0.25rem 0.75rem !important;
     border-radius: 6px !important;
     background: #ffffff !important;
   }
 
-  .chief-signoff-right {
+  .signoff-right {
     flex: 1.1 !important;
     text-align: right !important;
   }
 
-  .chief-signature-line {
+  .signature-line {
     width: 140px !important;
     height: 1px !important;
     background: #0f172a !important;
@@ -1334,7 +1271,8 @@ tbody tr:hover {
     margin-bottom: 0.35rem !important;
   }
 
-  .chief-print-footer {
+  /* ── 10. Running Footer ── */
+  .dossier-footer {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
