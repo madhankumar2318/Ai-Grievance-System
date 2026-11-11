@@ -432,12 +432,12 @@ export default function ChiefPrintReport({
                     <thead>
                         <tr>
                             <th style={{ width: "10%", textAlign: "center" }}>ID</th>
-                            <th style={{ width: "27%" }}>Subject & Category</th>
+                            <th style={{ width: "26.5%" }}>Subject & Category</th>
                             <th style={{ width: "15.5%" }}>Citizen Contact</th>
                             <th style={{ width: "15.5%" }}>Location / Zone</th>
-                            <th style={{ width: "11%", textAlign: "center" }}>Priority</th>
+                            <th style={{ width: "10.5%", textAlign: "center" }}>Priority</th>
                             <th style={{ width: "12.5%", textAlign: "center" }}>Status</th>
-                            <th style={{ width: "8.5%", textAlign: "center" }}>Date</th>
+                            <th style={{ width: "9.5%", textAlign: "center" }}>Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -488,8 +488,10 @@ export default function ChiefPrintReport({
                                             {c.status}
                                         </span>
                                     </td>
-                                    <td className="col-nowrap" style={{ textAlign: "center", color: "#64748b", fontSize: "0.68rem", fontWeight: 600 }}>
-                                        {c.date}
+                                    <td className="col-nowrap col-date">
+                                        <span style={{ display: "inline-block", color: "#475569", fontSize: "0.66rem", fontWeight: 600, letterSpacing: "-0.01em" }}>
+                                            {c.date}
+                                        </span>
                                     </td>
                                 </tr>
                             );

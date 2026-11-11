@@ -1427,6 +1427,13 @@ tbody tr:hover {
   white-space: nowrap !important;
 }
 
+.dossier-table td.col-date {
+  padding: 6px 2px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
 .dossier-signoff-box {
   display: flex !important;
   justify-content: space-between !important;
