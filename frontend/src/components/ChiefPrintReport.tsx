@@ -431,13 +431,13 @@ export default function ChiefPrintReport({
                 <table className="dossier-table">
                     <thead>
                         <tr>
-                            <th style={{ width: "9.5%" }}>ID</th>
-                            <th style={{ width: "29%" }}>Subject & Category</th>
-                            <th style={{ width: "18%" }}>Citizen Contact</th>
-                            <th style={{ width: "18%" }}>Location / Zone</th>
+                            <th style={{ width: "9%" }}>ID</th>
+                            <th style={{ width: "28%" }}>Subject & Category</th>
+                            <th style={{ width: "17%" }}>Citizen Contact</th>
+                            <th style={{ width: "17%" }}>Location / Zone</th>
                             <th style={{ width: "8%", textAlign: "center" }}>Priority</th>
-                            <th style={{ width: "9.5%", textAlign: "center" }}>Status</th>
-                            <th style={{ width: "8%", textAlign: "center" }}>Date</th>
+                            <th style={{ width: "12%", textAlign: "center" }}>Status</th>
+                            <th style={{ width: "9%", textAlign: "center" }}>Date</th>
                         </tr>
                     </thead>
                     <tbody>
