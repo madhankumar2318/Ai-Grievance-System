@@ -518,9 +518,9 @@ export default function Home() {
   useEffect(() => {
     if (!isLoading && user) {
       if (user.role === "chief") {
-        router.replace("/chief");
+        router.push("/chief");
       } else if (user.role === "authority") {
-        router.replace("/admin");
+        router.push("/admin");
       }
     }
   }, [user, isLoading, router]);

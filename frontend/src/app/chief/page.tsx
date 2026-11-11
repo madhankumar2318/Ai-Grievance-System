@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ComplaintMap from "@/components/ComplaintMap";
 import ChiefPrintReport from "@/components/ChiefPrintReport";
@@ -153,23 +153,49 @@ export default function ChiefDashboard() {
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
     const [isPrinting, setIsPrinting] = useState(false);
+    const isPrintStatePushed = useRef(false);
 
     useEffect(() => {
         const handleBeforePrint = () => setIsPrinting(true);
-        const handleAfterPrint = () => setIsPrinting(false);
+        const handleAfterPrint = () => {
+            setIsPrinting(false);
+            if (isPrintStatePushed.current && typeof window !== "undefined" && window.history.state?.chiefPrintModal) {
+                isPrintStatePushed.current = false;
+                window.history.back();
+            } else {
+                isPrintStatePushed.current = false;
+            }
+        };
+
+        const handlePopState = () => {
+            // If the user clicks the browser Back button ("one step backward") during print preview,
+            // the pushed modal state is popped and they safely remain on the Chief Dashboard.
+            setIsPrinting(false);
+            isPrintStatePushed.current = false;
+        };
+
         window.addEventListener("beforeprint", handleBeforePrint);
         window.addEventListener("afterprint", handleAfterPrint);
+        window.addEventListener("popstate", handlePopState);
         return () => {
             window.removeEventListener("beforeprint", handleBeforePrint);
             window.removeEventListener("afterprint", handleAfterPrint);
+            window.removeEventListener("popstate", handlePopState);
         };
     }, []);
 
     const handleExportPDF = () => {
         setIsPrinting(true);
+        try {
+            // Push history state so going "one step backward" returns directly to Chief Dashboard
+            // instead of navigating outside the tab/browser session to previous sites (e.g., MSN/New Tab)
+            window.history.pushState({ chiefPrintModal: true }, "", window.location.href);
+            isPrintStatePushed.current = true;
+        } catch {
+            // fallback if pushState is restricted
+        }
         setTimeout(() => {
             window.print();
-            setTimeout(() => setIsPrinting(false), 1000);
         }, 150);
     };
 
