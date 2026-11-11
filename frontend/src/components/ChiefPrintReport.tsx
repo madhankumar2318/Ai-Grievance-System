@@ -284,7 +284,7 @@ export default function ChiefPrintReport({
                 </div>
                 <div className="dossier-officer-grid">
                     {[
-                        { name: "Officer Priya",  dept: "Environment",   category: "Environment" },
+                        { name: "Officer Priya",  dept: "Environment",    category: "Environment" },
                         { name: "Officer Singh",  dept: "Infrastructure", category: "Infrastructure" },
                         { name: "Officer Reddy",  dept: "Public Health",  category: "Public Health" },
                         { name: "Officer Meera",  dept: "Safety",         category: "Safety" },
@@ -300,22 +300,79 @@ export default function ChiefPrintReport({
                             <div key={officer.name} className="dossier-officer-card">
                                 <div className="officer-badge">{initials}</div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: "700", fontSize: "0.75rem", color: "#0f172a" }}>{officer.name}</div>
-                                    <div style={{ fontSize: "0.65rem", color: "#64748b" }}>
-                                        {officer.dept} · {load} active {load === 1 ? "case" : "cases"}
+                                    <div style={{ fontWeight: 700, fontSize: "0.78rem", color: "#0f172a", whiteSpace: "nowrap" }}>
+                                        {officer.name}
+                                    </div>
+                                    <div style={{ fontSize: "0.68rem", color: "#64748b", whiteSpace: "nowrap" }}>
+                                        {officer.dept} · <strong>{load}</strong> active {load === 1 ? "case" : "cases"}
                                     </div>
                                 </div>
                                 <span style={{
-                                    fontSize: "0.62rem", fontWeight: "700",
-                                    padding: "0.15rem 0.45rem", borderRadius: "99px",
+                                    fontSize: "0.65rem", fontWeight: 700,
+                                    padding: "0.2rem 0.55rem", borderRadius: "99px",
                                     background: `${statusColor}14`, color: statusColor,
                                     border: `1px solid ${statusColor}30`,
+                                    whiteSpace: "nowrap", flexShrink: 0,
                                 }}>
                                     {status}
                                 </span>
                             </div>
                         );
                     })}
+                </div>
+
+                {/* ── Section 5: Executive Operational Intelligence Brief ── */}
+                <div className="dossier-section-title" style={{ marginTop: "0.6rem" }}>
+                    <span>05</span> EXECUTIVE OPERATIONAL INTELLIGENCE BRIEF
+                </div>
+                <div className="dossier-intel-grid">
+                    <div className="dossier-intel-card">
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
+                            <span style={{ fontSize: "0.85rem" }}>🎯</span>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#0f172a", textTransform: "uppercase" }}>Primary Civic Focus</span>
+                        </div>
+                        {(() => {
+                            const topCat = Object.entries(categoryCounts).sort(([, a], [, b]) => b - a)[0];
+                            const topName = topCat ? topCat[0] : "General";
+                            const topPct = total > 0 && topCat ? Math.round((topCat[1] / total) * 100) : 0;
+                            return (
+                                <>
+                                    <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#4f46e5", marginBottom: "0.2rem" }}>
+                                        {topName} ({topPct}% of Intake)
+                                    </div>
+                                    <div style={{ fontSize: "0.65rem", color: "#64748b", lineHeight: 1.3 }}>
+                                        Leading municipal category; field inspection teams deployed to high-density zones.
+                                    </div>
+                                </>
+                            );
+                        })()}
+                    </div>
+
+                    <div className="dossier-intel-card">
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
+                            <span style={{ fontSize: "0.85rem" }}>🚨</span>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#0f172a", textTransform: "uppercase" }}>Urgency & Escalations</span>
+                        </div>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 800, color: critical > 0 ? "#dc2626" : "#059669", marginBottom: "0.2rem" }}>
+                            {critical > 0 ? `${critical} Critical Escalations` : "Zero Critical Overdues"}
+                        </div>
+                        <div style={{ fontSize: "0.65rem", color: "#64748b", lineHeight: 1.3 }}>
+                            Triage routed under emergency SLA; automated alerts actively notifying department heads.
+                        </div>
+                    </div>
+
+                    <div className="dossier-intel-card">
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.25rem" }}>
+                            <span style={{ fontSize: "0.85rem" }}>⚡</span>
+                            <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#0f172a", textTransform: "uppercase" }}>Redressal Velocity</span>
+                        </div>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#059669", marginBottom: "0.2rem" }}>
+                            {resolutionRate}% Redressal Pace
+                        </div>
+                        <div style={{ fontSize: "0.65rem", color: "#64748b", lineHeight: 1.3 }}>
+                            {resolved} cases completed to date; active caseload distributed across 4 zonal authority officers.
+                        </div>
+                    </div>
                 </div>
 
                 {/* ── Page 1 Running Footer ── */}
@@ -332,10 +389,10 @@ export default function ChiefPrintReport({
                 {/* ── Page 2 Header ── */}
                 <div className="ledger-header-box">
                     <div>
-                        <div style={{ fontSize: "0.62rem", fontWeight: "800", color: "#4f46e5", letterSpacing: "0.06em" }}>
-                            SECTION 05 · COMPLETE AUDIT LEDGER
+                        <div style={{ fontSize: "0.62rem", fontWeight: 800, color: "#4f46e5", letterSpacing: "0.06em" }}>
+                            SECTION 06 · COMPLETE AUDIT LEDGER
                         </div>
-                        <h2 style={{ fontSize: "1.1rem", fontWeight: "800", color: "#0f172a", margin: "0.15rem 0" }}>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "#0f172a", margin: "0.15rem 0" }}>
                             Municipal Citizen Grievance Audit Ledger
                         </h2>
                         <div style={{ fontSize: "0.68rem", color: "#475569" }}>
@@ -350,17 +407,37 @@ export default function ChiefPrintReport({
                     </div>
                 </div>
 
+                {/* ── Page 2 Ledger Summary Status Bar ── */}
+                <div className="ledger-summary-bar">
+                    <div className="ledger-summary-pill">
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#475569" }}>📋 Audited Records</span>
+                        <strong style={{ fontSize: "0.85rem", color: "#0f172a" }}>{total}</strong>
+                    </div>
+                    <div className="ledger-summary-pill">
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#d97706" }}>⏳ Awaiting Action</span>
+                        <strong style={{ fontSize: "0.85rem", color: "#d97706" }}>{pending}</strong>
+                    </div>
+                    <div className="ledger-summary-pill">
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#4f46e5" }}>🔄 In Progress</span>
+                        <strong style={{ fontSize: "0.85rem", color: "#4f46e5" }}>{inProgress}</strong>
+                    </div>
+                    <div className="ledger-summary-pill">
+                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#059669" }}>✅ Resolved Cases</span>
+                        <strong style={{ fontSize: "0.85rem", color: "#059669" }}>{resolved}</strong>
+                    </div>
+                </div>
+
                 {/* ── Comprehensive Ledger Table ── */}
                 <table className="dossier-table">
                     <thead>
                         <tr>
-                            <th style={{ width: "11%" }}>ID</th>
-                            <th style={{ width: "29%" }}>Subject & Category</th>
-                            <th style={{ width: "17%" }}>Citizen Contact</th>
-                            <th style={{ width: "16%" }}>Location / Zone</th>
+                            <th style={{ width: "10%" }}>ID</th>
+                            <th style={{ width: "28%" }}>Subject & Category</th>
+                            <th style={{ width: "16%" }}>Citizen Contact</th>
+                            <th style={{ width: "14%" }}>Location / Zone</th>
                             <th style={{ width: "10%", textAlign: "center" }}>Priority</th>
-                            <th style={{ width: "10%", textAlign: "center" }}>Status</th>
-                            <th style={{ width: "7%", textAlign: "center" }}>Date</th>
+                            <th style={{ width: "11%", textAlign: "center" }}>Status</th>
+                            <th style={{ width: "11%", textAlign: "center" }}>Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -370,42 +447,48 @@ export default function ChiefPrintReport({
                             const catColor = CATEGORY_COLORS[c.category] || "#4f46e5";
                             return (
                                 <tr key={c.id}>
-                                    <td style={{ fontWeight: "700", fontFamily: "monospace", color: "#4338ca", fontSize: "0.72rem" }}>
+                                    <td className="col-nowrap" style={{ fontWeight: 700, fontFamily: "monospace", color: "#4338ca", fontSize: "0.72rem" }}>
                                         {c.id}
                                     </td>
                                     <td>
-                                        <div style={{ fontWeight: "600", color: "#0f172a", fontSize: "0.75rem", marginBottom: "0.1rem" }}>
+                                        <div style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.75rem", lineHeight: 1.25, marginBottom: "2px" }}>
                                             {c.subject}
                                         </div>
-                                        <span style={{ fontSize: "0.62rem", fontWeight: "700", color: catColor }}>
+                                        <span style={{ fontSize: "0.62rem", fontWeight: 700, color: catColor }}>
                                             ● {c.category}
                                         </span>
                                     </td>
-                                    <td style={{ color: "#475569", fontSize: "0.7rem" }}>
-                                        {c.user}
+                                    <td>
+                                        <div style={{ color: "#475569", fontSize: "0.7rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "115px" }} title={c.user}>
+                                            {c.user}
+                                        </div>
                                     </td>
-                                    <td style={{ color: "#475569", fontSize: "0.7rem" }}>
-                                        📍 {c.location}
+                                    <td>
+                                        <div style={{ color: "#475569", fontSize: "0.7rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "105px" }} title={c.location}>
+                                            📍 {c.location}
+                                        </div>
                                     </td>
-                                    <td style={{ textAlign: "center" }}>
+                                    <td className="col-nowrap" style={{ textAlign: "center" }}>
                                         <span style={{
-                                            display: "inline-block", padding: "1px 6px",
-                                            borderRadius: "4px", fontSize: "0.65rem", fontWeight: "800",
+                                            display: "inline-block", padding: "2px 7px",
+                                            borderRadius: "4px", fontSize: "0.65rem", fontWeight: 800,
+                                            whiteSpace: "nowrap",
                                             background: pMeta.bg, color: pMeta.color, border: `1px solid ${pMeta.border}`,
                                         }}>
                                             {c.priority}
                                         </span>
                                     </td>
-                                    <td style={{ textAlign: "center" }}>
+                                    <td className="col-nowrap" style={{ textAlign: "center" }}>
                                         <span style={{
-                                            display: "inline-block", padding: "1px 6px",
-                                            borderRadius: "4px", fontSize: "0.65rem", fontWeight: "800",
+                                            display: "inline-block", padding: "2px 7px",
+                                            borderRadius: "4px", fontSize: "0.65rem", fontWeight: 800,
+                                            whiteSpace: "nowrap",
                                             background: sMeta.bg, color: sMeta.color, border: `1px solid ${sMeta.border}`,
                                         }}>
                                             {c.status}
                                         </span>
                                     </td>
-                                    <td style={{ textAlign: "center", color: "#64748b", fontSize: "0.68rem" }}>
+                                    <td className="col-nowrap" style={{ textAlign: "center", color: "#64748b", fontSize: "0.7rem", fontWeight: 600 }}>
                                         {c.date}
                                     </td>
                                 </tr>

@@ -1235,7 +1235,7 @@ tbody tr:hover {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 6px !important;
-  padding: 0.4rem 0.3rem !important;
+  padding: 0.5rem 0.35rem !important;
   text-align: center !important;
 }
 
@@ -1279,19 +1279,19 @@ tbody tr:hover {
 
 .dossier-officer-grid {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 0.45rem !important;
-  margin-bottom: 0.65rem !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 0.6rem !important;
+  margin-bottom: 0.75rem !important;
 }
 
 .dossier-officer-card {
   background: #f8fafc !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 6px !important;
-  padding: 0.4rem 0.5rem !important;
+  padding: 0.5rem 0.65rem !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.45rem !important;
+  gap: 0.55rem !important;
 }
 
 .officer-badge {
@@ -1308,13 +1308,27 @@ tbody tr:hover {
   flex-shrink: 0 !important;
 }
 
+.dossier-intel-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 0.6rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.dossier-intel-card {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  padding: 0.55rem 0.65rem !important;
+}
+
 .ledger-header-box {
   display: flex !important;
   justify-content: space-between !important;
   align-items: flex-end !important;
   border-bottom: 2px solid #0f172a !important;
   padding-bottom: 0.45rem !important;
-  margin-bottom: 0.65rem !important;
+  margin-bottom: 0.55rem !important;
 }
 
 .ledger-count-badge {
@@ -1326,6 +1340,23 @@ tbody tr:hover {
   padding: 0.15rem 0.5rem !important;
   border-radius: 4px !important;
   letter-spacing: 0.05em !important;
+}
+
+.ledger-summary-bar {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 0.5rem !important;
+  margin-bottom: 0.65rem !important;
+}
+
+.ledger-summary-pill {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  padding: 0.4rem 0.6rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
 }
 
 .dossier-table {
@@ -1361,29 +1392,35 @@ tbody tr:hover {
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
   border: 1px solid #cbd5e1 !important;
-  padding: 4px 6px !important;
+  padding: 6px 8px !important;
   text-align: left !important;
 }
 
 .dossier-table td {
   border: 1px solid #e2e8f0 !important;
-  padding: 4px 6px !important;
+  padding: 6px 8px !important;
   color: #334155 !important;
   vertical-align: middle !important;
-  word-break: break-word !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
   white-space: normal !important;
-  line-height: 1.25 !important;
+  line-height: 1.3 !important;
+}
+
+.dossier-table td.col-nowrap {
+  white-space: nowrap !important;
+  word-break: normal !important;
 }
 
 .dossier-signoff-box {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  padding: 0.55rem 0.95rem !important;
+  padding: 0.7rem 1rem !important;
   background: #f8fafc !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 6px !important;
-  margin-top: 0.65rem !important;
+  margin-top: 0.75rem !important;
   margin-bottom: 0.65rem !important;
   page-break-inside: avoid !important;
   break-inside: avoid !important;
