@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ChiefPrintReport, { ChiefComplaint, TrendDay } from "./ChiefPrintReport";
 
 interface ExecutiveReportModalProps {
@@ -36,6 +36,10 @@ export default function ExecutiveReportModal({
     const [zoom, setZoom] = useState<number>(100);
     const [isExporting, setIsExporting] = useState<boolean>(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    // Hidden refs strictly for high-resolution 1:1 direct PDF generation
+    const exportPage1Ref = useRef<HTMLDivElement>(null);
+    const exportPage2Ref = useRef<HTMLDivElement>(null);
 
     // Keyboard listener (Escape key closes viewer)
     useEffect(() => {
@@ -74,21 +78,107 @@ export default function ExecutiveReportModal({
 
     if (!isOpen) return null;
 
-    const handleDownloadPDF = () => {
+    /* ── Direct 1-Click PDF Download (No Print Dialog) ── */
+    const handleDownloadPDF = async () => {
+        if (!exportPage1Ref.current || !exportPage2Ref.current) return;
         setIsExporting(true);
-        setToastMessage("Preparing High-Resolution Vector PDF... In your print window, select 'Save as PDF' (Portrait).");
+        setToastMessage("Generating direct PDF file... Please wait a moment.");
 
-        setTimeout(() => {
-            window.print();
+        try {
+            const { jsPDF } = await import("jspdf");
+            const html2canvas = (await import("html2canvas")).default;
+
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "a4",
+                compress: true,
+            });
+
+            // Capture Page 1 at 2x retina DPI
+            const canvas1 = await html2canvas(exportPage1Ref.current, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff",
+            });
+            const imgData1 = canvas1.toDataURL("image/jpeg", 0.95);
+            pdf.addImage(imgData1, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+
+            // Capture Page 2 at 2x retina DPI
+            const canvas2 = await html2canvas(exportPage2Ref.current, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff",
+            });
+            const imgData2 = canvas2.toDataURL("image/jpeg", 0.95);
+            pdf.addPage("a4", "portrait");
+            pdf.addImage(imgData2, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+
+            // Direct native file download — saves straight to user's computer!
+            pdf.save("Chief_Executive_Report.pdf");
+
+            setToastMessage("✓ PDF downloaded directly to your downloads!");
+            setTimeout(() => setToastMessage(null), 3500);
+        } catch (err) {
+            console.error("Direct PDF generation error:", err);
+            setToastMessage("Opening print dialog as fallback...");
             setTimeout(() => {
-                setIsExporting(false);
+                window.print();
                 setToastMessage(null);
-            }, 1200);
-        }, 300);
+            }, 600);
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     return (
         <div className="executive-modal-backdrop no-print">
+            {/* ── Hidden Off-Screen Container for 100% Crisp 1:1 PDF Rasterization ── */}
+            <div
+                style={{
+                    position: "fixed",
+                    top: "-12000px",
+                    left: "-12000px",
+                    width: "794px", // Exact 210mm at 96 DPI
+                    pointerEvents: "none",
+                    zIndex: -9999,
+                    background: "#ffffff",
+                }}
+            >
+                <div ref={exportPage1Ref} className="executive-a4-sheet" style={{ margin: 0, boxShadow: "none" }}>
+                    <ChiefPrintReport
+                        total={total}
+                        pending={pending}
+                        inProgress={inProgress}
+                        resolved={resolved}
+                        critical={critical}
+                        resolutionRate={resolutionRate}
+                        complaints={complaints}
+                        categoryCounts={categoryCounts}
+                        trendData={trendData}
+                        priorityCounts={priorityCounts}
+                        renderMode="page1-only"
+                    />
+                </div>
+                <div ref={exportPage2Ref} className="executive-a4-sheet" style={{ margin: 0, boxShadow: "none" }}>
+                    <ChiefPrintReport
+                        total={total}
+                        pending={pending}
+                        inProgress={inProgress}
+                        resolved={resolved}
+                        critical={critical}
+                        resolutionRate={resolutionRate}
+                        complaints={complaints}
+                        categoryCounts={categoryCounts}
+                        trendData={trendData}
+                        priorityCounts={priorityCounts}
+                        renderMode="page2-only"
+                    />
+                </div>
+            </div>
+
             {/* ── Top Floating Command Bar ── */}
             <header className="executive-modal-toolbar">
                 {/* Left: Branding & Status */}
@@ -154,14 +244,14 @@ export default function ExecutiveReportModal({
 
                 {/* Right: Action Buttons */}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                    {/* Primary: Download PDF */}
+                    {/* Primary: Direct Download PDF */}
                     <button
                         onClick={handleDownloadPDF}
                         disabled={isExporting}
                         className="modal-btn-download"
                     >
                         <span>📥</span>
-                        <span>{isExporting ? "Compiling PDF..." : "Download PDF"}</span>
+                        <span>{isExporting ? "Downloading PDF..." : "Download PDF"}</span>
                     </button>
 
                     {/* Close Button */}
@@ -175,7 +265,7 @@ export default function ExecutiveReportModal({
                 </div>
             </header>
 
-            {/* Toast guidance banner if downloading */}
+            {/* Toast guidance banner */}
             {toastMessage && (
                 <div className="modal-toast-banner">
                     <span>✨ {toastMessage}</span>
