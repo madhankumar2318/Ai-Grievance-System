@@ -340,7 +340,7 @@ export default function ChiefDashboard() {
                             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 28px rgba(239,68,68,0.5)"; }}
                             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 20px rgba(239,68,68,0.4)"; }}
                         >
-                            📄 {t("chief_export_pdf")}
+                            {t("chief_export_pdf")}
                         </button>
                     </div>
                 </div>
