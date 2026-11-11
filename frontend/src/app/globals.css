@@ -1421,6 +1421,12 @@ tbody tr:hover {
   word-break: normal !important;
 }
 
+.dossier-table td.col-badge {
+  padding: 5px 2px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
 .dossier-signoff-box {
   display: flex !important;
   justify-content: space-between !important;

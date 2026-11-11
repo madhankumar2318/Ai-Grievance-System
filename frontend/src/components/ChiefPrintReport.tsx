@@ -431,13 +431,13 @@ export default function ChiefPrintReport({
                 <table className="dossier-table">
                     <thead>
                         <tr>
-                            <th style={{ width: "10.5%", textAlign: "center" }}>ID</th>
-                            <th style={{ width: "28%" }}>Subject & Category</th>
-                            <th style={{ width: "16%" }}>Citizen Contact</th>
-                            <th style={{ width: "16%" }}>Location / Zone</th>
-                            <th style={{ width: "8%", textAlign: "center" }}>Priority</th>
-                            <th style={{ width: "12%", textAlign: "center" }}>Status</th>
-                            <th style={{ width: "9.5%", textAlign: "center" }}>Date</th>
+                            <th style={{ width: "10%", textAlign: "center" }}>ID</th>
+                            <th style={{ width: "27%" }}>Subject & Category</th>
+                            <th style={{ width: "15.5%" }}>Citizen Contact</th>
+                            <th style={{ width: "15.5%" }}>Location / Zone</th>
+                            <th style={{ width: "11%", textAlign: "center" }}>Priority</th>
+                            <th style={{ width: "12.5%", textAlign: "center" }}>Status</th>
+                            <th style={{ width: "8.5%", textAlign: "center" }}>Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -468,9 +468,9 @@ export default function ChiefPrintReport({
                                             📍 {c.location}
                                         </div>
                                     </td>
-                                    <td className="col-nowrap" style={{ textAlign: "center" }}>
+                                    <td className="col-nowrap col-badge">
                                         <span style={{
-                                            display: "inline-block", padding: "2px 6px",
+                                            display: "inline-block", padding: "2px 5px",
                                             borderRadius: "4px", fontSize: "0.62rem", fontWeight: 800,
                                             whiteSpace: "nowrap",
                                             background: pMeta.bg, color: pMeta.color, border: `1px solid ${pMeta.border}`,
@@ -478,9 +478,9 @@ export default function ChiefPrintReport({
                                             {c.priority}
                                         </span>
                                     </td>
-                                    <td className="col-nowrap" style={{ textAlign: "center" }}>
+                                    <td className="col-nowrap col-badge">
                                         <span style={{
-                                            display: "inline-block", padding: "2px 6px",
+                                            display: "inline-block", padding: "2px 5px",
                                             borderRadius: "4px", fontSize: "0.62rem", fontWeight: 800,
                                             whiteSpace: "nowrap",
                                             background: sMeta.bg, color: sMeta.color, border: `1px solid ${sMeta.border}`,
