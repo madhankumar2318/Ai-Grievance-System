@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ComplaintMap from "@/components/ComplaintMap";
 import ChiefPrintReport from "@/components/ChiefPrintReport";
+import ExecutiveReportModal from "@/components/ExecutiveReportModal";
 import { useLang } from "@/context/LanguageContext";
 import { getComplaintsServerAction } from "@/app/actions/complaintActions";
 import {
@@ -152,6 +153,7 @@ export default function ChiefDashboard() {
     const [complaints, setComplaints] = useState<ChiefComplaint[]>([]);
     const [loading, setLoading] = useState(true);
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
     const isPrintStatePushed = useRef(false);
 
@@ -168,9 +170,8 @@ export default function ChiefDashboard() {
         };
 
         const handlePopState = () => {
-            // If the user clicks the browser Back button ("one step backward") during print preview,
-            // the pushed modal state is popped and they safely remain on the Chief Dashboard.
             setIsPrinting(false);
+            setIsViewerOpen(false);
             isPrintStatePushed.current = false;
         };
 
@@ -185,18 +186,8 @@ export default function ChiefDashboard() {
     }, []);
 
     const handleExportPDF = () => {
-        setIsPrinting(true);
-        try {
-            // Push history state so going "one step backward" returns directly to Chief Dashboard
-            // instead of navigating outside the tab/browser session to previous sites (e.g., MSN/New Tab)
-            window.history.pushState({ chiefPrintModal: true }, "", window.location.href);
-            isPrintStatePushed.current = true;
-        } catch {
-            // fallback if pushState is restricted
-        }
-        setTimeout(() => {
-            window.print();
-        }, 150);
+        // Open the Sleek In-App Executive Document Viewer Modal
+        setIsViewerOpen(true);
     };
 
     /* ── Fetch from Supabase / Spring Boot ────────────────────────────────────────────── */
@@ -688,6 +679,22 @@ export default function ChiefDashboard() {
 
             {/* ── Official Print-Only Executive Dossier (Bulletproof Native Vector SVG & HTML) ── */}
             <ChiefPrintReport
+                total={total}
+                pending={pending}
+                inProgress={inProgress}
+                resolved={resolved}
+                critical={critical}
+                resolutionRate={resolutionRate}
+                complaints={complaints}
+                categoryCounts={categoryCounts}
+                trendData={trendData}
+                priorityCounts={priorityCounts}
+            />
+
+            {/* ── Sleek In-App Executive Document Viewer Modal (Option 2) ── */}
+            <ExecutiveReportModal
+                isOpen={isViewerOpen}
+                onClose={() => setIsViewerOpen(false)}
                 total={total}
                 pending={pending}
                 inProgress={inProgress}

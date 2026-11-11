@@ -888,6 +888,563 @@ tbody tr:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   IN-APP EXECUTIVE DOCUMENT VIEWER MODAL (OPTION 2)
+   ═══════════════════════════════════════════════════════════════ */
+.executive-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(8, 12, 22, 0.96);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; transform: scale(0.99); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.executive-modal-toolbar {
+  height: 64px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  flex-shrink: 0;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.modal-toolbar-emblem {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+.modal-toolbar-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.modal-toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+@media (max-width: 860px) {
+  .modal-toolbar-center { display: none; }
+}
+
+.modal-pill-group {
+  display: flex;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+
+.modal-pill-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-pill-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.modal-pill-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+}
+
+.modal-btn-download {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0.5rem 1.15rem;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+  transition: all 0.15s ease;
+}
+
+.modal-btn-download:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(16, 185, 129, 0.5);
+}
+
+.modal-btn-print {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(30, 41, 59, 0.8);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.5rem 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-btn-print:hover {
+  background: rgba(51, 65, 85, 0.9);
+  color: #ffffff;
+}
+
+.modal-btn-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-btn-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.modal-toast-banner {
+  background: linear-gradient(90deg, #312e81, #1e1b4b);
+  border-bottom: 1px solid rgba(129, 140, 248, 0.3);
+  color: #c7d2fe;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 1rem;
+  text-align: center;
+  animation: fadeInModal 0.2s ease;
+}
+
+.executive-modal-viewport {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding: 2.5rem 1rem 4rem;
+  display: flex;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.5) 0%, rgba(8, 12, 22, 0.98) 100%);
+}
+
+.executive-canvas-scaler {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.executive-sheet-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2.5rem;
+}
+
+.executive-sheet-tag {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.85rem;
+  border-radius: 999px;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.executive-a4-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  padding: 14mm 15mm;
+  border-radius: 4px;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.chief-modal-dossier-preview {
+  display: block;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MUNICIPAL AUDIT DOSSIER BASE DESIGN (Shared by Preview & Print)
+   ═══════════════════════════════════════════════════════════════ */
+.chief-print-page {
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.dossier-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  border-bottom: 2px solid #0f172a !important;
+  padding-bottom: 0.5rem !important;
+  margin-bottom: 0.65rem !important;
+}
+
+.dossier-branding {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+}
+
+.dossier-emblem {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 6px !important;
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.25rem !important;
+  flex-shrink: 0 !important;
+}
+
+.dossier-super {
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+  color: #4f46e5 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.dossier-title {
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0.1rem 0 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.dossier-sub {
+  font-size: 0.68rem !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+}
+
+.dossier-meta {
+  text-align: right !important;
+  flex-shrink: 0 !important;
+}
+
+.dossier-clearance {
+  display: inline-block !important;
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+  font-size: 0.6rem !important;
+  font-weight: 800 !important;
+  padding: 0.15rem 0.45rem !important;
+  border-radius: 4px !important;
+  border: 1px solid #c7d2fe !important;
+  letter-spacing: 0.04em !important;
+  margin-bottom: 0.15rem !important;
+}
+
+.dossier-date, .dossier-ref {
+  font-size: 0.65rem !important;
+  color: #64748b !important;
+  line-height: 1.3 !important;
+}
+
+.dossier-section-title {
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 0.35rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+}
+
+.dossier-section-title span {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  padding: 0.05rem 0.3rem !important;
+  border-radius: 3px !important;
+  font-size: 0.6rem !important;
+}
+
+.dossier-kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(6, 1fr) !important;
+  gap: 0.45rem !important;
+  margin-bottom: 0.6rem !important;
+  width: 100% !important;
+}
+
+.dossier-kpi-card {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  padding: 0.4rem 0.3rem !important;
+  text-align: center !important;
+}
+
+.kpi-icon-wrap {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto 0.2rem auto !important;
+  font-size: 0.8rem !important;
+}
+
+.kpi-num {
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  margin-bottom: 0.1rem !important;
+}
+
+.kpi-label {
+  font-size: 0.62rem !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+}
+
+.kpi-note {
+  font-size: 0.55rem !important;
+  color: #64748b !important;
+}
+
+.dossier-card {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+.dossier-officer-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 0.45rem !important;
+  margin-bottom: 0.65rem !important;
+}
+
+.dossier-officer-card {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  padding: 0.4rem 0.5rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.45rem !important;
+}
+
+.officer-badge {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.65rem !important;
+  font-weight: 800 !important;
+  flex-shrink: 0 !important;
+}
+
+.ledger-header-box {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  border-bottom: 2px solid #0f172a !important;
+  padding-bottom: 0.45rem !important;
+  margin-bottom: 0.65rem !important;
+}
+
+.ledger-count-badge {
+  display: inline-block !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  font-size: 0.62rem !important;
+  font-weight: 800 !important;
+  padding: 0.15rem 0.5rem !important;
+  border-radius: 4px !important;
+  letter-spacing: 0.05em !important;
+}
+
+.dossier-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 8.5px !important;
+  table-layout: fixed !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.dossier-table thead {
+  display: table-header-group !important;
+}
+
+.dossier-table tbody {
+  display: table-row-group !important;
+}
+
+.dossier-table tr {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
+.dossier-table tbody tr:nth-child(even) {
+  background: #f8fafc !important;
+}
+
+.dossier-table th {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  font-size: 8px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 4px 6px !important;
+  text-align: left !important;
+}
+
+.dossier-table td {
+  border: 1px solid #e2e8f0 !important;
+  padding: 4px 6px !important;
+  color: #334155 !important;
+  vertical-align: middle !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+  line-height: 1.25 !important;
+}
+
+.dossier-signoff-box {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0.55rem 0.95rem !important;
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  margin-top: 0.65rem !important;
+  margin-bottom: 0.65rem !important;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
+
+.signoff-left {
+  flex: 1.3 !important;
+}
+
+.signoff-badge {
+  display: inline-block !important;
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+  font-size: 0.6rem !important;
+  font-weight: 800 !important;
+  padding: 0.12rem 0.45rem !important;
+  border-radius: 4px !important;
+  border: 1px solid #c7d2fe !important;
+  letter-spacing: 0.05em !important;
+}
+
+.signoff-center {
+  flex: 0.8 !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.seal-box {
+  text-align: center !important;
+  border: 2px dashed #94a3b8 !important;
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+}
+
+.signoff-right {
+  flex: 1.1 !important;
+  text-align: right !important;
+}
+
+.signature-line {
+  width: 140px !important;
+  height: 1px !important;
+  background: #0f172a !important;
+  margin-left: auto !important;
+  margin-bottom: 0.35rem !important;
+}
+
+.dossier-footer {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 0.45rem 0.2rem 0 !important;
+  margin-top: 0.65rem !important;
+  border-top: 1px solid #cbd5e1 !important;
+  font-size: 0.65rem !important;
+  color: #64748b !important;
+  clear: both !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    PREMIUM EXECUTIVE PDF EXPORT & PRINT SYSTEM (A4 PORTRAIT)
    ═══════════════════════════════════════════════════════════════ */
 @media print {
@@ -914,7 +1471,7 @@ tbody tr:hover {
     width: 100% !important;
   }
 
-  /* ── 1. Hide interactive screen content ── */
+  /* ── 1. Hide interactive screen content & modals ── */
   nav,
   header,
   footer,
@@ -924,7 +1481,9 @@ tbody tr:hover {
   .chatbot-container,
   #chatbot-toggle,
   .desktop-only-control,
-  .chief-screen-content {
+  .chief-screen-content,
+  .executive-modal-backdrop,
+  .executive-modal-toolbar {
     display: none !important;
   }
 
@@ -942,12 +1501,6 @@ tbody tr:hover {
     background: #ffffff !important;
   }
 
-  .chief-print-page {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    background: #ffffff !important;
-  }
-
   .chief-page-1 {
     page-break-after: always !important;
     break-after: page !important;
@@ -958,329 +1511,5 @@ tbody tr:hover {
     page-break-before: always !important;
     break-before: page !important;
     min-height: 100% !important;
-  }
-
-  /* ── 3. Dossier Header ── */
-  .dossier-header {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: flex-start !important;
-    border-bottom: 2px solid #0f172a !important;
-    padding-bottom: 0.5rem !important;
-    margin-bottom: 0.65rem !important;
-  }
-
-  .dossier-branding {
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.65rem !important;
-  }
-
-  .dossier-emblem {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 6px !important;
-    background: #4f46e5 !important;
-    color: #ffffff !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 1.25rem !important;
-    flex-shrink: 0 !important;
-  }
-
-  .dossier-super {
-    font-size: 0.58rem !important;
-    font-weight: 800 !important;
-    color: #4f46e5 !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-  }
-
-  .dossier-title {
-    font-size: 1.15rem !important;
-    font-weight: 800 !important;
-    color: #0f172a !important;
-    margin: 0.1rem 0 !important;
-    line-height: 1.2 !important;
-    letter-spacing: -0.01em !important;
-  }
-
-  .dossier-sub {
-    font-size: 0.68rem !important;
-    color: #475569 !important;
-    font-weight: 600 !important;
-  }
-
-  .dossier-meta {
-    text-align: right !important;
-    flex-shrink: 0 !important;
-  }
-
-  .dossier-clearance {
-    display: inline-block !important;
-    background: #e0e7ff !important;
-    color: #3730a3 !important;
-    font-size: 0.6rem !important;
-    font-weight: 800 !important;
-    padding: 0.15rem 0.45rem !important;
-    border-radius: 4px !important;
-    border: 1px solid #c7d2fe !important;
-    letter-spacing: 0.04em !important;
-    margin-bottom: 0.15rem !important;
-  }
-
-  .dossier-date, .dossier-ref {
-    font-size: 0.65rem !important;
-    color: #64748b !important;
-    line-height: 1.3 !important;
-  }
-
-  /* ── 4. Section Headings ── */
-  .dossier-section-title {
-    font-size: 0.72rem !important;
-    font-weight: 800 !important;
-    color: #0f172a !important;
-    letter-spacing: 0.06em !important;
-    text-transform: uppercase !important;
-    margin-bottom: 0.35rem !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.35rem !important;
-  }
-
-  .dossier-section-title span {
-    background: #0f172a !important;
-    color: #ffffff !important;
-    padding: 0.05rem 0.3rem !important;
-    border-radius: 3px !important;
-    font-size: 0.6rem !important;
-  }
-
-  /* ── 5. KPI Cards ── */
-  .dossier-kpi-grid {
-    display: grid !important;
-    grid-template-columns: repeat(6, 1fr) !important;
-    gap: 0.45rem !important;
-    margin-bottom: 0.6rem !important;
-    width: 100% !important;
-  }
-
-  .dossier-kpi-card {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    padding: 0.4rem 0.3rem !important;
-    text-align: center !important;
-  }
-
-  .kpi-icon-wrap {
-    width: 24px !important;
-    height: 24px !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 0 auto 0.2rem auto !important;
-    font-size: 0.8rem !important;
-  }
-
-  .kpi-num {
-    font-size: 1.35rem !important;
-    font-weight: 800 !important;
-    line-height: 1.15 !important;
-    margin-bottom: 0.1rem !important;
-  }
-
-  .kpi-label {
-    font-size: 0.62rem !important;
-    font-weight: 700 !important;
-    color: #0f172a !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.03em !important;
-  }
-
-  .kpi-note {
-    font-size: 0.55rem !important;
-    color: #64748b !important;
-  }
-
-  /* ── 6. Generic Dossier Card ── */
-  .dossier-card {
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    box-shadow: none !important;
-  }
-
-  /* ── 7. Officer Grid ── */
-  .dossier-officer-grid {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 0.45rem !important;
-    margin-bottom: 0.65rem !important;
-  }
-
-  .dossier-officer-card {
-    background: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    padding: 0.4rem 0.5rem !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 0.45rem !important;
-  }
-
-  .officer-badge {
-    width: 28px !important;
-    height: 28px !important;
-    border-radius: 50% !important;
-    background: #4f46e5 !important;
-    color: #ffffff !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-size: 0.65rem !important;
-    font-weight: 800 !important;
-    flex-shrink: 0 !important;
-  }
-
-  /* ── 8. Table on Page 2 ── */
-  .ledger-header-box {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: flex-end !important;
-    border-bottom: 2px solid #0f172a !important;
-    padding-bottom: 0.45rem !important;
-    margin-bottom: 0.65rem !important;
-  }
-
-  .ledger-count-badge {
-    display: inline-block !important;
-    background: #0f172a !important;
-    color: #ffffff !important;
-    font-size: 0.62rem !important;
-    font-weight: 800 !important;
-    padding: 0.15rem 0.5rem !important;
-    border-radius: 4px !important;
-    letter-spacing: 0.05em !important;
-  }
-
-  .dossier-table {
-    width: 100% !important;
-    border-collapse: collapse !important;
-    font-size: 8.5px !important;
-    table-layout: fixed !important;
-    margin-bottom: 0.75rem !important;
-  }
-
-  .dossier-table thead {
-    display: table-header-group !important;
-  }
-
-  .dossier-table tbody {
-    display: table-row-group !important;
-  }
-
-  .dossier-table tr {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .dossier-table tbody tr:nth-child(even) {
-    background: #f8fafc !important;
-  }
-
-  .dossier-table th {
-    background: #f1f5f9 !important;
-    color: #0f172a !important;
-    font-size: 8px !important;
-    font-weight: 800 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    border: 1px solid #cbd5e1 !important;
-    padding: 4px 6px !important;
-    text-align: left !important;
-  }
-
-  .dossier-table td {
-    border: 1px solid #e2e8f0 !important;
-    padding: 4px 6px !important;
-    color: #334155 !important;
-    vertical-align: middle !important;
-    word-break: break-word !important;
-    white-space: normal !important;
-    line-height: 1.25 !important;
-  }
-
-  /* ── 9. Official Sign-off Seal Box ── */
-  .dossier-signoff-box {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 0.55rem 0.95rem !important;
-    background: #f8fafc !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 6px !important;
-    margin-top: 0.65rem !important;
-    margin-bottom: 0.65rem !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .signoff-left {
-    flex: 1.3 !important;
-  }
-
-  .signoff-badge {
-    display: inline-block !important;
-    background: #e0e7ff !important;
-    color: #3730a3 !important;
-    font-size: 0.6rem !important;
-    font-weight: 800 !important;
-    padding: 0.12rem 0.45rem !important;
-    border-radius: 4px !important;
-    border: 1px solid #c7d2fe !important;
-    letter-spacing: 0.05em !important;
-  }
-
-  .signoff-center {
-    flex: 0.8 !important;
-    display: flex !important;
-    justify-content: center !important;
-  }
-
-  .seal-box {
-    text-align: center !important;
-    border: 2px dashed #94a3b8 !important;
-    padding: 0.25rem 0.75rem !important;
-    border-radius: 6px !important;
-    background: #ffffff !important;
-  }
-
-  .signoff-right {
-    flex: 1.1 !important;
-    text-align: right !important;
-  }
-
-  .signature-line {
-    width: 140px !important;
-    height: 1px !important;
-    background: #0f172a !important;
-    margin-left: auto !important;
-    margin-bottom: 0.35rem !important;
-  }
-
-  /* ── 10. Running Footer ── */
-  .dossier-footer {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 0.45rem 0.2rem 0 !important;
-    margin-top: 0.65rem !important;
-    border-top: 1px solid #cbd5e1 !important;
-    font-size: 0.65rem !important;
-    color: #64748b !important;
-    clear: both !important;
   }
 }

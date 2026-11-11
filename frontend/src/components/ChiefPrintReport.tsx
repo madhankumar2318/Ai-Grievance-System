@@ -1,6 +1,6 @@
 import React from "react";
 
-interface ChiefComplaint {
+export interface ChiefComplaint {
     id: string;
     subject: string;
     category: string;
@@ -11,13 +11,13 @@ interface ChiefComplaint {
     date: string;
 }
 
-interface TrendDay {
+export interface TrendDay {
     day: string;
     Filed: number;
     Resolved: number;
 }
 
-interface ChiefPrintReportProps {
+export interface ChiefPrintReportProps {
     total: number;
     pending: number;
     inProgress: number;
@@ -28,6 +28,7 @@ interface ChiefPrintReportProps {
     categoryCounts: Record<string, number>;
     trendData: TrendDay[];
     priorityCounts: Record<string, number>;
+    renderMode?: "all" | "page1-only" | "page2-only";
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -64,6 +65,7 @@ export default function ChiefPrintReport({
     categoryCounts,
     trendData,
     priorityCounts,
+    renderMode = "all",
 }: ChiefPrintReportProps) {
     const currentDate = new Date().toLocaleString("en-IN", {
         dateStyle: "medium",
@@ -91,12 +93,8 @@ export default function ChiefPrintReport({
     const filedPoints = trendData.map((d, i) => `${getX(i)},${getY(d.Filed)}`).join(" ");
     const resolvedPoints = trendData.map((d, i) => `${getX(i)},${getY(d.Resolved)}`).join(" ");
 
-    return (
-        <div className="chief-print-dossier">
-            {/* ═════════════════════════════════════════════════════════════════
-                PAGE 1: EXECUTIVE BRIEFING & CIVIC INTELLIGENCE DOSSIER
-               ═════════════════════════════════════════════════════════════════ */}
-            <div className="chief-print-page chief-page-1">
+    const renderPage1 = () => (
+        <div className="chief-print-page chief-page-1">
                 {/* ── Document Header ── */}
                 <div className="dossier-header">
                     <div className="dossier-branding">
@@ -326,12 +324,11 @@ export default function ChiefPrintReport({
                     <span>Official Administrative Record · Confidential</span>
                     <span>Page 1 of 2</span>
                 </div>
-            </div>
+        </div>
+    );
 
-            {/* ═════════════════════════════════════════════════════════════════
-                PAGE 2: COMPLETE GRIEVANCE AUDIT LEDGER & SIGN-OFF SEAL
-               ═════════════════════════════════════════════════════════════════ */}
-            <div className="chief-print-page chief-page-2">
+    const renderPage2 = () => (
+        <div className="chief-print-page chief-page-2">
                 {/* ── Page 2 Header ── */}
                 <div className="ledger-header-box">
                     <div>
@@ -454,7 +451,21 @@ export default function ChiefPrintReport({
                     <span>Official Administrative Record · Confidential</span>
                     <span>Page 2 of 2</span>
                 </div>
-            </div>
+        </div>
+    );
+
+    if (renderMode === "page1-only") {
+        return <div className="chief-modal-dossier-preview">{renderPage1()}</div>;
+    }
+
+    if (renderMode === "page2-only") {
+        return <div className="chief-modal-dossier-preview">{renderPage2()}</div>;
+    }
+
+    return (
+        <div className="chief-print-dossier">
+            {renderPage1()}
+            {renderPage2()}
         </div>
     );
 }
