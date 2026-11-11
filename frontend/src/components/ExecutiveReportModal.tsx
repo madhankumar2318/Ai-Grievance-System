@@ -97,14 +97,11 @@ export default function ExecutiveReportModal({
                     <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                             <span style={{ color: "#ffffff", fontWeight: 800, fontSize: "0.95rem", letterSpacing: "-0.01em" }}>
-                                Executive Audit Dossier
-                            </span>
-                            <span className="modal-toolbar-badge">
-                                TIER-1 CIVIC RECORD
+                                Chief Executive Report
                             </span>
                         </div>
                         <div style={{ color: "#94a3b8", fontSize: "0.72rem" }}>
-                            Official Municipal Redressal Oversight Ledger · A4 Standard
+                            City-wide grievance overview & analytics
                         </div>
                     </div>
                 </div>
@@ -199,7 +196,7 @@ export default function ExecutiveReportModal({
                     {(activePage === "all" || activePage === "1") && (
                         <div className="executive-sheet-container">
                             <div className="executive-sheet-tag">
-                                <span>PAGE 1 OF 2 · EXECUTIVE OVERVIEW & CIVIC INTELLIGENCE</span>
+                                <span>PAGE 1 OF 2 · EXECUTIVE OVERVIEW & CHARTS</span>
                             </div>
                             <div className="executive-a4-sheet">
                                 <ChiefPrintReport
@@ -223,7 +220,7 @@ export default function ExecutiveReportModal({
                     {(activePage === "all" || activePage === "2") && (
                         <div className="executive-sheet-container">
                             <div className="executive-sheet-tag">
-                                <span>PAGE 2 OF 2 · GRIEVANCE AUDIT LEDGER & MUNICIPAL SIGN-OFF</span>
+                                <span>PAGE 2 OF 2 · GRIEVANCE AUDIT LEDGER & SIGN-OFF</span>
                             </div>
                             <div className="executive-a4-sheet">
                                 <ChiefPrintReport

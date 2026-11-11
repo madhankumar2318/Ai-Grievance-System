@@ -100,17 +100,17 @@ export default function ChiefPrintReport({
                     <div className="dossier-branding">
                         <div className="dossier-emblem">🏛️</div>
                         <div>
-                            <div className="dossier-super">OFFICIAL CIVIC ADMINISTRATIVE RECORD</div>
-                            <h1 className="dossier-title">AI Grievance Redressal System — Chief Executive Audit</h1>
+                            <div className="dossier-super">OFFICIAL CIVIC RECORD</div>
+                            <h1 className="dossier-title">AI Grievance System — Chief Executive Report</h1>
                             <div className="dossier-sub">
-                                Office of the Chief Municipal Administrator · Integrated Redressal & Oversight Ledger
+                                Office of the Chief Administrator · City Grievance Overview
                             </div>
                         </div>
                     </div>
                     <div className="dossier-meta">
-                        <span className="dossier-clearance">TIER-1 CLEARANCE</span>
+                        <span className="dossier-clearance">OFFICIAL REPORT</span>
                         <div className="dossier-date">Generated: <strong>{currentDate}</strong></div>
-                        <div className="dossier-ref">Ref: <strong>MUNI-AUDIT-2026-CHIEF</strong></div>
+                        <div className="dossier-ref">Ref: <strong>MUNI-REPORT-2026</strong></div>
                     </div>
                 </div>
 
@@ -320,7 +320,7 @@ export default function ChiefPrintReport({
 
                 {/* ── Page 1 Running Footer ── */}
                 <div className="dossier-footer">
-                    <span>AI Grievance Redressal System — Executive Oversight Dossier</span>
+                    <span>AI Grievance System — Chief Executive Report</span>
                     <span>Official Administrative Record · Confidential</span>
                     <span>Page 1 of 2</span>
                 </div>
@@ -422,7 +422,7 @@ export default function ChiefPrintReport({
                             System-generated civic grievance audit ledger from AI Municipal Portal.
                         </p>
                         <p style={{ margin: 0, fontSize: "0.65rem", color: "#64748b" }}>
-                            Cryptographic Integrity: SHA-256 Validated · Clearance: Tier-1 Executive Administrative Oversight
+                            Cryptographic Integrity: SHA-256 Validated · Access: Chief Executive Review
                         </p>
                     </div>
 
@@ -447,7 +447,7 @@ export default function ChiefPrintReport({
 
                 {/* ── Page 2 Running Footer ── */}
                 <div className="dossier-footer">
-                    <span>AI Grievance Redressal System — Executive Oversight Ledger</span>
+                    <span>AI Grievance System — Chief Executive Report</span>
                     <span>Official Administrative Record · Confidential</span>
                     <span>Page 2 of 2</span>
                 </div>
