@@ -74,7 +74,7 @@ export default function ChiefPrintReport({
 
     /* ── Compute SVG Line Chart coordinates ────────────────────────────── */
     const svgWidth = 670;
-    const svgHeight = 115;
+    const svgHeight = 125;
     const padL = 35;
     const padR = 20;
     const padT = 15;
@@ -158,11 +158,11 @@ export default function ChiefPrintReport({
                 </div>
 
                 {/* ── Section 2: 7-Day Velocity Trend (Pure SVG Vector) ── */}
-                <div className="dossier-section-title" style={{ marginTop: "0.6rem" }}>
+                <div className="dossier-section-title" style={{ marginTop: "0.85rem" }}>
                     <span>02</span> INTAKE VS. RESOLUTION VELOCITY (7-DAY AUDIT TRAIL)
                 </div>
-                <div className="dossier-card" style={{ padding: "0.5rem 0.8rem 0.4rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.2rem" }}>
+                <div className="dossier-card" style={{ padding: "0.6rem 0.85rem 0.45rem", marginBottom: "0.85rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
                         <div style={{ fontSize: "0.72rem", color: "#475569", fontWeight: "600" }}>
                             Daily citizen complaint filings vs. administrative closures
                         </div>
@@ -179,7 +179,7 @@ export default function ChiefPrintReport({
                     </div>
 
                     {/* Pure SVG Vector Graph */}
-                    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ width: "100%", height: "95px", display: "block" }}>
+                    <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ width: "100%", height: "105px", display: "block" }}>
                         {/* Grid lines */}
                         {[0, 0.5, 1].map((pct, idx) => {
                             const y = padT + chartH * (1 - pct);
@@ -215,7 +215,7 @@ export default function ChiefPrintReport({
                 </div>
 
                 {/* ── Section 3: Operational Breakdown (Urgency & Categories) ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem", marginTop: "0.6rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginTop: "0.85rem", marginBottom: "0.85rem" }}>
                     {/* Urgency Distribution */}
                     <div>
                         <div className="dossier-section-title">
@@ -279,7 +279,7 @@ export default function ChiefPrintReport({
                 </div>
 
                 {/* ── Section 4: Departmental Authority & Caseload Allocation ── */}
-                <div className="dossier-section-title" style={{ marginTop: "0.6rem" }}>
+                <div className="dossier-section-title" style={{ marginTop: "0.85rem" }}>
                     <span>04</span> DEPARTMENTAL AUTHORITY CASELOAD ALLOCATION
                 </div>
                 <div className="dossier-officer-grid">
@@ -322,7 +322,7 @@ export default function ChiefPrintReport({
                 </div>
 
                 {/* ── Section 5: Executive Operational Intelligence Brief ── */}
-                <div className="dossier-section-title" style={{ marginTop: "0.6rem" }}>
+                <div className="dossier-section-title" style={{ marginTop: "0.85rem" }}>
                     <span>05</span> EXECUTIVE OPERATIONAL INTELLIGENCE BRIEF
                 </div>
                 <div className="dossier-intel-grid">
@@ -431,13 +431,13 @@ export default function ChiefPrintReport({
                 <table className="dossier-table">
                     <thead>
                         <tr>
-                            <th style={{ width: "10%" }}>ID</th>
-                            <th style={{ width: "28%" }}>Subject & Category</th>
-                            <th style={{ width: "16%" }}>Citizen Contact</th>
-                            <th style={{ width: "14%" }}>Location / Zone</th>
-                            <th style={{ width: "10%", textAlign: "center" }}>Priority</th>
-                            <th style={{ width: "11%", textAlign: "center" }}>Status</th>
-                            <th style={{ width: "11%", textAlign: "center" }}>Date</th>
+                            <th style={{ width: "9.5%" }}>ID</th>
+                            <th style={{ width: "29%" }}>Subject & Category</th>
+                            <th style={{ width: "18%" }}>Citizen Contact</th>
+                            <th style={{ width: "18%" }}>Location / Zone</th>
+                            <th style={{ width: "8%", textAlign: "center" }}>Priority</th>
+                            <th style={{ width: "9.5%", textAlign: "center" }}>Status</th>
+                            <th style={{ width: "8%", textAlign: "center" }}>Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -459,19 +459,19 @@ export default function ChiefPrintReport({
                                         </span>
                                     </td>
                                     <td>
-                                        <div style={{ color: "#475569", fontSize: "0.7rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "115px" }} title={c.user}>
+                                        <div style={{ color: "#334155", fontSize: "0.68rem", lineHeight: 1.25, wordBreak: "break-word" }} title={c.user}>
                                             {c.user}
                                         </div>
                                     </td>
                                     <td>
-                                        <div style={{ color: "#475569", fontSize: "0.7rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "105px" }} title={c.location}>
+                                        <div style={{ color: "#334155", fontSize: "0.68rem", lineHeight: 1.25, wordBreak: "normal" }} title={c.location}>
                                             📍 {c.location}
                                         </div>
                                     </td>
                                     <td className="col-nowrap" style={{ textAlign: "center" }}>
                                         <span style={{
-                                            display: "inline-block", padding: "2px 7px",
-                                            borderRadius: "4px", fontSize: "0.65rem", fontWeight: 800,
+                                            display: "inline-block", padding: "2px 6px",
+                                            borderRadius: "4px", fontSize: "0.62rem", fontWeight: 800,
                                             whiteSpace: "nowrap",
                                             background: pMeta.bg, color: pMeta.color, border: `1px solid ${pMeta.border}`,
                                         }}>
@@ -480,15 +480,15 @@ export default function ChiefPrintReport({
                                     </td>
                                     <td className="col-nowrap" style={{ textAlign: "center" }}>
                                         <span style={{
-                                            display: "inline-block", padding: "2px 7px",
-                                            borderRadius: "4px", fontSize: "0.65rem", fontWeight: 800,
+                                            display: "inline-block", padding: "2px 6px",
+                                            borderRadius: "4px", fontSize: "0.62rem", fontWeight: 800,
                                             whiteSpace: "nowrap",
                                             background: sMeta.bg, color: sMeta.color, border: `1px solid ${sMeta.border}`,
                                         }}>
                                             {c.status}
                                         </span>
                                     </td>
-                                    <td className="col-nowrap" style={{ textAlign: "center", color: "#64748b", fontSize: "0.7rem", fontWeight: 600 }}>
+                                    <td className="col-nowrap" style={{ textAlign: "center", color: "#64748b", fontSize: "0.68rem", fontWeight: 600 }}>
                                         {c.date}
                                     </td>
                                 </tr>
