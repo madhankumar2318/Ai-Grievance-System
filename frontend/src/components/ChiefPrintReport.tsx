@@ -431,7 +431,7 @@ export default function ChiefPrintReport({
                 <table className="dossier-table">
                     <thead>
                         <tr>
-                            <th style={{ width: "9%" }}>ID</th>
+                            <th style={{ width: "9%", textAlign: "center" }}>ID</th>
                             <th style={{ width: "28%" }}>Subject & Category</th>
                             <th style={{ width: "17%" }}>Citizen Contact</th>
                             <th style={{ width: "17%" }}>Location / Zone</th>
@@ -445,10 +445,33 @@ export default function ChiefPrintReport({
                             const pMeta = PRIORITY_META[c.priority] || PRIORITY_META.Medium;
                             const sMeta = STATUS_META[c.status] || STATUS_META.Pending;
                             const catColor = CATEGORY_COLORS[c.category] || "#4f46e5";
+                            const hasHyphen = c.id.includes("-");
+                            const prefix = hasHyphen ? c.id.substring(0, c.id.indexOf("-") + 1) : "";
+                            const idNum = hasHyphen ? c.id.substring(c.id.indexOf("-") + 1) : c.id;
                             return (
                                 <tr key={c.id}>
-                                    <td className="col-nowrap" style={{ fontWeight: 700, fontFamily: "monospace", color: "#4338ca", fontSize: "0.72rem" }}>
-                                        {c.id}
+                                    <td className="col-nowrap" style={{ textAlign: "center", verticalAlign: "middle" }}>
+                                        {hasHyphen ? (
+                                            <div style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                lineHeight: 1.15,
+                                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                            }}>
+                                                <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#6366f1", letterSpacing: "0.04em" }}>
+                                                    {prefix}
+                                                </span>
+                                                <span style={{ fontSize: "0.72rem", fontWeight: 800, color: "#1e1b4b" }}>
+                                                    {idNum}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span style={{ fontWeight: 700, fontFamily: "ui-monospace, monospace", color: "#4338ca", fontSize: "0.72rem" }}>
+                                                {c.id}
+                                            </span>
+                                        )}
                                     </td>
                                     <td>
                                         <div style={{ fontWeight: 600, color: "#0f172a", fontSize: "0.75rem", lineHeight: 1.25, marginBottom: "2px" }}>
