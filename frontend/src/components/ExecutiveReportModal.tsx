@@ -32,8 +32,6 @@ export default function ExecutiveReportModal({
     trendData,
     priorityCounts,
 }: ExecutiveReportModalProps) {
-    const [activePage, setActivePage] = useState<"all" | "1" | "2">("all");
-    const [zoom, setZoom] = useState<number>(100);
     const [isExporting, setIsExporting] = useState<boolean>(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -196,54 +194,8 @@ export default function ExecutiveReportModal({
                     </div>
                 </div>
 
-                {/* Center: Page Controls & Zoom */}
-                <div className="modal-toolbar-center">
-                    {/* Page View Selector */}
-                    <div className="modal-pill-group">
-                        <button
-                            onClick={() => setActivePage("all")}
-                            className={`modal-pill-btn ${activePage === "all" ? "active" : ""}`}
-                        >
-                            📄 All Pages (2)
-                        </button>
-                        <button
-                            onClick={() => setActivePage("1")}
-                            className={`modal-pill-btn ${activePage === "1" ? "active" : ""}`}
-                        >
-                            Page 1
-                        </button>
-                        <button
-                            onClick={() => setActivePage("2")}
-                            className={`modal-pill-btn ${activePage === "2" ? "active" : ""}`}
-                        >
-                            Page 2
-                        </button>
-                    </div>
-
-                    {/* Zoom Selector */}
-                    <div className="modal-pill-group">
-                        <button
-                            onClick={() => setZoom(Math.max(70, zoom - 15))}
-                            className="modal-pill-btn"
-                            title="Zoom Out"
-                        >
-                            −
-                        </button>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#cbd5e1", padding: "0 0.4rem" }}>
-                            {zoom}%
-                        </span>
-                        <button
-                            onClick={() => setZoom(Math.min(130, zoom + 15))}
-                            className="modal-pill-btn"
-                            title="Zoom In"
-                        >
-                            +
-                        </button>
-                    </div>
-                </div>
-
                 {/* Right: Action Buttons */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                     {/* Primary: Direct Download PDF */}
                     <button
                         onClick={handleDownloadPDF}
@@ -274,61 +226,50 @@ export default function ExecutiveReportModal({
 
             {/* ── Main Viewport (Dark Canvas) ── */}
             <main className="executive-modal-viewport">
-                <div
-                    className="executive-canvas-scaler"
-                    style={{
-                        transform: `scale(${zoom / 100})`,
-                        transformOrigin: "top center",
-                        transition: "transform 0.15s ease",
-                    }}
-                >
+                <div className="executive-canvas-scaler">
                     {/* PAGE 1 */}
-                    {(activePage === "all" || activePage === "1") && (
-                        <div className="executive-sheet-container">
-                            <div className="executive-sheet-tag">
-                                <span>PAGE 1 OF 2 · EXECUTIVE OVERVIEW & CHARTS</span>
-                            </div>
-                            <div className="executive-a4-sheet">
-                                <ChiefPrintReport
-                                    total={total}
-                                    pending={pending}
-                                    inProgress={inProgress}
-                                    resolved={resolved}
-                                    critical={critical}
-                                    resolutionRate={resolutionRate}
-                                    complaints={complaints}
-                                    categoryCounts={categoryCounts}
-                                    trendData={trendData}
-                                    priorityCounts={priorityCounts}
-                                    renderMode="page1-only"
-                                />
-                            </div>
+                    <div className="executive-sheet-container">
+                        <div className="executive-sheet-tag">
+                            <span>PAGE 1 OF 2 · EXECUTIVE OVERVIEW & CHARTS</span>
                         </div>
-                    )}
+                        <div className="executive-a4-sheet">
+                            <ChiefPrintReport
+                                total={total}
+                                pending={pending}
+                                inProgress={inProgress}
+                                resolved={resolved}
+                                critical={critical}
+                                resolutionRate={resolutionRate}
+                                complaints={complaints}
+                                categoryCounts={categoryCounts}
+                                trendData={trendData}
+                                priorityCounts={priorityCounts}
+                                renderMode="page1-only"
+                            />
+                        </div>
+                    </div>
 
                     {/* PAGE 2 */}
-                    {(activePage === "all" || activePage === "2") && (
-                        <div className="executive-sheet-container">
-                            <div className="executive-sheet-tag">
-                                <span>PAGE 2 OF 2 · GRIEVANCE AUDIT LEDGER & SIGN-OFF</span>
-                            </div>
-                            <div className="executive-a4-sheet">
-                                <ChiefPrintReport
-                                    total={total}
-                                    pending={pending}
-                                    inProgress={inProgress}
-                                    resolved={resolved}
-                                    critical={critical}
-                                    resolutionRate={resolutionRate}
-                                    complaints={complaints}
-                                    categoryCounts={categoryCounts}
-                                    trendData={trendData}
-                                    priorityCounts={priorityCounts}
-                                    renderMode="page2-only"
-                                />
-                            </div>
+                    <div className="executive-sheet-container">
+                        <div className="executive-sheet-tag">
+                            <span>PAGE 2 OF 2 · GRIEVANCE AUDIT LEDGER & SIGN-OFF</span>
                         </div>
-                    )}
+                        <div className="executive-a4-sheet">
+                            <ChiefPrintReport
+                                total={total}
+                                pending={pending}
+                                inProgress={inProgress}
+                                resolved={resolved}
+                                critical={critical}
+                                resolutionRate={resolutionRate}
+                                complaints={complaints}
+                                categoryCounts={categoryCounts}
+                                trendData={trendData}
+                                priorityCounts={priorityCounts}
+                                renderMode="page2-only"
+                            />
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>
