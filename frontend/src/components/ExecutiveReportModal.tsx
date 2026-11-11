@@ -87,10 +87,6 @@ export default function ExecutiveReportModal({
         }, 300);
     };
 
-    const handlePhysicalPrint = () => {
-        window.print();
-    };
-
     return (
         <div className="executive-modal-backdrop no-print">
             {/* ── Top Floating Command Bar ── */}
@@ -169,16 +165,6 @@ export default function ExecutiveReportModal({
                     >
                         <span>📥</span>
                         <span>{isExporting ? "Compiling PDF..." : "Download PDF"}</span>
-                    </button>
-
-                    {/* Secondary: Physical Print */}
-                    <button
-                        onClick={handlePhysicalPrint}
-                        className="modal-btn-print"
-                        title="Send directly to physical printer"
-                    >
-                        <span>🖨️</span>
-                        <span className="btn-text-desktop">Print</span>
                     </button>
 
                     {/* Close Button */}
