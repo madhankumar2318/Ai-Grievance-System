@@ -390,20 +390,22 @@ export default function ChiefDashboard() {
                             </div>
                         </div>
 
-                        {/* 2-Column Row: Priority Bar Chart & Category Pie Chart */}
-                        <div className="chief-charts-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                        {/* 2-Column Row: Priority Bar Chart & Category Pie Chart (Symmetrical 50/50 Split) */}
+                        <div className="chief-charts-row">
                             {/* Bar Chart — Priority Distribution */}
-                            <div className="glass chief-priority-card" style={{ padding: isPrinting ? "0.6rem 0.85rem" : "1.75rem", borderRadius: "1.25rem" }}>
-                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📊 Priority Distribution</div>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.35rem" : "1.25rem" }}>Complaints grouped by urgency level (live)</div>
-                                <div style={{ width: "100%", height: isPrinting ? 115 : 180 }}>
+                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.85rem" : "1.75rem", borderRadius: "1.25rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                <div>
+                                    <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>📊 Priority Distribution</div>
+                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.35rem" : "1.25rem" }}>Complaints grouped by urgency level (live)</div>
+                                </div>
+                                <div style={{ width: "100%", height: isPrinting ? 115 : 210 }}>
                                     <ResponsiveContainer key={isPrinting ? "p-bar" : "s-bar"} width="100%" height="100%">
-                                        <BarChart data={priorityBarData} margin={{ top: 4, right: 6, left: -24, bottom: 0 }}>
+                                        <BarChart data={priorityBarData} margin={{ top: 8, right: 12, left: -22, bottom: 0 }}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                                            <XAxis dataKey="name" tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} interval={0} axisLine={false} tickLine={false} />
-                                            <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                                            <XAxis dataKey="name" tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} interval={0} axisLine={false} tickLine={false} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: isPrinting ? 9 : 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                                             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(99, 102, 241, 0.08)", rx: 8, ry: 8 }} />
-                                            <Bar dataKey="count" name="Complaints" radius={[4, 4, 0, 0]} maxBarSize={isPrinting ? 28 : 40}>
+                                            <Bar dataKey="count" name="Complaints" radius={[6, 6, 0, 0]} maxBarSize={isPrinting ? 28 : 42}>
                                                 {priorityBarData.map(entry => (
                                                     <Cell key={entry.name} fill={PRIORITY_COLORS[entry.name]} />
                                                 ))}
@@ -414,17 +416,19 @@ export default function ChiefDashboard() {
                             </div>
 
                             {/* Pie Chart — Category Breakdown */}
-                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.85rem" : "1.75rem", borderRadius: "1.25rem" }}>
-                                <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>🍩 Category Breakdown</div>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.35rem" : "1rem" }}>Distribution by complaint type</div>
+                            <div className="glass card-hover" style={{ padding: isPrinting ? "0.6rem 0.85rem" : "1.75rem", borderRadius: "1.25rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                <div>
+                                    <div style={{ fontWeight: "700", marginBottom: "0.2rem", fontSize: isPrinting ? "0.82rem" : "1rem" }}>🍩 Category Breakdown</div>
+                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: isPrinting ? "0.35rem" : "1rem" }}>Distribution by complaint type</div>
+                                </div>
                                 {pieData.length > 0 ? (
                                     <>
-                                        <div style={{ width: "100%", height: isPrinting ? 115 : 160 }}>
+                                        <div style={{ width: "100%", height: isPrinting ? 115 : 155 }}>
                                             <ResponsiveContainer key={isPrinting ? "p-pie" : "s-pie"} width="100%" height="100%">
                                                 <PieChart>
                                                     <Pie
                                                         data={pieData} cx="50%" cy="50%"
-                                                        innerRadius={isPrinting ? 26 : 36} outerRadius={isPrinting ? 48 : 60}
+                                                        innerRadius={isPrinting ? 26 : 38} outerRadius={isPrinting ? 48 : 62}
                                                         dataKey="value" paddingAngle={3}
                                                         onMouseEnter={(_, index) => setActiveIndex(index)}
                                                         onMouseLeave={() => setActiveIndex(null)}
@@ -442,10 +446,10 @@ export default function ChiefDashboard() {
                                                 </PieChart>
                                             </ResponsiveContainer>
                                         </div>
-                                        <div className="chief-pie-legend no-print" style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+                                        <div className="chief-pie-legend no-print" style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginTop: "0.5rem" }}>
                                             {pieData.map(entry => (
-                                                <div key={entry.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.75rem" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                <div key={entry.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.76rem" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
                                                         <span style={{ width: 8, height: 8, borderRadius: "50%", background: CATEGORY_COLORS[entry.name] || "#6366f1", display: "inline-block" }} />
                                                         <span style={{ color: "var(--text-muted)" }}>{entry.name}</span>
                                                     </div>

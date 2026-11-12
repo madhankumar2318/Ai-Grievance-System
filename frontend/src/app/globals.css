@@ -784,7 +784,20 @@ tbody tr:hover {
 }
 
 .chief-priority-card {
-  grid-column: 1 / -1;
+  grid-column: auto;
+}
+
+.chief-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 868px) {
+  .chief-charts-row {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
 }
 
 @media (max-width: 768px) {
