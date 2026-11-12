@@ -61,6 +61,9 @@ export default function AdminDashboard() {
     const [complaints, setComplaints] = useState<AdminComplaint[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("All");
+    const [departmentFilter, setDepartmentFilter] = useState("All");
+    const [locationFilter, setLocationFilter] = useState("All");
+    const [searchQuery, setSearchQuery] = useState("");
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const toggleRow = (id: string) => setExpandedId(prev => prev === id ? null : id);
@@ -121,7 +124,60 @@ export default function AdminDashboard() {
     ];
 
     const FILTERS = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
-    const filtered = filter === "All" ? complaints : complaints.filter(c => c.status === filter);
+
+    // Dynamic unique department options from current complaints
+    const availableDepartments = React.useMemo(() => {
+        const set = new Set(complaints.map(c => c.category).filter(Boolean));
+        return ["All", ...Array.from(set).sort()];
+    }, [complaints]);
+
+    // Dynamic unique location/area options from current complaints
+    const availableLocations = React.useMemo(() => {
+        const set = new Set<string>();
+        // Always surface Trichy Region as primary jurisdiction zone
+        set.add("Trichy Region");
+
+        complaints.forEach(c => {
+            if (!c.location) return;
+            // Coordinates in 10.95, 78.44 are grouped under Trichy Region
+            if (/^\d{1,2}\.\d+/.test(c.location)) return;
+            const primaryArea = c.location.split(",")[0].trim();
+            if (primaryArea) set.add(primaryArea);
+        });
+
+        return ["All", ...Array.from(set).sort()];
+    }, [complaints]);
+
+    // Intelligent combined filtering (Status + Department + Location + Search)
+    const filtered = complaints.filter(c => {
+        if (filter !== "All" && c.status !== filter) return false;
+        if (departmentFilter !== "All" && c.category !== departmentFilter) return false;
+
+        if (locationFilter !== "All") {
+            if (locationFilter === "Trichy Region") {
+                const isTrichy = /trichy|tiruchirappalli|kaikatti|10\.95|78\.44/i.test(c.location || "") ||
+                                 /trichy|tiruchirappalli|kaikatti/i.test(c.description || "");
+                if (!isTrichy) return false;
+            } else {
+                const locText = (c.location || "").toLowerCase();
+                if (!locText.includes(locationFilter.toLowerCase())) return false;
+            }
+        }
+
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            const matches =
+                c.id.toLowerCase().includes(q) ||
+                c.subject.toLowerCase().includes(q) ||
+                c.category.toLowerCase().includes(q) ||
+                c.location.toLowerCase().includes(q) ||
+                c.user.toLowerCase().includes(q) ||
+                c.description.toLowerCase().includes(q);
+            if (!matches) return false;
+        }
+
+        return true;
+    });
 
     return (
         <ProtectedRoute allowedRoles={["authority", "chief"]}>
@@ -156,32 +212,170 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* ── Filter Bar ── */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--text-muted)", marginRight: "0.25rem" }}>Filter:</span>
-                    {FILTERS.map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            style={{
-                                padding: "0.35rem 0.9rem", borderRadius: "99px",
-                                fontSize: "0.78rem", fontWeight: "700",
-                                border: filter === f ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
-                                background: filter === f ? "var(--grad-primary)" : "var(--bg-card)",
-                                color: filter === f ? "white" : "var(--text-muted)",
-                                cursor: "pointer", transition: "var(--transition)",
-                                boxShadow: filter === f ? "0 4px 12px var(--primary-glow)" : "none",
-                            }}
-                        >{f}</button>
-                    ))}
-                    <span style={{ marginLeft: "auto", fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                        Showing {filtered.length} of {complaints.length}
-                    </span>
+                <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "0.75rem",
+                    marginBottom: "1.25rem",
+                    flexWrap: "wrap",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "1rem",
+                    background: "rgba(255, 255, 255, 0.02)",
+                    border: "1px solid var(--border)",
+                }}>
+                    {/* Left: Status Filter Pills */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginRight: "0.2rem" }}>
+                            Status:
+                        </span>
+                        {FILTERS.map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                style={{
+                                    padding: "0.3rem 0.8rem", borderRadius: "99px",
+                                    fontSize: "0.76rem", fontWeight: "700",
+                                    border: filter === f ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+                                    background: filter === f ? "var(--grad-primary)" : "var(--bg-card)",
+                                    color: filter === f ? "white" : "var(--text-muted)",
+                                    cursor: "pointer", transition: "var(--transition)",
+                                    boxShadow: filter === f ? "0 2px 8px var(--primary-glow)" : "none",
+                                }}
+                            >{f}</button>
+                        ))}
+                    </div>
+
+                    {/* Right: Department & Location Dropdowns + Search + Clear */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {/* Department Filter */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-muted)" }}>🏢 Dept:</span>
+                            <select
+                                value={departmentFilter}
+                                onChange={e => setDepartmentFilter(e.target.value)}
+                                style={{
+                                    padding: "0.35rem 0.75rem",
+                                    borderRadius: "0.5rem",
+                                    border: departmentFilter !== "All" ? "1.5px solid #6366f1" : "1.5px solid var(--border)",
+                                    background: "var(--bg-card)",
+                                    color: departmentFilter !== "All" ? "#818cf8" : "var(--text-main)",
+                                    fontSize: "0.76rem",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    outline: "none",
+                                }}
+                            >
+                                {availableDepartments.map(dept => (
+                                    <option key={dept} value={dept} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                                        {dept === "All" ? "All Departments" : `${CATEGORY_ICONS[dept] || "📁"} ${dept}`}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Location Filter */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-muted)" }}>📍 Area:</span>
+                            <select
+                                value={locationFilter}
+                                onChange={e => setLocationFilter(e.target.value)}
+                                style={{
+                                    padding: "0.35rem 0.75rem",
+                                    borderRadius: "0.5rem",
+                                    border: locationFilter !== "All" ? "1.5px solid #10b981" : "1.5px solid var(--border)",
+                                    background: "var(--bg-card)",
+                                    color: locationFilter !== "All" ? "#34d399" : "var(--text-main)",
+                                    fontSize: "0.76rem",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    outline: "none",
+                                }}
+                            >
+                                {availableLocations.map(loc => (
+                                    <option key={loc} value={loc} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                                        {loc === "All" ? "All Locations" : loc}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Search Input */}
+                        <div style={{ position: "relative" }}>
+                            <input
+                                type="text"
+                                placeholder="Search..."
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                style={{
+                                    padding: "0.35rem 0.65rem 0.35rem 1.65rem",
+                                    borderRadius: "0.5rem",
+                                    border: searchQuery ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+                                    background: "var(--bg-card)",
+                                    color: "var(--text-main)",
+                                    fontSize: "0.76rem",
+                                    width: "125px",
+                                    outline: "none",
+                                }}
+                            />
+                            <span style={{ position: "absolute", left: "0.5rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "var(--text-muted)", pointerEvents: "none" }}>
+                                🔍
+                            </span>
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery("")}
+                                    style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.7rem" }}
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Reset Button */}
+                        {(filter !== "All" || departmentFilter !== "All" || locationFilter !== "All" || searchQuery) && (
+                            <button
+                                onClick={() => {
+                                    setFilter("All");
+                                    setDepartmentFilter("All");
+                                    setLocationFilter("All");
+                                    setSearchQuery("");
+                                }}
+                                style={{
+                                    padding: "0.35rem 0.65rem",
+                                    borderRadius: "0.5rem",
+                                    border: "1px solid #ef444440",
+                                    background: "#ef444415",
+                                    color: "#f87171",
+                                    fontSize: "0.74rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer",
+                                }}
+                                title="Reset all filters"
+                            >
+                                ✕ Reset
+                            </button>
+                        )}
+                    </div>
                 </div>
 
-                {/* ── Hint ── */}
-                <p style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                    <span>👆</span> Click any row to view full complaint details
-                </p>
+                {/* Counter & Hint Row */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem", fontSize: "0.76rem", color: "var(--text-muted)", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <p style={{ margin: 0, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                        <span>👆</span> Click any row to view full complaint details
+                    </p>
+                    <span style={{ fontWeight: "600" }}>
+                        Showing <strong>{filtered.length}</strong> of {complaints.length} grievances
+                        {(departmentFilter !== "All" || locationFilter !== "All" || searchQuery) && (
+                            <span style={{ color: "var(--primary)", marginLeft: "0.4rem" }}>
+                                ({[
+                                    departmentFilter !== "All" ? departmentFilter : null,
+                                    locationFilter !== "All" ? locationFilter : null,
+                                    searchQuery ? `"${searchQuery}"` : null,
+                                ].filter(Boolean).join(" · ")})
+                            </span>
+                        )}
+                    </span>
+                </div>
 
                 {/* ── Desktop View (Table) ── */}
                 <div className="admin-desktop-table">
@@ -195,7 +389,18 @@ export default function AdminDashboard() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((c, idx) => {
+                                {filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} style={{ padding: "3.5rem 1.5rem", textAlign: "center", color: "var(--text-muted)" }}>
+                                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🔍</div>
+                                            <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "var(--text-main)" }}>No matching complaints found</div>
+                                            <div style={{ fontSize: "0.8rem", marginTop: "0.25rem", color: "var(--text-muted)" }}>
+                                                Try adjusting or clearing your department, area, or search filters.
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((c, idx) => {
                                     const pCfg = PRIORITY_CONFIG[c.priority] ?? PRIORITY_CONFIG.Medium;
                                     const sCfg = STATUS_CONFIG[c.status] ?? STATUS_CONFIG.Pending;
                                     const isExpanded = expandedId === c.id;
@@ -359,7 +564,7 @@ export default function AdminDashboard() {
                                             )}
                                         </React.Fragment>
                                     );
-                                })}
+                                }))}
                             </tbody>
                         </table>
 
@@ -373,7 +578,20 @@ export default function AdminDashboard() {
                         {!loading && filtered.length === 0 && (
                             <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
                                 <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>📭</div>
-                                <p style={{ fontWeight: "600", color: "var(--text-muted)" }}>No complaints match &quot;{filter}&quot;</p>
+                                <p style={{ fontWeight: "700", color: "var(--text-main)", fontSize: "1rem", marginBottom: "0.4rem" }}>No complaints match the selected filters</p>
+                                <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "1rem" }}>Try selecting another department or area, or clear your search query.</p>
+                                <button
+                                    onClick={() => {
+                                        setFilter("All");
+                                        setDepartmentFilter("All");
+                                        setLocationFilter("All");
+                                        setSearchQuery("");
+                                    }}
+                                    className="btn btn-secondary"
+                                    style={{ padding: "0.45rem 1.1rem", fontSize: "0.8rem", borderRadius: "0.5rem" }}
+                                >
+                                    Clear All Filters
+                                </button>
                             </div>
                         )}
                     </div>
@@ -497,8 +715,21 @@ export default function AdminDashboard() {
                     )}
                     {!loading && filtered.length === 0 && (
                         <div style={{ padding: "3rem 1rem", textAlign: "center" }}>
-                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📭</div>
-                            <p style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text-muted)" }}>No complaints match &quot;{filter}&quot;</p>
+                            <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📭</div>
+                            <p style={{ fontSize: "0.95rem", fontWeight: "700", color: "var(--text-main)", marginBottom: "0.4rem" }}>No complaints match the selected filters</p>
+                            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginBottom: "0.85rem" }}>Try clearing your department or area filters.</p>
+                            <button
+                                onClick={() => {
+                                    setFilter("All");
+                                    setDepartmentFilter("All");
+                                    setLocationFilter("All");
+                                    setSearchQuery("");
+                                }}
+                                className="btn btn-secondary"
+                                style={{ padding: "0.4rem 1rem", fontSize: "0.78rem", borderRadius: "0.5rem" }}
+                            >
+                                Clear All Filters
+                            </button>
                         </div>
                     )}
                 </div>
