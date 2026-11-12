@@ -542,6 +542,7 @@ export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<{ subject: string; category: string; confidence: number } | null>(null);
   const [hasImageForAnalysis, setHasImageForAnalysis] = useState(false);
   const lastImageFileRef = useRef<File | null>(null);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -617,6 +618,38 @@ export default function Home() {
   const applyAnalysis = () => {
     if (!analysisResult) return;
     setFormData((p) => ({ ...p, subject: analysisResult.subject }));
+  };
+
+  const handleDetectLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      alert("Geolocation is not supported by your browser. Please type your location manually.");
+      return;
+    }
+    setIsDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        try {
+          const res = await reverseGeocodeServerAction(lat, lng);
+          if (res.success && res.landmark) {
+            setFormData((p) => ({ ...p, location: res.landmark! }));
+          } else {
+            setFormData((p) => ({ ...p, location: `${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
+          }
+        } catch {
+          setFormData((p) => ({ ...p, location: `${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
+        } finally {
+          setIsDetectingLocation(false);
+        }
+      },
+      (err) => {
+        setIsDetectingLocation(false);
+        console.warn("Geolocation access denied or unavailable:", err);
+        alert("Location access denied or unavailable. You can type your location manually.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
   const removeFile = (i: number) => {
@@ -847,11 +880,34 @@ export default function Home() {
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       style={{ paddingRight: "3rem" }}
                     />
-                    <button type="button" title="Detect my location"
-                      onClick={() => { navigator.geolocation?.getCurrentPosition((pos) => setFormData((p) => ({ ...p, location: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` })), () => alert("Location access denied.")); }}
-                      style={{ position: "absolute", right: "0.5rem", top: "50%", transform: "translateY(-50%)", padding: "0.35rem 0.5rem", borderRadius: "0.5rem", border: "none", background: "transparent", cursor: "pointer", fontSize: "1.15rem", transition: "var(--transition)", lineHeight: 1 }}
-                    >🎯</button>
+                    <button
+                      type="button"
+                      title={isDetectingLocation ? "Detecting location..." : "Detect my location (GPS / Wi-Fi)"}
+                      onClick={handleDetectLocation}
+                      disabled={isDetectingLocation}
+                      style={{
+                        position: "absolute",
+                        right: "0.5rem",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        padding: "0.35rem 0.5rem",
+                        borderRadius: "0.5rem",
+                        border: "none",
+                        background: "transparent",
+                        cursor: isDetectingLocation ? "wait" : "pointer",
+                        fontSize: "1.15rem",
+                        transition: "var(--transition)",
+                        lineHeight: 1,
+                        opacity: isDetectingLocation ? 0.6 : 1,
+                      }}
+                    >
+                      {isDetectingLocation ? "⏳" : "🎯"}
+                    </button>
                   </div>
+                  <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "0.35rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                    <span>💡</span>
+                    <span>Click 🎯 to auto-detect, or click the box to type your exact street, landmark, or district.</span>
+                  </p>
 
                   <button type="button" disabled={mediaFiles.length >= 5} onClick={() => setShowGpsCamera(true)}
                     style={{ marginTop: "0.75rem", width: "100%", padding: "0.85rem 1rem", borderRadius: "0.75rem", border: "none", background: "linear-gradient(135deg, #6366f1, #ec4899)", color: "white", fontWeight: "700", fontSize: "0.85rem", cursor: mediaFiles.length >= 5 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", opacity: mediaFiles.length >= 5 ? 0.5 : 1, transition: "var(--transition)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)", whiteSpace: "nowrap", overflow: "hidden" }}
