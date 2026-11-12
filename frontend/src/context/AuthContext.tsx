@@ -6,10 +6,12 @@ import { getVerifiedSessionServerAction, logoutServerAction } from "@/app/action
 
 export type UserRole = "user" | "authority" | "chief";
 
-interface AuthUser {
+export interface AuthUser {
     username: string;
     email: string;
     role: UserRole;
+    state?: string;
+    district?: string;
 }
 
 interface AuthContextType {

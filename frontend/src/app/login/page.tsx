@@ -373,7 +373,13 @@ export default function LoginPage() {
             });
 
             if (res.success && res.user) {
-                login({ username: res.user.username, email: res.user.email, role: res.user.role as UserRole });
+                login({
+                    username: res.user.username,
+                    email: res.user.email,
+                    role: res.user.role as UserRole,
+                    state: res.user.state,
+                    district: res.user.district,
+                });
 
                 // Safe post-login redirect with whitelist validation against open redirect attacks
                 let target = res.user.role === "user" ? "/" : res.user.role === "authority" ? "/admin" : "/chief";

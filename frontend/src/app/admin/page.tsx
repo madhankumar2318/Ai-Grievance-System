@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
 import { getComplaintsServerAction, updateComplaintStatusServerAction } from "@/app/actions/complaintActions";
-import { DISTRICTS_BY_STATE, INDIAN_STATES } from "@/lib/indiaGeoData";
 
 
 const PRIORITY_CONFIG: Record<string, { color: string; icon: string }> = {
@@ -59,14 +59,17 @@ export interface DbAdminComplaint {
 
 export default function AdminDashboard() {
     const { t } = useLang();
+    const { user } = useAuth();
     const [complaints, setComplaints] = useState<AdminComplaint[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("All");
     const [departmentFilter, setDepartmentFilter] = useState("All");
-    const [stateFilter, setStateFilter] = useState("All");
-    const [districtFilter, setDistrictFilter] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedId, setExpandedId] = useState<string | null>(null);
+
+    // Authority Officer's locked jurisdiction (strictly derived from their login / profile)
+    const officerState = user?.state || "Tamil Nadu";
+    const officerDistrict = user?.district || "Tiruchirappalli";
 
     const toggleRow = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
@@ -112,13 +115,41 @@ export default function AdminDashboard() {
         }
     };
 
-    const pending = complaints.filter(c => c.status === "Pending").length;
-    const resolved = complaints.filter(c => c.status === "Resolved").length;
-    const inProgress = complaints.filter(c => c.status === "In Progress").length;
-    const rejected = complaints.filter(c => c.status === "Rejected").length;
+    // ── Privacy & Data Segregation Boundary ──────────────────────────────────────
+    // Authority officers are strictly confined to their assigned State & District.
+    // Complaints from other jurisdictions are never exposed to prevent cross-district privacy leaks.
+    const jurisdictionComplaints = React.useMemo(() => {
+        return complaints.filter(c => {
+            if (officerDistrict === "Tiruchirappalli") {
+                return (
+                    /trichy|tiruchirappalli|kaikatti|10\.95|78\.44/i.test(c.location || "") ||
+                    /trichy|tiruchirappalli|kaikatti/i.test(c.description || "") ||
+                    /green valley|shanti nagar|gandhi nagar|city mall|industrial area|rampur|nh-48|general hospital/i.test(c.location || "")
+                );
+            }
+            const dLower = officerDistrict.toLowerCase();
+            const sLower = officerState.toLowerCase();
+            const locLower = (c.location || "").toLowerCase();
+            const descLower = (c.description || "").toLowerCase();
+            const subjLower = (c.subject || "").toLowerCase();
+
+            return (
+                locLower.includes(dLower) ||
+                descLower.includes(dLower) ||
+                subjLower.includes(dLower) ||
+                locLower.includes(sLower) ||
+                descLower.includes(sLower)
+            );
+        });
+    }, [complaints, officerDistrict, officerState]);
+
+    const pending = jurisdictionComplaints.filter(c => c.status === "Pending").length;
+    const resolved = jurisdictionComplaints.filter(c => c.status === "Resolved").length;
+    const inProgress = jurisdictionComplaints.filter(c => c.status === "In Progress").length;
+    const rejected = jurisdictionComplaints.filter(c => c.status === "Rejected").length;
 
     const STATS = [
-        { label: t("admin_total"), value: complaints.length, color: "#6366f1", icon: "📋", grad: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
+        { label: t("admin_total"), value: jurisdictionComplaints.length, color: "#6366f1", icon: "📋", grad: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
         { label: t("admin_pending"), value: pending, color: "#f59e0b", icon: "⏳", grad: "linear-gradient(135deg,#f59e0b,#f97316)" },
         { label: t("admin_in_progress"), value: inProgress, color: "#6366f1", icon: "🔄", grad: "linear-gradient(135deg,#06b6d4,#6366f1)" },
         { label: t("admin_resolved"), value: resolved, color: "#10b981", icon: "✅", grad: "linear-gradient(135deg,#10b981,#06b6d4)" },
@@ -127,67 +158,18 @@ export default function AdminDashboard() {
 
     const FILTERS = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
 
-    // Dynamic unique department options from current complaints
+    // Dynamic unique department options from jurisdiction complaints
     const availableDepartments = React.useMemo(() => {
-        const set = new Set(complaints.map(c => c.category).filter(Boolean));
+        const set = new Set(jurisdictionComplaints.map(c => c.category).filter(Boolean));
         return ["All", ...Array.from(set).sort()];
-    }, [complaints]);
+    }, [jurisdictionComplaints]);
 
-    // Dynamic districts based on selected state (using official India Geo dataset)
-    const availableDistricts = React.useMemo(() => {
-        if (stateFilter === "All") return [];
-        return DISTRICTS_BY_STATE[stateFilter] || [];
-    }, [stateFilter]);
-
-    // Intelligent combined filtering (Status + Department + State + District + Search)
-    const filtered = complaints.filter(c => {
+    // Combined filtering within the officer's jurisdiction
+    const filtered = jurisdictionComplaints.filter(c => {
         if (filter !== "All" && c.status !== filter) return false;
         if (departmentFilter !== "All" && c.category !== departmentFilter) return false;
 
-        const locText = (c.location || "").toLowerCase();
-        const descText = (c.description || "").toLowerCase();
-        const subjText = (c.subject || "").toLowerCase();
-
-        // 1. State Filter
-        if (stateFilter !== "All") {
-            const sLower = stateFilter.toLowerCase();
-            const stateDistricts = DISTRICTS_BY_STATE[stateFilter] || [];
-
-            const stateMatches =
-                locText.includes(sLower) ||
-                descText.includes(sLower) ||
-                subjText.includes(sLower) ||
-                stateDistricts.some(d => locText.includes(d.toLowerCase())) ||
-                (stateFilter === "Tamil Nadu" && (
-                    /trichy|tiruchirappalli|kaikatti|10\.95|78\.44/i.test(c.location || "") ||
-                    /trichy|tiruchirappalli|kaikatti/i.test(c.description || "") ||
-                    /green valley|shanti nagar|gandhi nagar|city mall|industrial area|rampur|nh-48|general hospital/i.test(c.location || "")
-                ));
-
-            if (!stateMatches) return false;
-        }
-
-        // 2. District Filter
-        if (districtFilter !== "All") {
-            const dLower = districtFilter.toLowerCase();
-            let districtMatches = false;
-
-            if (districtFilter === "Tiruchirappalli") {
-                districtMatches =
-                    /trichy|tiruchirappalli|kaikatti|10\.95|78\.44/i.test(c.location || "") ||
-                    /trichy|tiruchirappalli|kaikatti/i.test(c.description || "") ||
-                    /green valley|shanti nagar|gandhi nagar|city mall|industrial area|rampur|nh-48|general hospital/i.test(c.location || "");
-            } else {
-                districtMatches =
-                    locText.includes(dLower) ||
-                    descText.includes(dLower) ||
-                    subjText.includes(dLower);
-            }
-
-            if (!districtMatches) return false;
-        }
-
-        // 3. Search Query
+        // Search Query
         if (searchQuery.trim()) {
             const q = searchQuery.toLowerCase().trim();
             const matches =
@@ -208,10 +190,31 @@ export default function AdminDashboard() {
             <main className="container section">
 
                 {/* ── Header ── */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3rem", flexWrap: "wrap", gap: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
                     <div>
-                        <h1 className="gradient-text" style={{ fontSize: "2.5rem" }}>{t("admin_title")}</h1>
-                        <p style={{ marginTop: "0.25rem" }}>{t("admin_subtitle")}</p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                            <h1 className="gradient-text" style={{ fontSize: "2.5rem", margin: 0 }}>{t("admin_title")}</h1>
+                            {/* Locked Jurisdiction Badge */}
+                            <div style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                                padding: "0.35rem 0.85rem",
+                                borderRadius: "99px",
+                                background: "rgba(16, 185, 129, 0.12)",
+                                border: "1.5px solid rgba(16, 185, 129, 0.35)",
+                                color: "#34d399",
+                                fontSize: "0.82rem",
+                                fontWeight: "700",
+                                boxShadow: "0 0 15px rgba(16, 185, 129, 0.15)",
+                            }}>
+                                <span>🔒</span>
+                                <span>{officerDistrict}, {officerState} Jurisdiction</span>
+                            </div>
+                        </div>
+                        <p style={{ marginTop: "0.35rem", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                            Strict jurisdictional isolation: Showing verified grievances assigned to <strong>{officerDistrict} ({officerState})</strong>
+                        </p>
                     </div>
                     <div className="glass" style={{ padding: "0.5rem 1rem", borderRadius: "0.5rem", fontSize: "0.9rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", display: "inline-block", position: "relative" }}>
@@ -270,8 +273,30 @@ export default function AdminDashboard() {
                         ))}
                     </div>
 
-                    {/* Right: Department & Location Dropdowns + Search + Clear */}
+                    {/* Right: Jurisdiction Indicator + Department + Search + Clear */}
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                        {/* Locked Jurisdiction Tag */}
+                        <div
+                            title={`Confined to ${officerDistrict}, ${officerState} jurisdiction for citizen data privacy.`}
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.35rem",
+                                padding: "0.35rem 0.75rem",
+                                borderRadius: "0.5rem",
+                                background: "rgba(16, 185, 129, 0.08)",
+                                border: "1px solid rgba(16, 185, 129, 0.25)",
+                                color: "#34d399",
+                                fontSize: "0.76rem",
+                                fontWeight: "700",
+                                cursor: "default",
+                            }}
+                        >
+                            <span>📍</span>
+                            <span>{officerDistrict}</span>
+                            <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>🔒</span>
+                        </div>
+
                         {/* Department Filter */}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
                             <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-muted)" }}>🏢 Dept:</span>
@@ -298,75 +323,11 @@ export default function AdminDashboard() {
                             </select>
                         </div>
 
-                        {/* State Filter */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-muted)" }}>🗺️ State:</span>
-                            <select
-                                value={stateFilter}
-                                onChange={e => {
-                                    setStateFilter(e.target.value);
-                                    setDistrictFilter("All");
-                                }}
-                                style={{
-                                    padding: "0.35rem 0.65rem",
-                                    borderRadius: "0.5rem",
-                                    border: stateFilter !== "All" ? "1.5px solid #10b981" : "1.5px solid var(--border)",
-                                    background: "var(--bg-card)",
-                                    color: stateFilter !== "All" ? "#34d399" : "var(--text-main)",
-                                    fontSize: "0.76rem",
-                                    fontWeight: "600",
-                                    cursor: "pointer",
-                                    outline: "none",
-                                    maxWidth: "135px",
-                                }}
-                            >
-                                <option value="All" style={{ background: "#0f172a", color: "#f8fafc" }}>All States</option>
-                                {INDIAN_STATES.map(s => (
-                                    <option key={s} value={s} style={{ background: "#0f172a", color: "#f8fafc" }}>
-                                        {s}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* District Filter (cascading: shows ONLY districts of selected state) */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-muted)" }}>📍 District:</span>
-                            <select
-                                value={districtFilter}
-                                onChange={e => setDistrictFilter(e.target.value)}
-                                disabled={stateFilter === "All"}
-                                style={{
-                                    padding: "0.35rem 0.65rem",
-                                    borderRadius: "0.5rem",
-                                    border: districtFilter !== "All" ? "1.5px solid #38bdf8" : "1.5px solid var(--border)",
-                                    background: "var(--bg-card)",
-                                    color: districtFilter !== "All" ? "#38bdf8" : stateFilter === "All" ? "var(--text-muted)" : "var(--text-main)",
-                                    fontSize: "0.76rem",
-                                    fontWeight: "600",
-                                    cursor: stateFilter === "All" ? "not-allowed" : "pointer",
-                                    outline: "none",
-                                    maxWidth: "150px",
-                                    opacity: stateFilter === "All" ? 0.6 : 1,
-                                }}
-                                title={stateFilter === "All" ? "Select a State first to filter by district" : `Filter by ${stateFilter} district`}
-                            >
-                                <option value="All" style={{ background: "#0f172a", color: "#f8fafc" }}>
-                                    {stateFilter === "All" ? "Select State first" : `All ${stateFilter} Districts`}
-                                </option>
-                                {availableDistricts.map(d => (
-                                    <option key={d} value={d} style={{ background: "#0f172a", color: "#f8fafc" }}>
-                                        {d}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
                         {/* Search Input */}
                         <div style={{ position: "relative" }}>
                             <input
                                 type="text"
-                                placeholder="Search..."
+                                placeholder={`Search in ${officerDistrict}...`}
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 style={{
@@ -376,7 +337,7 @@ export default function AdminDashboard() {
                                     background: "var(--bg-card)",
                                     color: "var(--text-main)",
                                     fontSize: "0.76rem",
-                                    width: "125px",
+                                    width: "140px",
                                     outline: "none",
                                 }}
                             />
@@ -394,13 +355,11 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Reset Button */}
-                        {(filter !== "All" || departmentFilter !== "All" || stateFilter !== "All" || districtFilter !== "All" || searchQuery) && (
+                        {(filter !== "All" || departmentFilter !== "All" || searchQuery) && (
                             <button
                                 onClick={() => {
                                     setFilter("All");
                                     setDepartmentFilter("All");
-                                    setStateFilter("All");
-                                    setDistrictFilter("All");
                                     setSearchQuery("");
                                 }}
                                 style={{
@@ -413,7 +372,7 @@ export default function AdminDashboard() {
                                     fontWeight: "700",
                                     cursor: "pointer",
                                 }}
-                                title="Reset all filters"
+                                title="Reset filters"
                             >
                                 ✕ Reset
                             </button>
@@ -427,12 +386,11 @@ export default function AdminDashboard() {
                         <span>👆</span> Click any row to view full complaint details
                     </p>
                     <span style={{ fontWeight: "600" }}>
-                        Showing <strong>{filtered.length}</strong> of {complaints.length} grievances
-                        {(departmentFilter !== "All" || stateFilter !== "All" || districtFilter !== "All" || searchQuery) && (
+                        Showing <strong>{filtered.length}</strong> of {jurisdictionComplaints.length} grievances in <strong>{officerDistrict}</strong>
+                        {(departmentFilter !== "All" || searchQuery) && (
                             <span style={{ color: "var(--primary)", marginLeft: "0.4rem" }}>
                                 ({[
                                     departmentFilter !== "All" ? departmentFilter : null,
-                                    stateFilter !== "All" ? (districtFilter !== "All" ? `${districtFilter}, ${stateFilter}` : stateFilter) : null,
                                     searchQuery ? `"${searchQuery}"` : null,
                                 ].filter(Boolean).join(" · ")})
                             </span>
@@ -647,8 +605,6 @@ export default function AdminDashboard() {
                                     onClick={() => {
                                         setFilter("All");
                                         setDepartmentFilter("All");
-                                        setStateFilter("All");
-                                        setDistrictFilter("All");
                                         setSearchQuery("");
                                     }}
                                     className="btn btn-secondary"
@@ -786,8 +742,6 @@ export default function AdminDashboard() {
                                 onClick={() => {
                                     setFilter("All");
                                     setDepartmentFilter("All");
-                                    setStateFilter("All");
-                                    setDistrictFilter("All");
                                     setSearchQuery("");
                                 }}
                                 className="btn btn-secondary"

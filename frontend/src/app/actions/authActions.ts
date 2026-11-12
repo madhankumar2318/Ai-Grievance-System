@@ -28,7 +28,7 @@ function base64urlEncodeBytes(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64url");
 }
 
-export async function signJWT(payload: { email: string; username: string; role: string }): Promise<string> {
+export async function signJWT(payload: { email: string; username: string; role: string; state?: string; district?: string }): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const encodedHeader = base64urlEncode(JSON.stringify(header));
   const now = Math.floor(Date.now() / 1000);
@@ -56,7 +56,7 @@ export async function signJWT(payload: { email: string; username: string; role: 
   return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
 }
 
-async function setAuthCookie(user: { email: string; username: string; role: string }) {
+async function setAuthCookie(user: { email: string; username: string; role: string; state?: string; district?: string }) {
   try {
     const token = await signJWT(user);
     const cookieStore = await cookies();
@@ -93,7 +93,7 @@ export interface RegisterUserParams {
 export async function registerUserServerAction(params: RegisterUserParams): Promise<{
   success: boolean;
   error?: string;
-  user?: { email: string; username: string; role: string };
+  user?: { email: string; username: string; role: string; state?: string; district?: string };
 }> {
   const ip = await getClientIp();
 
@@ -287,7 +287,7 @@ export async function loginUserServerAction(credentials: {
 }): Promise<{
   success: boolean;
   error?: string;
-  user?: { email: string; username: string; role: string };
+  user?: { email: string; username: string; role: string; state?: string; district?: string };
 }> {
   const ip = await getClientIp();
 
@@ -306,16 +306,16 @@ export async function loginUserServerAction(credentials: {
 
   // Demo accounts (only active when explicitly enabled in environment)
   const isDemoEnabled = process.env.ENABLE_DEMO_ACCOUNTS === "true" || process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-  const DEMO_USERS: Record<string, { name: string; pass: string; role: string }> = {
-    "user@demo.com": { name: "Rahul Sharma", pass: "user123", role: "user" },
-    "authority@demo.com": { name: "Officer Priya", pass: "auth123", role: "authority" },
-    "chief@demo.com": { name: "Chief Kumar", pass: "chief123", role: "chief" },
+  const DEMO_USERS: Record<string, { name: string; pass: string; role: string; state?: string; district?: string }> = {
+    "user@demo.com": { name: "Rahul Sharma", pass: "user123", role: "user", state: "Tamil Nadu", district: "Tiruchirappalli" },
+    "authority@demo.com": { name: "Officer Priya", pass: "auth123", role: "authority", state: "Tamil Nadu", district: "Tiruchirappalli" },
+    "chief@demo.com": { name: "Chief Kumar", pass: "chief123", role: "chief", state: "Tamil Nadu", district: "All Districts" },
   };
 
   if (isDemoEnabled && DEMO_USERS[email]) {
     const demo = DEMO_USERS[email];
     if (demo.role === role && demo.pass === password) {
-      const user = { email, username: demo.name, role: demo.role };
+      const user = { email, username: demo.name, role: demo.role, state: demo.state, district: demo.district };
       await setAuthCookie(user);
       return { success: true, user };
     }
@@ -373,6 +373,8 @@ export async function loginUserServerAction(credentials: {
             email: user.email,
             username: user.username,
             role: user.role,
+            state: user.state || (role === "authority" ? "Tamil Nadu" : undefined),
+            district: user.district || (role === "authority" ? "Tiruchirappalli" : undefined),
           };
           await setAuthCookie(authUser);
           console.log(
@@ -407,7 +409,7 @@ export async function loginUserServerAction(credentials: {
  */
 export async function getVerifiedSessionServerAction(): Promise<{
   authenticated: boolean;
-  user: { email: string; username: string; role: "user" | "authority" | "chief" } | null;
+  user: { email: string; username: string; role: "user" | "authority" | "chief"; state?: string; district?: string } | null;
 }> {
   try {
     const cookieStore = await cookies();
@@ -450,6 +452,8 @@ export async function getVerifiedSessionServerAction(): Promise<{
         email: payload.email,
         username: payload.username,
         role: payload.role,
+        state: payload.state || undefined,
+        district: payload.district || undefined,
       },
     };
   } catch (err) {
