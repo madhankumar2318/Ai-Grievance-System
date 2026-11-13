@@ -10,6 +10,7 @@ import { NotificationBanner } from "@/components/PushNotifications";
 import { analyzePhotoServerAction } from "@/app/actions/analyzePhoto";
 import { submitComplaintServerAction } from "@/app/actions/submitComplaint";
 import { reverseGeocodeServerAction } from "@/app/actions/geoActions";
+import { DISTRICTS_BY_STATE, getTownsForDistrict } from "@/lib/indiaGeoData";
 
 interface MediaFile { name: string; type: string; url: string; size: number; file?: File; }
 interface GpsCoords { lat: number; lng: number; accuracy: number; }
@@ -543,6 +544,41 @@ export default function Home() {
   const [hasImageForAnalysis, setHasImageForAnalysis] = useState(false);
   const lastImageFileRef = useRef<File | null>(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [selectedState, setSelectedState] = useState("Tamil Nadu");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedTown, setSelectedTown] = useState("");
+  const [customVillage, setCustomVillage] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
+  const [locationAutoDetected, setLocationAutoDetected] = useState(false);
+
+  // Available districts for current state (defaults to Tamil Nadu)
+  const districtsList = DISTRICTS_BY_STATE[selectedState] || DISTRICTS_BY_STATE["Tamil Nadu"] || [];
+  // Available towns for selected district
+  const availableTowns = selectedDistrict ? getTownsForDistrict(selectedDistrict) : [];
+
+  const buildLocationString = useCallback((
+    state: string,
+    dist: string,
+    twn: string,
+    vil: string,
+    str: string
+  ) => {
+    const parts: string[] = [];
+    if (str.trim()) parts.push(str.trim());
+    if (twn === "Other" && vil.trim()) {
+      parts.push(vil.trim());
+    } else if (twn && twn !== "Other") {
+      parts.push(twn);
+    }
+    if (dist) parts.push(dist);
+    if (state) parts.push(state);
+    return parts.join(", ");
+  }, []);
+
+  useEffect(() => {
+    const fullLoc = buildLocationString(selectedState, selectedDistrict, selectedTown, customVillage, streetAddress);
+    setFormData((prev) => ({ ...prev, location: fullLoc }));
+  }, [selectedState, selectedDistrict, selectedTown, customVillage, streetAddress, buildLocationString]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -622,7 +658,7 @@ export default function Home() {
 
   const handleDetectLocation = () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
-      alert("Geolocation is not supported by your browser. Please type your location manually.");
+      alert("Geolocation is not supported by your browser. Please select your District and Town manually.");
       return;
     }
     setIsDetectingLocation(true);
@@ -632,13 +668,61 @@ export default function Home() {
         const lng = pos.coords.longitude;
         try {
           const res = await reverseGeocodeServerAction(lat, lng);
-          if (res.success && res.landmark) {
-            setFormData((p) => ({ ...p, location: res.landmark! }));
+          if (res.success) {
+            // 1. Detect state if returned
+            const detectedState = res.state && DISTRICTS_BY_STATE[res.state] ? res.state : "Tamil Nadu";
+            setSelectedState(detectedState);
+
+            // 2. Detect District
+            const candidateDistricts = DISTRICTS_BY_STATE[detectedState] || DISTRICTS_BY_STATE["Tamil Nadu"] || [];
+            let matchedDistrict = "";
+            if (res.district) {
+              matchedDistrict = candidateDistricts.find(
+                (d) => d.toLowerCase() === res.district!.toLowerCase() ||
+                       res.district!.toLowerCase().includes(d.toLowerCase()) ||
+                       d.toLowerCase().includes(res.district!.toLowerCase())
+              ) || "";
+            }
+
+            if (matchedDistrict) {
+              setSelectedDistrict(matchedDistrict);
+
+              // 3. Detect Town / Taluk
+              const towns = getTownsForDistrict(matchedDistrict);
+              let matchedTown = "";
+              if (res.town) {
+                matchedTown = towns.find(
+                  (t) => t.toLowerCase() === res.town!.toLowerCase() ||
+                         res.town!.toLowerCase().includes(t.toLowerCase()) ||
+                         t.toLowerCase().includes(res.town!.toLowerCase())
+                ) || "";
+              }
+
+              if (matchedTown && matchedTown !== "Other") {
+                setSelectedTown(matchedTown);
+                setCustomVillage("");
+              } else if (res.town) {
+                setSelectedTown("Other");
+                setCustomVillage(res.town);
+              } else {
+                setSelectedTown("");
+                setCustomVillage("");
+              }
+            }
+
+            // 4. Set Street / Landmark
+            if (res.street) {
+              setStreetAddress(res.street);
+            } else if (res.landmark && !matchedDistrict) {
+              setStreetAddress(res.landmark);
+            }
+
+            setLocationAutoDetected(true);
           } else {
-            setFormData((p) => ({ ...p, location: `${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
+            alert("Could not detect exact location from GPS. Please choose your District and Town from the dropdowns.");
           }
         } catch {
-          setFormData((p) => ({ ...p, location: `${lat.toFixed(5)}, ${lng.toFixed(5)}` }));
+          alert("Auto-detect timed out. Please choose your District and Town manually.");
         } finally {
           setIsDetectingLocation(false);
         }
@@ -646,7 +730,7 @@ export default function Home() {
       (err) => {
         setIsDetectingLocation(false);
         console.warn("Geolocation access denied or unavailable:", err);
-        alert("Location access denied or unavailable. You can type your location manually.");
+        alert("Location access denied or unavailable. Please choose your District and Town from the dropdowns.");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -745,7 +829,7 @@ export default function Home() {
   };
 
 
-  const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
+  const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); setSelectedDistrict(""); setSelectedTown(""); setCustomVillage(""); setStreetAddress(""); setLocationAutoDetected(false); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
 
   if (user?.role === "chief" || user?.role === "authority") {
     return (
@@ -866,48 +950,152 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* Location + GPS Camera + AI Photo Analysis */}
                 <div>
-                  <label style={{ display: "block", marginBottom: "0.75rem", fontWeight: "600", fontSize: "0.9rem" }}>
-                    {t("form_location")}
-                  </label>
+                {/* Location Details (District -> Town -> Street) */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", background: "rgba(255, 255, 255, 0.02)", padding: "1.1rem", borderRadius: "1rem", border: "1px solid var(--border)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <label style={{ fontWeight: "700", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "0.45rem", margin: 0 }}>
+                      <span>📍</span>
+                      <span>{t("form_location")}</span>
+                    </label>
 
-                  <div style={{ position: "relative" }}>
-                    <input
-                      type="text"
-                      placeholder={t("form_location_placeholder")}
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      style={{ paddingRight: "3rem" }}
-                    />
+                    {/* Auto-detect button */}
                     <button
                       type="button"
-                      title={isDetectingLocation ? "Detecting location..." : "Detect my location (GPS / Wi-Fi)"}
                       onClick={handleDetectLocation}
                       disabled={isDetectingLocation}
                       style={{
-                        position: "absolute",
-                        right: "0.5rem",
-                        top: "50%",
-                        transform: "translateY(-50%)",
-                        padding: "0.35rem 0.5rem",
-                        borderRadius: "0.5rem",
-                        border: "none",
-                        background: "transparent",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.35rem 0.8rem",
+                        borderRadius: "999px",
+                        border: "1px solid rgba(99, 102, 241, 0.5)",
+                        background: isDetectingLocation ? "rgba(99, 102, 241, 0.25)" : "rgba(99, 102, 241, 0.12)",
+                        color: "#a5b4fc",
+                        fontSize: "0.78rem",
+                        fontWeight: "600",
                         cursor: isDetectingLocation ? "wait" : "pointer",
-                        fontSize: "1.15rem",
                         transition: "var(--transition)",
-                        lineHeight: 1,
-                        opacity: isDetectingLocation ? 0.6 : 1,
                       }}
+                      title="Auto-detect District & Town via GPS"
                     >
-                      {isDetectingLocation ? "⏳" : "🎯"}
+                      <span>{isDetectingLocation ? "⏳" : "🎯"}</span>
+                      <span>{isDetectingLocation ? "Detecting GPS..." : "Auto-Detect Location"}</span>
                     </button>
                   </div>
-                  <p style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "0.35rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                    <span>💡</span>
-                    <span>Click 🎯 to auto-detect, or click the box to type your exact street, landmark, or district.</span>
-                  </p>
+
+                  {locationAutoDetected && (
+                    <div style={{ padding: "0.45rem 0.75rem", borderRadius: "0.5rem", background: "rgba(34, 197, 94, 0.12)", border: "1px solid rgba(34, 197, 94, 0.3)", color: "#4ade80", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                      <span>✓</span>
+                      <span>Location auto-filled via GPS. You can freely change any dropdown below if needed.</span>
+                    </div>
+                  )}
+
+                  {/* District & Town Row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "600", marginBottom: "0.35rem", color: "var(--text-muted)" }}>
+                        District <span style={{ color: "#ec4899" }}>*</span>
+                      </label>
+                      <select
+                        value={selectedDistrict}
+                        onChange={(e) => {
+                          setSelectedDistrict(e.target.value);
+                          setSelectedTown("");
+                          setCustomVillage("");
+                          setLocationAutoDetected(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 0.9rem",
+                          borderRadius: "0.75rem",
+                          border: selectedDistrict ? "1.5px solid #6366f1" : "1.5px solid var(--border)",
+                          background: "var(--bg-card, #1e293b)",
+                          color: selectedDistrict ? "var(--text-main, #fff)" : "var(--text-muted)",
+                          fontSize: "0.88rem",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <option value="">-- Select District --</option>
+                        {districtsList.map((d) => (
+                          <option key={d} value={d} style={{ background: "#1e293b", color: "#fff" }}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "600", marginBottom: "0.35rem", color: "var(--text-muted)" }}>
+                        Town / Taluk <span style={{ color: "#ec4899" }}>*</span>
+                      </label>
+                      <select
+                        value={selectedTown}
+                        onChange={(e) => {
+                          setSelectedTown(e.target.value);
+                          if (e.target.value !== "Other") setCustomVillage("");
+                        }}
+                        disabled={!selectedDistrict}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 0.9rem",
+                          borderRadius: "0.75rem",
+                          border: selectedTown ? "1.5px solid #6366f1" : "1.5px solid var(--border)",
+                          background: "var(--bg-card, #1e293b)",
+                          color: selectedTown ? "var(--text-main, #fff)" : "var(--text-muted)",
+                          fontSize: "0.88rem",
+                          cursor: !selectedDistrict ? "not-allowed" : "pointer",
+                          opacity: !selectedDistrict ? 0.6 : 1,
+                        }}
+                      >
+                        <option value="">{selectedDistrict ? "-- Select Town / Taluk --" : "Select District first"}</option>
+                        {availableTowns.map((t) => (
+                          <option key={t} value={t} style={{ background: "#1e293b", color: "#fff" }}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* If 'Other' Town selected: enter custom village/panchayat */}
+                  {selectedTown === "Other" && (
+                    <div style={{ animation: "fadeIn 0.25s ease-in-out" }}>
+                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "600", marginBottom: "0.35rem", color: "var(--text-muted)" }}>
+                        Village / Panchayat / Area Name <span style={{ color: "#ec4899" }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Enter your village or panchayat name (e.g. Semmipalayam, Perumanallur)..."
+                        value={customVillage}
+                        onChange={(e) => setCustomVillage(e.target.value)}
+                        style={{ width: "100%", padding: "0.75rem 0.9rem", borderRadius: "0.75rem", fontSize: "0.88rem" }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Street / Ward & Landmark */}
+                  <div>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "600", marginBottom: "0.35rem", color: "var(--text-muted)" }}>
+                      Street, Ward & Landmark (Specific spot)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ward 4, Near Mariamman Temple, 2nd Cross Street"
+                      value={streetAddress}
+                      onChange={(e) => setStreetAddress(e.target.value)}
+                      style={{ width: "100%", padding: "0.75rem 0.9rem", borderRadius: "0.75rem", fontSize: "0.88rem" }}
+                    />
+                  </div>
+
+                  {/* Composed registered location badge */}
+                  {formData.location && (
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.03)", padding: "0.45rem 0.75rem", borderRadius: "0.5rem", borderLeft: "3px solid #6366f1", wordBreak: "break-word" }}>
+                      <span style={{ fontWeight: "700", color: "#a5b4fc" }}>Registered Location:</span> {formData.location}
+                    </div>
+                  )}
+                </div>
 
                   <button type="button" disabled={mediaFiles.length >= 5} onClick={() => setShowGpsCamera(true)}
                     style={{ marginTop: "0.75rem", width: "100%", padding: "0.85rem 1rem", borderRadius: "0.75rem", border: "none", background: "linear-gradient(135deg, #6366f1, #ec4899)", color: "white", fontWeight: "700", fontSize: "0.85rem", cursor: mediaFiles.length >= 5 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", opacity: mediaFiles.length >= 5 ? 0.5 : 1, transition: "var(--transition)", boxShadow: "0 4px 15px rgba(99,102,241,0.3)", whiteSpace: "nowrap", overflow: "hidden" }}

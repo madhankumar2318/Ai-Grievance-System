@@ -2,8 +2,22 @@
 
 import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
 
+export interface ReverseGeocodeResult {
+  success: boolean;
+  landmark?: string;
+  state?: string;
+  district?: string;
+  town?: string;
+  street?: string;
+  error?: string;
+}
+
 interface GeoCacheEntry {
   landmark: string;
+  state?: string;
+  district?: string;
+  town?: string;
+  street?: string;
   timestamp: number;
 }
 
@@ -21,7 +35,7 @@ const geoCache = new Map<string, GeoCacheEntry>();
 export async function reverseGeocodeServerAction(
   lat: number,
   lng: number
-): Promise<{ success: boolean; landmark?: string; error?: string }> {
+): Promise<ReverseGeocodeResult> {
   // 1. Validate coordinates range
   if (
     typeof lat !== "number" ||
@@ -51,7 +65,14 @@ export async function reverseGeocodeServerAction(
   const cached = geoCache.get(cacheKey);
   const now = Date.now();
   if (cached && now - cached.timestamp < 60 * 60 * 1000) {
-    return { success: true, landmark: cached.landmark };
+    return {
+      success: true,
+      landmark: cached.landmark,
+      state: cached.state,
+      district: cached.district,
+      town: cached.town,
+      street: cached.street,
+    };
   }
 
   // 4. Query OpenStreetMap Nominatim with compliant User-Agent
@@ -74,10 +95,12 @@ export async function reverseGeocodeServerAction(
     if (res.ok) {
       const data = await res.json();
       const addr = data.address || {};
-      const road = addr.road || addr.street || addr.suburb || addr.neighbourhood || "";
-      const town = addr.town || addr.city || addr.county || addr.district || "";
-      const state = addr.state || "";
-      const parts = [road, town, state].filter(Boolean);
+      const road = (addr.road || addr.street || addr.neighbourhood || addr.suburb || "").trim();
+      const town = (addr.town || addr.city || addr.suburb || addr.village || addr.municipality || "").trim();
+      const rawDistrict = (addr.state_district || addr.district || addr.county || "").trim();
+      const cleanDistrict = rawDistrict.replace(/\s+district$/i, "").trim();
+      const state = (addr.state || "").trim();
+      const parts = [road, town, cleanDistrict, state].filter(Boolean);
 
       let landmark = "";
       if (parts.length > 0) {
@@ -90,9 +113,23 @@ export async function reverseGeocodeServerAction(
       landmark = landmark.replace(/<[^>]*>/g, "").replace(/[\r\n\t]/g, " ").trim().slice(0, 200);
 
       if (landmark) {
-        // Cache landmark result
-        geoCache.set(cacheKey, { landmark, timestamp: now });
-        return { success: true, landmark };
+        const entry: GeoCacheEntry = {
+          landmark,
+          state,
+          district: cleanDistrict,
+          town,
+          street: road,
+          timestamp: now,
+        };
+        geoCache.set(cacheKey, entry);
+        return {
+          success: true,
+          landmark,
+          state,
+          district: cleanDistrict,
+          town,
+          street: road,
+        };
       }
     }
   } catch (err) {

@@ -40,3 +40,61 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
 };
 
 export const INDIAN_STATES: string[] = Object.keys(DISTRICTS_BY_STATE).sort();
+
+/* ── Popular Towns / Taluks by District ───────────────────────────────────── */
+export const TOWNS_BY_DISTRICT: Record<string, string[]> = {
+    // Tamil Nadu
+    "Tiruppur": ["Tiruppur North", "Tiruppur South", "Avinashi", "Palladam", "Dharapuram", "Kangeyam", "Udumalaipettai", "Madathukulam", "Uthukuli"],
+    "Coimbatore": ["Coimbatore North", "Coimbatore South", "Pollachi", "Mettupalayam", "Sulur", "Annur", "Valparai", "Kinathukadavu", "Perur", "Madukkarai"],
+    "Chennai": ["T. Nagar", "Anna Nagar", "Adyar", "Mylapore", "Velachery", "Tambaram", "Guindy", "Royapettah", "Kilpauk", "Ambattur", "Perambur", "Egmore"],
+    "Madurai": ["Madurai North", "Madurai South", "Melur", "Thirumangalam", "Usilampatti", "Vadipatti", "Peraiyur"],
+    "Salem": ["Salem West", "Salem South", "Salem North", "Attur", "Mettur", "Omalur", "Edappadi", "Sankari", "Yercaud"],
+    "Erode": ["Erode City", "Bhavani", "Gobichettipalayam", "Perundurai", "Sathyamangalam", "Modakkurichi", "Anthiyur", "Kodumudi"],
+    "Tiruchirappalli": ["Trichy City", "Srirangam", "Manapparai", "Lalgudi", "Musiri", "Thuraiyur", "Thiruverumbur"],
+    "Dindigul": ["Dindigul Town", "Palani", "Kodaikanal", "Oddanchatram", "Natham", "Nilakottai", "Vedasandur"],
+    "Thanjavur": ["Thanjavur Town", "Kumbakonam", "Pattukkottai", "Orathanadu", "Thiruvaiyaru", "Papanasam"],
+    "Tirunelveli": ["Tirunelveli City", "Palayamkottai", "Ambasamudram", "Nanguneri", "Radhapuram"],
+    "Kancheepuram": ["Kanchipuram Town", "Sriperumbudur", "Kundrathur", "Uthiramerur", "Walajabad"],
+    "Chengalpattu": ["Chengalpattu Town", "Tambaram", "Pallavaram", "Maraimalai Nagar", "Maduranthakam", "Tiruporur"],
+    "Vellore": ["Vellore City", "Katpadi", "Gudiyatham", "Anaicut", "Kaniyambadi"],
+    "Cuddalore": ["Cuddalore Town", "Chidambaram", "Panruti", "Vriddhachalam", "Neyveli", "Tittakudi"],
+    "Namakkal": ["Namakkal Town", "Tiruchengode", "Rasipuram", "Paramathi Velur", "Kolli Hills"],
+    "Karur": ["Karur Town", "Kulithalai", "Aravakurichi", "Manmangalam", "Pugalur"],
+    "Krishnagiri": ["Krishnagiri Town", "Hosur", "Pochampalli", "Uthangarai", "Denkanikottai"],
+    "Dharmapuri": ["Dharmapuri Town", "Harur", "Palacode", "Pennagaram", "Pappireddipatti"],
+    "Nilgiris": ["Udhagamandalam (Ooty)", "Coonoor", "Kotagiri", "Gudalur", "Pandalur"],
+    "Virudhunagar": ["Virudhunagar Town", "Sivakasi", "Rajapalayam", "Aruppukkottai", "Sattur", "Srivilliputhur"],
+    "Theni": ["Theni Town", "Periyakulam", "Bodinayakanur", "Uthamapalayam", "Andipatti"],
+    "Thoothukudi": ["Thoothukudi City", "Kovilpatti", "Tiruchendur", "Srivaikuntam", "Ottapidaram", "Vilathikulam"],
+    "Tiruvallur": ["Tiruvallur Town", "Avadi", "Ponneri", "Gummidipoondi", "Tiruttani", "Poonamallee"],
+    "Tiruvannamalai": ["Tiruvannamalai Town", "Arani", "Cheyyar", "Polur", "Chengam", "Vandavasi"],
+    "Tiruvarur": ["Tiruvarur Town", "Mannargudi", "Thiruthuraipoondi", "Nannilam", "Kodavasal"],
+    "Viluppuram": ["Viluppuram Town", "Tindivanam", "Gingee", "Vanur", "Vikravandi"],
+    "Kallakurichi": ["Kallakurichi Town", "Sankarapuram", "Chinnasalem", "Ulundurpet", "Tirukoilur"],
+    "Mayiladuthurai": ["Mayiladuthurai Town", "Sirkazhi", "Tharangambadi", "Kuthalam"],
+    "Nagapattinam": ["Nagapattinam Town", "Kilvelur", "Vedaranyam", "Thirukkuvalai"],
+    "Perambalur": ["Perambalur Town", "Veppanthattai", "Kunnam", "Alathur"],
+    "Pudukkottai": ["Pudukkottai Town", "Aranthangi", "Alangudi", "Illuppur", "Gandarvakottai"],
+    "Ramanathapuram": ["Ramanathapuram Town", "Rameswaram", "Paramakudi", "Mudukulathur", "Tiruvadanai"],
+    "Ranipet": ["Ranipet Town", "Walajah", "Arcot", "Arakkonam", "Nemili"],
+    "Sivaganga": ["Sivaganga Town", "Karaikudi", "Devakottai", "Manamadurai", "Tiruppattur"],
+    "Tenkasi": ["Tenkasi Town", "Sankarankovil", "Ambasamudram", "Kadayanallur", "Shenkottai"],
+    "Tirupathur": ["Tirupathur Town", "Vaniyambadi", "Ambur", "Natrampalli"],
+    "Ariyalur": ["Ariyalur Town", "Udayarpalayam", "Sendurai", "Andimadam"],
+};
+
+export function getTownsForDistrict(district: string): string[] {
+    if (!district) return [];
+    const towns = TOWNS_BY_DISTRICT[district];
+    if (towns && towns.length > 0) {
+        return [...towns, "Other"];
+    }
+    return [
+        `${district} City`,
+        `${district} North`,
+        `${district} South`,
+        `${district} Central`,
+        `${district} Rural`,
+        "Other"
+    ];
+}
