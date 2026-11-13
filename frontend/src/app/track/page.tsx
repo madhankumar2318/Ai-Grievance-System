@@ -354,7 +354,28 @@ export default function TrackPage() {
                                     {complaint.id}
                                 </div>
                                 <h2 style={{ fontSize: "1.4rem", marginBottom: "0.5rem" }}>{complaint.subject}</h2>
-                                <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{complaint.description}</p>
+                                {(() => {
+                                    const photoMatch = complaint.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                                    const evidencePhoto = photoMatch ? photoMatch[1] : null;
+                                    const cleanDesc = complaint.description.replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "").trim();
+                                    return (
+                                        <>
+                                            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{cleanDesc}</p>
+                                            {evidencePhoto && (
+                                                <div style={{ marginTop: "0.75rem" }}>
+                                                    <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "#a5b4fc", marginBottom: "0.35rem" }}>
+                                                        📷 Attached Photo Evidence
+                                                    </div>
+                                                    <img
+                                                        src={evidencePhoto}
+                                                        alt="Evidence"
+                                                        style={{ maxWidth: "240px", maxHeight: "160px", borderRadius: "0.5rem", border: "1px solid var(--border)", objectFit: "cover" }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </div>
                             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
                                 <span style={{

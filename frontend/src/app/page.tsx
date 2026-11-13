@@ -693,16 +693,62 @@ export default function Home() {
 
   const formatSize = (b: number) => b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`;
 
+  const compressImageForUpload = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const maxDim = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", 0.7));
+          } else {
+            resolve((e.target?.result as string) || "");
+          }
+        };
+        img.onerror = () => resolve((e.target?.result as string) || "");
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      let evidencePhoto: string | undefined = undefined;
+      const imageMedia = mediaFiles.find(f => f.file && f.type.startsWith("image/"));
+      if (imageMedia && imageMedia.file) {
+        try {
+          evidencePhoto = await compressImageForUpload(imageMedia.file);
+        } catch (err) {
+          console.warn("Evidence photo processing error:", err);
+        }
+      }
+
       const response = await submitComplaintServerAction({
         subject: formData.subject,
         description: formData.description,
         location: formData.location,
         email: formData.email,
         attachmentCount: mediaFiles.length,
+        evidencePhoto,
       });
 
       if (response && response.success) {

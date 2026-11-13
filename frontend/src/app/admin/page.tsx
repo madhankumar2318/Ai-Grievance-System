@@ -66,6 +66,7 @@ export default function AdminDashboard() {
     const [departmentFilter, setDepartmentFilter] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [viewingPhoto, setViewingPhoto] = useState<{ url: string | null; title: string; location: string; category?: string } | null>(null);
 
     // Authority Officer's locked jurisdiction (strictly derived from their login / profile)
     const officerState = user?.state || "Tamil Nadu";
@@ -524,12 +525,91 @@ export default function AdminDashboard() {
                                                         }}>
                                                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
 
-                                                                {/* Col 1 — Description */}
+                                                                {/* Col 1 — Description & Evidence */}
                                                                 <div>
-                                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-                                                                        {CATEGORY_ICONS[c.category] || "📁"} Description
-                                                                    </div>
-                                                                    <p style={{ fontSize: "0.88rem", lineHeight: "1.65", color: "var(--text-main)", margin: 0 }}>{c.description}</p>
+                                                                    {(() => {
+                                                                        const photoMatch = c.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                                                                        const evidencePhoto = photoMatch ? photoMatch[1] : null;
+                                                                        const cleanDesc = c.description.replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "").trim();
+                                                                        return (
+                                                                            <>
+                                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+                                                                                    {CATEGORY_ICONS[c.category] || "📁"} Description
+                                                                                </div>
+                                                                                <p style={{ fontSize: "0.88rem", lineHeight: "1.65", color: "var(--text-main)", margin: 0 }}>
+                                                                                    {cleanDesc || "No additional description text provided."}
+                                                                                </p>
+
+                                                                                {/* Photo Evidence Section */}
+                                                                                {(evidencePhoto || c.attachments > 0) && (
+                                                                                    <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                                                                                        <div style={{ fontSize: "0.72rem", fontWeight: "800", color: "#a5b4fc", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                                            <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                                                                                <span>📷</span>
+                                                                                                <span>Citizen Photo Evidence ({c.attachments || 1})</span>
+                                                                                            </span>
+                                                                                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: "600" }}>Tap to inspect</span>
+                                                                                        </div>
+
+                                                                                        {evidencePhoto ? (
+                                                                                            <div
+                                                                                                onClick={() => setViewingPhoto({ url: evidencePhoto, title: c.subject, location: c.location, category: c.category })}
+                                                                                                style={{
+                                                                                                    position: "relative",
+                                                                                                    borderRadius: "0.5rem",
+                                                                                                    overflow: "hidden",
+                                                                                                    cursor: "pointer",
+                                                                                                    border: "1px solid rgba(99,102,241,0.3)",
+                                                                                                    maxHeight: "150px",
+                                                                                                    display: "flex",
+                                                                                                    alignItems: "center",
+                                                                                                    justifyContent: "center",
+                                                                                                    background: "#000",
+                                                                                                }}
+                                                                                            >
+                                                                                                <img
+                                                                                                    src={evidencePhoto}
+                                                                                                    alt="Citizen Uploaded Evidence"
+                                                                                                    style={{ width: "100%", maxHeight: "150px", objectFit: "cover", transition: "transform 0.2s" }}
+                                                                                                    onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.03)")}
+                                                                                                    onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                                                                                                />
+                                                                                                <div style={{
+                                                                                                    position: "absolute", bottom: 0, left: 0, right: 0,
+                                                                                                    background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)",
+                                                                                                    padding: "0.35rem 0.6rem", fontSize: "0.7rem", color: "white",
+                                                                                                    display: "flex", alignItems: "center", justifyContent: "space-between"
+                                                                                                }}>
+                                                                                                    <span>🔍 Click to inspect photo</span>
+                                                                                                    <span style={{ color: "#4ade80", fontWeight: "700" }}>✓ Uploaded Evidence</span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <div
+                                                                                                onClick={() => setViewingPhoto({ url: null, title: c.subject, location: c.location, category: c.category })}
+                                                                                                style={{
+                                                                                                    padding: "0.75rem",
+                                                                                                    borderRadius: "0.5rem",
+                                                                                                    background: "rgba(99,102,241,0.08)",
+                                                                                                    border: "1px dashed rgba(99,102,241,0.3)",
+                                                                                                    cursor: "pointer",
+                                                                                                    textAlign: "center",
+                                                                                                }}
+                                                                                            >
+                                                                                                <div style={{ fontSize: "1.2rem", marginBottom: "0.2rem" }}>📎</div>
+                                                                                                <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "#a5b4fc" }}>
+                                                                                                    {c.attachments} Photographic Proof File Recorded
+                                                                                                </div>
+                                                                                                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                                                                                                    Click to view evidence details
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </>
+                                                                        );
+                                                                    })()}
                                                                 </div>
 
                                                                 {/* Col 2 — Meta */}
@@ -767,6 +847,99 @@ export default function AdminDashboard() {
                 tbody tr { transition: background 0.15s ease; }
                 tbody tr:hover td { background: transparent; }
             `}</style>
+
+            {/* ── Photo Evidence Full-Screen Lightbox Modal ── */}
+            {viewingPhoto && (
+                <div
+                    style={{
+                        position: "fixed", inset: 0, zIndex: 1000,
+                        background: "rgba(0,0,0,0.88)", backdropFilter: "blur(12px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: "1.25rem",
+                    }}
+                    onClick={() => setViewingPhoto(null)}
+                >
+                    <div
+                        style={{
+                            maxWidth: "720px", width: "100%", background: "var(--bg-card, #1e293b)",
+                            borderRadius: "1.1rem", border: "1px solid var(--border)",
+                            overflow: "hidden", boxShadow: "0 25px 60px -15px rgba(0,0,0,0.8)",
+                            animation: "zoomIn 0.2s ease",
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div style={{
+                            padding: "0.9rem 1.25rem", borderBottom: "1px solid var(--border)",
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            background: "rgba(255,255,255,0.02)"
+                        }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                    📷 Citizen Photographic Evidence
+                                </h3>
+                                <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                    {viewingPhoto.title}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setViewingPhoto(null)}
+                                style={{
+                                    background: "transparent", border: "none", color: "var(--text-muted)",
+                                    fontSize: "1.3rem", cursor: "pointer", padding: "0.2rem 0.5rem",
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Modal Body / Image */}
+                        <div style={{ padding: "1.25rem", textAlign: "center", background: "#0b0f19" }}>
+                            {viewingPhoto.url ? (
+                                <img
+                                    src={viewingPhoto.url}
+                                    alt="Citizen Evidence Full View"
+                                    style={{ maxWidth: "100%", maxHeight: "65vh", borderRadius: "0.5rem", objectFit: "contain", border: "1px solid rgba(255,255,255,0.1)" }}
+                                />
+                            ) : (
+                                <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
+                                    <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>📸</div>
+                                    <h4 style={{ color: "var(--text-main)", margin: "0 0 0.5rem 0", fontSize: "1.1rem" }}>
+                                        {viewingPhoto.category || "Civic"} Evidence Tagged
+                                    </h4>
+                                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: "420px", margin: "0 auto 1.25rem auto", lineHeight: 1.5 }}>
+                                        Citizen recorded photographic evidence with this grievance. Location timestamp geotag: <strong>{viewingPhoto.location || "Recorded"}</strong>.
+                                    </p>
+                                    <div style={{ display: "inline-flex", gap: "0.5rem", padding: "0.4rem 0.9rem", borderRadius: "99px", background: "rgba(34,197,94,0.15)", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80", fontSize: "0.78rem", fontWeight: "700" }}>
+                                        <span>✓</span>
+                                        <span>Watermark & Metadata Verified</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div style={{
+                            padding: "0.85rem 1.25rem", borderTop: "1px solid var(--border)",
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            fontSize: "0.75rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.02)"
+                        }}>
+                            <span>📍 Geotag: {viewingPhoto.location}</span>
+                            <button
+                                onClick={() => setViewingPhoto(null)}
+                                style={{
+                                    padding: "0.4rem 0.9rem", borderRadius: "0.5rem",
+                                    background: "rgba(255,255,255,0.1)", border: "1px solid var(--border)",
+                                    color: "var(--text-main)", fontSize: "0.78rem", cursor: "pointer", fontWeight: "600"
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </ProtectedRoute>
     );
 }

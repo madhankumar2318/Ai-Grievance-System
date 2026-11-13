@@ -8,6 +8,7 @@ interface SubmitComplaintParams {
   location?: string;
   email?: string;
   attachmentCount?: number;
+  evidencePhoto?: string;
 }
 
 export async function submitComplaintServerAction(params: SubmitComplaintParams) {
@@ -50,7 +51,12 @@ export async function submitComplaintServerAction(params: SubmitComplaintParams)
   }
 
   const subject = cleanSubject;
-  const description = cleanDescription;
+  let fullDescription = cleanDescription;
+  if (params.evidencePhoto && typeof params.evidencePhoto === "string" && params.evidencePhoto.startsWith("data:image/")) {
+    const safePhoto = params.evidencePhoto.slice(0, 350000);
+    fullDescription = `${cleanDescription}\n\n[EVIDENCE_PHOTO:${safePhoto}]`;
+  }
+  const description = fullDescription;
   const location = cleanLocation;
   const email = cleanEmail;
 
