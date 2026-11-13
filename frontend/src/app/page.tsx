@@ -550,18 +550,6 @@ export default function Home() {
   const [customVillage, setCustomVillage] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
   const [locationAutoDetected, setLocationAutoDetected] = useState(false);
-  const [districtSource, setDistrictSource] = useState<"profile" | "gps" | "manual" | "none">("none");
-
-  // Auto-fill District & State from logged-in citizen's profile
-  useEffect(() => {
-    if (user?.district && !selectedDistrict && districtSource === "none") {
-      if (user.state && DISTRICTS_BY_STATE[user.state]) {
-        setSelectedState(user.state);
-      }
-      setSelectedDistrict(user.district);
-      setDistrictSource("profile");
-    }
-  }, [user, selectedDistrict, districtSource]);
 
   // Available districts for current state (defaults to Tamil Nadu)
   const districtsList = DISTRICTS_BY_STATE[selectedState] || DISTRICTS_BY_STATE["Tamil Nadu"] || [];
@@ -730,7 +718,6 @@ export default function Home() {
             }
 
             setLocationAutoDetected(true);
-            setDistrictSource("gps");
           } else {
             alert("Could not detect exact location from GPS. Please choose your District and Town from the dropdowns.");
           }
@@ -842,7 +829,7 @@ export default function Home() {
   };
 
 
-  const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); if (user?.district) { setSelectedDistrict(user.district); if (user.state && DISTRICTS_BY_STATE[user.state]) setSelectedState(user.state); setDistrictSource("profile"); } else { setSelectedDistrict(""); setDistrictSource("none"); } setSelectedTown(""); setCustomVillage(""); setStreetAddress(""); setLocationAutoDetected(false); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
+  const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); setSelectedDistrict(""); setSelectedTown(""); setCustomVillage(""); setStreetAddress(""); setLocationAutoDetected(false); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
 
   if (user?.role === "chief" || user?.role === "authority") {
     return (
@@ -1008,21 +995,9 @@ export default function Home() {
                   {/* District & Town Row */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.35rem" }}>
-                        <label style={{ fontSize: "0.75rem", fontWeight: "600", color: "var(--text-muted)", margin: 0 }}>
-                          District <span style={{ color: "#ec4899" }}>*</span>
-                        </label>
-                        {districtSource === "profile" && selectedDistrict && (
-                          <span style={{ fontSize: "0.68rem", color: "#818cf8", background: "rgba(99,102,241,0.15)", padding: "0.1rem 0.45rem", borderRadius: "999px", fontWeight: "600" }}>
-                            🏠 Home Profile
-                          </span>
-                        )}
-                        {districtSource === "gps" && selectedDistrict && (
-                          <span style={{ fontSize: "0.68rem", color: "#4ade80", background: "rgba(34,197,94,0.15)", padding: "0.1rem 0.45rem", borderRadius: "999px", fontWeight: "600" }}>
-                            🎯 GPS Auto-Filled
-                          </span>
-                        )}
-                      </div>
+                      <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "600", marginBottom: "0.35rem", color: "var(--text-muted)" }}>
+                        District <span style={{ color: "#ec4899" }}>*</span>
+                      </label>
                       <select
                         value={selectedDistrict}
                         onChange={(e) => {
@@ -1030,7 +1005,6 @@ export default function Home() {
                           setSelectedTown("");
                           setCustomVillage("");
                           setLocationAutoDetected(false);
-                          setDistrictSource("manual");
                         }}
                         style={{
                           width: "100%",
@@ -1084,13 +1058,6 @@ export default function Home() {
                       </select>
                     </div>
                   </div>
-
-                  {districtSource === "profile" && selectedDistrict && (
-                    <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", margin: "-0.25rem 0 0.1rem 0", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                      <span>💡</span>
-                      <span>District pre-filled from your profile (<strong>{selectedDistrict}</strong>). You can change the dropdown if reporting an issue in another area.</span>
-                    </p>
-                  )}
 
                   {/* If 'Other' Town selected: enter custom village/panchayat */}
                   {selectedTown === "Other" && (
