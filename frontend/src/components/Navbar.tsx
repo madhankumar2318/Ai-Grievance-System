@@ -26,9 +26,94 @@ export default function Navbar() {
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [showNotifMenu, setShowNotifMenu] = useState(false);
+    const [hasUnread, setHasUnread] = useState(true);
+    const [notifications, setNotifications] = useState<{ id: string; title: string; message: string; time: string; icon: string; link?: string; unread: boolean; }[]>([]);
+
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        const notifs: { id: string; title: string; message: string; time: string; icon: string; link?: string; unread: boolean; }[] = [];
+
+        if (typeof window !== "undefined" && user?.role === "user") {
+            try {
+                const stored = JSON.parse(localStorage.getItem("grievance_my_complaints") || "[]");
+                if (Array.isArray(stored) && stored.length > 0) {
+                    stored.slice(0, 3).forEach((c, idx) => {
+                        const statusIcon = c.status === "Resolved" ? "✅" : c.status === "In Progress" ? "🔄" : "📋";
+                        notifs.push({
+                            id: `complaint-${c.id || idx}`,
+                            title: `Grievance #${c.id || "GRV-" + (idx + 1000)}`,
+                            message: `Status is currently ${c.status || "Pending"}. Click to view live progress.`,
+                            time: idx === 0 ? "Recent" : `${idx + 1}d ago`,
+                            icon: statusIcon,
+                            link: `/track?id=${c.id}`,
+                            unread: idx === 0,
+                        });
+                    });
+                }
+            } catch {
+                // Ignore json parse error
+            }
+        }
+
+        if (user?.role === "authority") {
+            notifs.push({
+                id: "auth-jurisdiction",
+                title: "🛡️ Jurisdiction Active",
+                message: `Assigned to ${user.district || "Tiruppur"} District queue. New complaints will appear automatically.`,
+                time: "Live",
+                icon: "🏛️",
+                link: "/admin",
+                unread: true,
+            });
+            notifs.push({
+                id: "auth-triage",
+                title: "⚡ AI Triage Engine",
+                message: "Complaints are automatically prioritized (Critical, High, Medium, Low).",
+                time: "System",
+                icon: "🤖",
+                link: "/admin",
+                unread: false,
+            });
+        } else if (user?.role === "chief") {
+            notifs.push({
+                id: "chief-oversight",
+                title: "⭐ Chief Oversight Dashboard",
+                message: "System-wide analytics, department resolution rates, and SLA metrics are synced.",
+                time: "Live",
+                icon: "📊",
+                link: "/chief",
+                unread: true,
+            });
+        } else {
+            notifs.push({
+                id: "sys-welcome",
+                title: "👋 Welcome to AI Grievance System",
+                message: "You can file civic complaints with photos, voice input, and GPS camera tags.",
+                time: "Active",
+                icon: "✨",
+                link: "/",
+                unread: false,
+            });
+            notifs.push({
+                id: "sys-ai",
+                title: "🤖 24/7 AI Civic Assistant",
+                message: "Need help? Tap the floating assistant icon in the bottom right corner anytime.",
+                time: "Tip",
+                icon: "💡",
+                link: "/",
+                unread: false,
+            });
+        }
+
+        setNotifications(notifs);
+    }, [isLoggedIn, user]);
 
     useEffect(() => {
         setIsMobileMenuOpen(false);
+        setShowNotifMenu(false);
+        setShowLangMenu(false);
+        setShowUserMenu(false);
     }, [pathname]);
 
     const handleLogout = () => { logout(); router.push("/login"); };
@@ -85,37 +170,187 @@ export default function Navbar() {
                         </div>
                     )}
 
-                    {/* Notification bell (demo badge) */}
+                    {/* Notification bell & Interactive Panel */}
                     {isLoggedIn && (
-                        <button
-                            style={{
-                                width: "38px", height: "38px", borderRadius: "50%",
-                                border: "1px solid var(--border)",
-                                background: "var(--bg-card)",
-                                cursor: "pointer", fontSize: "1rem",
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                                position: "relative", transition: "var(--transition)",
-                                color: "var(--text-muted)",
-                            }}
-                            title="Notifications"
-                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)"; (e.currentTarget as HTMLElement).style.color = "var(--primary)"; }}
-                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}
-                        >
-                            🔔
-                            {/* Badge */}
-                            <span style={{
-                                position: "absolute", top: "4px", right: "4px",
-                                width: "8px", height: "8px", borderRadius: "50%",
-                                background: "#ef4444",
-                                boxShadow: "0 0 0 2px var(--bg-card)",
-                            }}>
-                                <span style={{
-                                    position: "absolute", inset: 0, borderRadius: "50%",
-                                    background: "#ef4444",
-                                    animation: "ping 1.5s ease-out infinite",
-                                }} />
-                            </span>
-                        </button>
+                        <div style={{ position: "relative" }}>
+                            <button
+                                onClick={() => {
+                                    setShowNotifMenu(p => !p);
+                                    setShowLangMenu(false);
+                                    setShowUserMenu(false);
+                                }}
+                                style={{
+                                    width: "38px", height: "38px", borderRadius: "50%",
+                                    border: showNotifMenu ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+                                    background: showNotifMenu ? "rgba(99,102,241,0.15)" : "var(--bg-card)",
+                                    cursor: "pointer", fontSize: "1rem",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    position: "relative", transition: "var(--transition)",
+                                    color: showNotifMenu ? "var(--primary)" : "var(--text-muted)",
+                                }}
+                                title="Notifications"
+                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)"; (e.currentTarget as HTMLElement).style.color = "var(--primary)"; }}
+                                onMouseLeave={e => { if (!showNotifMenu) { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; } }}
+                            >
+                                🔔
+                                {/* Badge */}
+                                {hasUnread && (
+                                    <span style={{
+                                        position: "absolute", top: "4px", right: "4px",
+                                        width: "9px", height: "9px", borderRadius: "50%",
+                                        background: "#ef4444",
+                                        boxShadow: "0 0 0 2px var(--bg-card)",
+                                    }}>
+                                        <span style={{
+                                            position: "absolute", inset: 0, borderRadius: "50%",
+                                            background: "#ef4444",
+                                            animation: "ping 1.5s ease-out infinite",
+                                        }} />
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Notification Dropdown Panel */}
+                            {showNotifMenu && (
+                                <div
+                                    className="glass animate-fade-in"
+                                    style={{
+                                        position: "absolute",
+                                        top: "calc(100% + 0.6rem)",
+                                        right: "-20px",
+                                        width: "min(340px, 90vw)",
+                                        borderRadius: "1rem",
+                                        border: "1px solid var(--border)",
+                                        background: "var(--bg-card, #1e293b)",
+                                        boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)",
+                                        overflow: "hidden",
+                                        zIndex: 250,
+                                    }}
+                                >
+                                    {/* Header */}
+                                    <div style={{
+                                        padding: "0.85rem 1rem",
+                                        borderBottom: "1px solid var(--border)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        background: "rgba(255, 255, 255, 0.02)",
+                                    }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                            <span style={{ fontSize: "1rem" }}>🔔</span>
+                                            <span style={{ fontWeight: "700", fontSize: "0.9rem", color: "var(--text-main)" }}>Notifications</span>
+                                            {hasUnread && (
+                                                <span style={{
+                                                    background: "#ef4444", color: "white", fontSize: "0.65rem",
+                                                    padding: "0.1rem 0.45rem", borderRadius: "999px", fontWeight: "700"
+                                                }}>
+                                                    New
+                                                </span>
+                                            )}
+                                        </div>
+                                        {hasUnread && (
+                                            <button
+                                                onClick={() => setHasUnread(false)}
+                                                style={{
+                                                    background: "transparent", border: "none", color: "var(--primary)",
+                                                    fontSize: "0.72rem", cursor: "pointer", fontWeight: "600",
+                                                    padding: "0.2rem 0.4rem", borderRadius: "0.35rem",
+                                                }}
+                                            >
+                                                Mark all read
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Notification List */}
+                                    <div style={{ maxHeight: "320px", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+                                        {notifications.length === 0 ? (
+                                            <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+                                                <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "0.4rem" }}>📭</span>
+                                                No new notifications
+                                            </div>
+                                        ) : (
+                                            notifications.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => {
+                                                        setShowNotifMenu(false);
+                                                        if (item.link) router.push(item.link);
+                                                    }}
+                                                    style={{
+                                                        padding: "0.75rem 1rem",
+                                                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                                                        cursor: item.link ? "pointer" : "default",
+                                                        display: "flex",
+                                                        gap: "0.75rem",
+                                                        alignItems: "flex-start",
+                                                        transition: "background 0.15s ease",
+                                                        background: item.unread && hasUnread ? "rgba(99, 102, 241, 0.06)" : "transparent",
+                                                    }}
+                                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)"; }}
+                                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = item.unread && hasUnread ? "rgba(99, 102, 241, 0.06)" : "transparent"; }}
+                                                >
+                                                    <div style={{
+                                                        width: "32px", height: "32px", borderRadius: "8px",
+                                                        background: "rgba(99,102,241,0.15)", display: "flex",
+                                                        alignItems: "center", justifyContent: "center", fontSize: "1rem", flexShrink: 0
+                                                    }}>
+                                                        {item.icon}
+                                                    </div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+                                                            <span style={{ fontWeight: "700", fontSize: "0.82rem", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                {item.title}
+                                                            </span>
+                                                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", flexShrink: 0 }}>
+                                                                {item.time}
+                                                            </span>
+                                                        </div>
+                                                        <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", margin: "0.2rem 0 0 0", lineHeight: "1.3", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                                            {item.message}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div style={{
+                                        padding: "0.65rem 1rem",
+                                        borderTop: "1px solid var(--border)",
+                                        textAlign: "center",
+                                        background: "rgba(255, 255, 255, 0.02)",
+                                    }}>
+                                        <button
+                                            onClick={() => {
+                                                setShowNotifMenu(false);
+                                                router.push(user?.role === "user" ? "/track" : user?.role === "authority" ? "/admin" : "/chief");
+                                            }}
+                                            style={{
+                                                background: "transparent",
+                                                border: "none",
+                                                color: "var(--primary)",
+                                                fontSize: "0.78rem",
+                                                fontWeight: "700",
+                                                cursor: "pointer",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "0.3rem",
+                                            }}
+                                        >
+                                            <span>{user?.role === "user" ? "Track All Grievances" : "View Dashboard Queue"}</span>
+                                            <span>→</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Backdrop to close notification panel when clicking outside */}
+                            {showNotifMenu && (
+                                <div onClick={() => setShowNotifMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 199 }} />
+                            )}
+                        </div>
                     )}
 
                     {/* Language Selector — visible on both desktop & mobile for easy access */}
