@@ -543,13 +543,11 @@ export default function Home() {
   const [analysisResult, setAnalysisResult] = useState<{ subject: string; category: string; confidence: number } | null>(null);
   const [hasImageForAnalysis, setHasImageForAnalysis] = useState(false);
   const lastImageFileRef = useRef<File | null>(null);
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [selectedState, setSelectedState] = useState("Tamil Nadu");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedTown, setSelectedTown] = useState("");
   const [customVillage, setCustomVillage] = useState("");
   const [streetAddress, setStreetAddress] = useState("");
-  const [locationAutoDetected, setLocationAutoDetected] = useState(false);
 
   // Available districts for current state (defaults to Tamil Nadu)
   const districtsList = DISTRICTS_BY_STATE[selectedState] || DISTRICTS_BY_STATE["Tamil Nadu"] || [];
@@ -656,86 +654,6 @@ export default function Home() {
     setFormData((p) => ({ ...p, subject: analysisResult.subject }));
   };
 
-  const handleDetectLocation = () => {
-    if (typeof window === "undefined" || !navigator.geolocation) {
-      alert("Geolocation is not supported by your browser. Please select your District and Town manually.");
-      return;
-    }
-    setIsDetectingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        try {
-          const res = await reverseGeocodeServerAction(lat, lng);
-          if (res.success) {
-            // 1. Detect state if returned
-            const detectedState = res.state && DISTRICTS_BY_STATE[res.state] ? res.state : "Tamil Nadu";
-            setSelectedState(detectedState);
-
-            // 2. Detect District
-            const candidateDistricts = DISTRICTS_BY_STATE[detectedState] || DISTRICTS_BY_STATE["Tamil Nadu"] || [];
-            let matchedDistrict = "";
-            if (res.district) {
-              matchedDistrict = candidateDistricts.find(
-                (d) => d.toLowerCase() === res.district!.toLowerCase() ||
-                       res.district!.toLowerCase().includes(d.toLowerCase()) ||
-                       d.toLowerCase().includes(res.district!.toLowerCase())
-              ) || "";
-            }
-
-            if (matchedDistrict) {
-              setSelectedDistrict(matchedDistrict);
-
-              // 3. Detect Town / Taluk
-              const towns = getTownsForDistrict(matchedDistrict);
-              let matchedTown = "";
-              if (res.town) {
-                matchedTown = towns.find(
-                  (t) => t.toLowerCase() === res.town!.toLowerCase() ||
-                         res.town!.toLowerCase().includes(t.toLowerCase()) ||
-                         t.toLowerCase().includes(res.town!.toLowerCase())
-                ) || "";
-              }
-
-              if (matchedTown && matchedTown !== "Other") {
-                setSelectedTown(matchedTown);
-                setCustomVillage("");
-              } else if (res.town) {
-                setSelectedTown("Other");
-                setCustomVillage(res.town);
-              } else {
-                setSelectedTown("");
-                setCustomVillage("");
-              }
-            }
-
-            // 4. Set Street / Landmark
-            if (res.street) {
-              setStreetAddress(res.street);
-            } else if (res.landmark && !matchedDistrict) {
-              setStreetAddress(res.landmark);
-            }
-
-            setLocationAutoDetected(true);
-          } else {
-            alert("Could not detect exact location from GPS. Please choose your District and Town from the dropdowns.");
-          }
-        } catch {
-          alert("Auto-detect timed out. Please choose your District and Town manually.");
-        } finally {
-          setIsDetectingLocation(false);
-        }
-      },
-      (err) => {
-        setIsDetectingLocation(false);
-        console.warn("Geolocation access denied or unavailable:", err);
-        alert("Location access denied or unavailable. Please choose your District and Town from the dropdowns.");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  };
-
   const removeFile = (i: number) => {
     setMediaFiles((prev) => {
       URL.revokeObjectURL(prev[i].url);
@@ -829,7 +747,7 @@ export default function Home() {
   };
 
 
-  const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); setSelectedDistrict(""); setSelectedTown(""); setCustomVillage(""); setStreetAddress(""); setLocationAutoDetected(false); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
+  const reset = () => { mediaFiles.forEach(f => URL.revokeObjectURL(f.url)); setResult(null); setFormData({ subject: "", description: "", location: "", email: "" }); setSelectedDistrict(""); setSelectedTown(""); setCustomVillage(""); setStreetAddress(""); setMediaFiles([]); setAnalysisResult(null); setHasImageForAnalysis(false); lastImageFileRef.current = null; };
 
   if (user?.role === "chief" || user?.role === "authority") {
     return (
@@ -953,44 +871,12 @@ export default function Home() {
                 <div>
                 {/* Location Details (District -> Town -> Street) */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", background: "rgba(255, 255, 255, 0.02)", padding: "1.1rem", borderRadius: "1rem", border: "1px solid var(--border)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                     <label style={{ fontWeight: "700", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "0.45rem", margin: 0 }}>
                       <span>📍</span>
                       <span>{t("form_location")}</span>
                     </label>
-
-                    {/* Auto-detect button */}
-                    <button
-                      type="button"
-                      onClick={handleDetectLocation}
-                      disabled={isDetectingLocation}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "0.4rem",
-                        padding: "0.35rem 0.8rem",
-                        borderRadius: "999px",
-                        border: "1px solid rgba(99, 102, 241, 0.5)",
-                        background: isDetectingLocation ? "rgba(99, 102, 241, 0.25)" : "rgba(99, 102, 241, 0.12)",
-                        color: "#a5b4fc",
-                        fontSize: "0.78rem",
-                        fontWeight: "600",
-                        cursor: isDetectingLocation ? "wait" : "pointer",
-                        transition: "var(--transition)",
-                      }}
-                      title="Auto-detect District & Town via GPS"
-                    >
-                      <span>{isDetectingLocation ? "⏳" : "🎯"}</span>
-                      <span>{isDetectingLocation ? "Detecting GPS..." : "Auto-Detect Location"}</span>
-                    </button>
                   </div>
-
-                  {locationAutoDetected && (
-                    <div style={{ padding: "0.45rem 0.75rem", borderRadius: "0.5rem", background: "rgba(34, 197, 94, 0.12)", border: "1px solid rgba(34, 197, 94, 0.3)", color: "#4ade80", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                      <span>✓</span>
-                      <span>Location auto-filled via GPS. You can freely change any dropdown below if needed.</span>
-                    </div>
-                  )}
 
                   {/* District & Town Row */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem" }}>
@@ -1004,7 +890,7 @@ export default function Home() {
                           setSelectedDistrict(e.target.value);
                           setSelectedTown("");
                           setCustomVillage("");
-                          setLocationAutoDetected(false);
+                          
                         }}
                         style={{
                           width: "100%",
