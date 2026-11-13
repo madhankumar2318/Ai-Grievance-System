@@ -190,7 +190,6 @@ export default function ComplaintMap({
     // Interactive Navigation & UX Controls
     const [scrollZoomEnabled, setScrollZoomEnabled] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
-    const [selectedDistrict, setSelectedDistrict] = useState<string>("All");
     const [selectedPriority, setSelectedPriority] = useState<string>("All");
     const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -284,10 +283,9 @@ export default function ComplaintMap({
         fetchPins();
     }, [initialComplaints, mapComplaintsToPins]);
 
-    // Filter pins based on user criteria (District, Priority, Search)
+    // Filter pins based on user criteria (Priority, Search)
     const filteredPins = useMemo(() => {
         return allPins.filter((p) => {
-            if (selectedDistrict !== "All" && p.districtName !== selectedDistrict) return false;
             if (selectedPriority !== "All" && p.priority !== selectedPriority) return false;
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase().trim();
@@ -298,16 +296,7 @@ export default function ComplaintMap({
             }
             return true;
         });
-    }, [allPins, selectedDistrict, selectedPriority, searchQuery]);
-
-    // Available districts computed dynamically from active complaints
-    const availableDistricts = useMemo(() => {
-        const counts: Record<string, number> = {};
-        allPins.forEach((p) => {
-            counts[p.districtName] = (counts[p.districtName] || 0) + 1;
-        });
-        return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    }, [allPins]);
+    }, [allPins, selectedPriority, searchQuery]);
 
     // 2. Initialize Leaflet Map ONCE on client mount
     useEffect(() => {
@@ -491,45 +480,6 @@ export default function ComplaintMap({
         });
     };
 
-    // Fly to specific district
-    const handleFlyToDistrict = (districtName: string) => {
-        setSelectedDistrict(districtName);
-        if (!mapInstanceRef.current) return;
-
-        if (districtName === "All") {
-            handleFitAll();
-            return;
-        }
-
-        const match = Object.values(DISTRICT_COORDS).find(
-            (d) => d.displayName.toLowerCase() === districtName.toLowerCase()
-        );
-
-        if (match) {
-            mapInstanceRef.current.flyTo([match.lat, match.lng], 13, { duration: 1.0 });
-        } else {
-            const districtPins = allPins.filter((p) => p.districtName === districtName);
-            if (districtPins.length > 0) {
-                import("leaflet").then((L) => {
-                    const coords: [number, number][] = districtPins.map((p) => [p.lat, p.lng]);
-                    mapInstanceRef.current?.fitBounds(L.latLngBounds(coords), { padding: [60, 60], maxZoom: 14 });
-                });
-            }
-        }
-    };
-
-    // Quick select a pin from the bottom complaint drawer
-    const handleSelectComplaintFromList = (pin: ComplaintPin) => {
-        setSelected(pin);
-        if (mapInstanceRef.current) {
-            mapInstanceRef.current.flyTo([pin.lat, pin.lng], 15, { duration: 0.8 });
-            const marker = markerInstancesRef.current.get(pin.id);
-            if (marker) {
-                marker.openTooltip();
-            }
-        }
-    };
-
     // Handle map height expansion toggle
     const handleToggleExpand = () => {
         setIsExpanded((prev) => !prev);
@@ -636,89 +586,6 @@ export default function ComplaintMap({
                         <span>{filteredPins.length} of {allPins.length} Plotted</span>
                     </div>
                 </div>
-            </div>
-
-            {/* Quick District Navigation Bar */}
-            <div style={{
-                marginBottom: "1rem",
-                padding: "0.75rem 1rem",
-                borderRadius: "0.85rem",
-                background: "rgba(15,15,26,0.65)",
-                border: "1px solid var(--border)",
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: "0.5rem",
-            }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginRight: "0.25rem" }}>
-                    Quick Jump:
-                </span>
-
-                {/* All Option */}
-                <button
-                    type="button"
-                    onClick={() => handleFlyToDistrict("All")}
-                    style={{
-                        padding: "0.3rem 0.75rem",
-                        borderRadius: "99px",
-                        fontSize: "0.75rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        border: selectedDistrict === "All" ? "1px solid var(--primary)" : "1px solid var(--border)",
-                        background: selectedDistrict === "All" ? "var(--primary)" : "rgba(255,255,255,0.04)",
-                        color: selectedDistrict === "All" ? "#ffffff" : "var(--text-main)",
-                        transition: "all 0.15s ease",
-                    }}
-                >
-                    🎯 All ({allPins.length})
-                </button>
-
-                {/* Dynamic buttons for districts containing complaints */}
-                {availableDistricts.map(([district, count]) => {
-                    const isSelected = selectedDistrict === district;
-                    return (
-                        <button
-                            key={district}
-                            type="button"
-                            onClick={() => handleFlyToDistrict(district)}
-                            style={{
-                                padding: "0.3rem 0.75rem",
-                                borderRadius: "99px",
-                                fontSize: "0.75rem",
-                                fontWeight: "700",
-                                cursor: "pointer",
-                                border: isSelected ? "1px solid #6366f1" : "1px solid rgba(255,255,255,0.1)",
-                                background: isSelected ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "rgba(255,255,255,0.04)",
-                                color: isSelected ? "#ffffff" : "var(--text-main)",
-                                transition: "all 0.15s ease",
-                            }}
-                        >
-                            📍 {district} ({count})
-                        </button>
-                    );
-                })}
-
-                {/* Major State Hubs Quick Jump if not already listed */}
-                {["Coimbatore", "Chennai", "Madurai", "Salem"].filter(d => !availableDistricts.some(([ad]) => ad === d)).map((hub) => (
-                    <button
-                        key={hub}
-                        type="button"
-                        onClick={() => handleFlyToDistrict(hub)}
-                        style={{
-                            padding: "0.3rem 0.75rem",
-                            borderRadius: "99px",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
-                            cursor: "pointer",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            background: "transparent",
-                            color: "var(--text-muted)",
-                            transition: "all 0.15s ease",
-                        }}
-                    >
-                        {hub}
-                    </button>
-                ))}
             </div>
 
             {/* Filter & Priority Bar */}
@@ -1023,79 +890,6 @@ export default function ComplaintMap({
                     </div>
                 )}
             </div>
-
-            {/* Interactive "Plotted Complaints Quick-Jump" Bar */}
-            {filteredPins.length > 0 && (
-                <div style={{ marginTop: "1rem" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                        <span style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--text-muted)" }}>
-                            📋 Tap Any Complaint Below to Fly Directly to Pin:
-                        </span>
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-faint)" }}>
-                            {filteredPins.length} complaints shown
-                        </span>
-                    </div>
-
-                    <div style={{
-                        display: "flex",
-                        gap: "0.6rem",
-                        overflowX: "auto",
-                        paddingBottom: "0.5rem",
-                        scrollbarWidth: "thin",
-                    }}>
-                        {filteredPins.map((pin) => {
-                            const isPinSelected = selected?.id === pin.id;
-                            const pColor = PRIORITY_COLORS[pin.priority] || "#6366f1";
-                            return (
-                                <button
-                                    key={pin.id}
-                                    type="button"
-                                    onClick={() => handleSelectComplaintFromList(pin)}
-                                    style={{
-                                        flexShrink: 0,
-                                        padding: "0.6rem 0.85rem",
-                                        borderRadius: "0.75rem",
-                                        background: isPinSelected ? "rgba(99,102,241,0.18)" : "var(--bg-card)",
-                                        border: isPinSelected ? `1.5px solid ${pColor}` : "1px solid var(--border)",
-                                        textAlign: "left",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        gap: "0.2rem",
-                                        maxWidth: "240px",
-                                        transition: "all 0.15s ease",
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isPinSelected) (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isPinSelected) (e.currentTarget as HTMLElement).style.borderColor = "var(--border)";
-                                    }}
-                                >
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", gap: "0.5rem" }}>
-                                        <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: "700" }}>{pin.id}</span>
-                                        <span style={{ fontSize: "0.68rem", fontWeight: "800", color: pColor }}>{pin.priority}</span>
-                                    </div>
-                                    <div style={{
-                                        fontSize: "0.78rem",
-                                        fontWeight: "600",
-                                        color: "var(--text-main)",
-                                        whiteSpace: "nowrap",
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        width: "100%",
-                                    }}>
-                                        {pin.subject}
-                                    </div>
-                                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
-                                        📍 {pin.districtName}
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
 
             <style>{`
                 .leaflet-tooltip-custom {
