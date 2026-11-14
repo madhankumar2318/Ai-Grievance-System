@@ -596,155 +596,284 @@ export default function AdminDashboard() {
                                             </tr>
 
                                             {/* ── Detail Panel ── */}
-                                            {isExpanded && (
-                                                <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                                                    <td colSpan={7} style={{ padding: 0 }}>
-                                                        <div style={{
-                                                            padding: "1.5rem 2rem",
-                                                            background: "rgba(99,102,241,0.03)",
-                                                            borderTop: `3px solid ${pCfg.color}`,
-                                                            animation: "slideDown 0.25s ease",
-                                                        }}>
-                                                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
+                                            {isExpanded && (() => {
+                                                const atrMatch = (c.description || "").match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+                                                let atrData: ActionTakenReportData | null = null;
+                                                if (atrMatch) {
+                                                    try {
+                                                        atrData = JSON.parse(atrMatch[1]);
+                                                    } catch (e) {
+                                                        console.error("Failed to parse ATR JSON:", e);
+                                                    }
+                                                }
+                                                const photoMatch = (c.description || "").match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                                                const evidencePhoto = photoMatch ? photoMatch[1] : null;
+                                                const cleanDesc = (c.description || "")
+                                                    .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
+                                                    .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
+                                                    .trim();
 
-                                                                {/* Col 1 — Description & Evidence */}
-                                                                <div>
-                                                                    {(() => {
-                                                                        const photoMatch = c.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
-                                                                        const evidencePhoto = photoMatch ? photoMatch[1] : null;
-                                                                        const cleanDesc = c.description.replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "").trim();
-                                                                        return (
-                                                                            <>
-                                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
-                                                                                    {CATEGORY_ICONS[c.category] || "📁"} Description
+                                                return (
+                                                    <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                        <td colSpan={7} style={{ padding: 0 }}>
+                                                            <div style={{
+                                                                padding: "1.5rem 2rem",
+                                                                background: "rgba(99,102,241,0.03)",
+                                                                borderTop: `3px solid ${pCfg.color}`,
+                                                                animation: "slideDown 0.25s ease",
+                                                            }}>
+                                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
+
+                                                                    {/* Col 1 — Description & Evidence */}
+                                                                    <div style={{ minWidth: 0 }}>
+                                                                        <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+                                                                            {CATEGORY_ICONS[c.category] || "📁"} Description
+                                                                        </div>
+                                                                        <p style={{ fontSize: "0.88rem", lineHeight: "1.65", color: "var(--text-main)", margin: 0, wordBreak: "break-word" }}>
+                                                                            {cleanDesc || "No additional description text provided."}
+                                                                        </p>
+
+                                                                        {/* Photo Evidence Section */}
+                                                                        {(evidencePhoto || c.attachments > 0) && (
+                                                                            <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                                                                                <div style={{ fontSize: "0.72rem", fontWeight: "800", color: "#a5b4fc", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                                    <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                                                                        <span>📷</span>
+                                                                                        <span>Citizen Photo Evidence ({c.attachments || 1})</span>
+                                                                                    </span>
+                                                                                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: "600" }}>Tap to inspect</span>
                                                                                 </div>
-                                                                                <p style={{ fontSize: "0.88rem", lineHeight: "1.65", color: "var(--text-main)", margin: 0 }}>
-                                                                                    {cleanDesc || "No additional description text provided."}
-                                                                                </p>
 
-                                                                                {/* Photo Evidence Section */}
-                                                                                {(evidencePhoto || c.attachments > 0) && (
-                                                                                    <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
-                                                                                        <div style={{ fontSize: "0.72rem", fontWeight: "800", color: "#a5b4fc", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                                                                            <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                                                                                                <span>📷</span>
-                                                                                                <span>Citizen Photo Evidence ({c.attachments || 1})</span>
-                                                                                            </span>
-                                                                                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: "600" }}>Tap to inspect</span>
+                                                                                {evidencePhoto ? (
+                                                                                    <div
+                                                                                        onClick={() => setViewingPhoto({ url: evidencePhoto, title: c.subject, location: c.location, category: c.category })}
+                                                                                        style={{
+                                                                                            position: "relative",
+                                                                                            borderRadius: "0.5rem",
+                                                                                            overflow: "hidden",
+                                                                                            cursor: "pointer",
+                                                                                            border: "1px solid rgba(99,102,241,0.3)",
+                                                                                            maxHeight: "150px",
+                                                                                            display: "flex",
+                                                                                            alignItems: "center",
+                                                                                            justifyContent: "center",
+                                                                                            background: "#000",
+                                                                                        }}
+                                                                                    >
+                                                                                        <img
+                                                                                            src={evidencePhoto}
+                                                                                            alt="Citizen Uploaded Evidence"
+                                                                                            style={{ width: "100%", maxHeight: "150px", objectFit: "cover", transition: "transform 0.2s" }}
+                                                                                            onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.03)")}
+                                                                                            onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                                                                                        />
+                                                                                        <div style={{
+                                                                                            position: "absolute", bottom: 0, left: 0, right: 0,
+                                                                                            background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)",
+                                                                                            padding: "0.35rem 0.6rem", fontSize: "0.7rem", color: "white",
+                                                                                            display: "flex", alignItems: "center", justifyContent: "space-between"
+                                                                                        }}>
+                                                                                            <span>🔍 Click to inspect photo</span>
+                                                                                            <span style={{ color: "#4ade80", fontWeight: "700" }}>✓ Uploaded Evidence</span>
                                                                                         </div>
-
-                                                                                        {evidencePhoto ? (
-                                                                                            <div
-                                                                                                onClick={() => setViewingPhoto({ url: evidencePhoto, title: c.subject, location: c.location, category: c.category })}
-                                                                                                style={{
-                                                                                                    position: "relative",
-                                                                                                    borderRadius: "0.5rem",
-                                                                                                    overflow: "hidden",
-                                                                                                    cursor: "pointer",
-                                                                                                    border: "1px solid rgba(99,102,241,0.3)",
-                                                                                                    maxHeight: "150px",
-                                                                                                    display: "flex",
-                                                                                                    alignItems: "center",
-                                                                                                    justifyContent: "center",
-                                                                                                    background: "#000",
-                                                                                                }}
-                                                                                            >
-                                                                                                <img
-                                                                                                    src={evidencePhoto}
-                                                                                                    alt="Citizen Uploaded Evidence"
-                                                                                                    style={{ width: "100%", maxHeight: "150px", objectFit: "cover", transition: "transform 0.2s" }}
-                                                                                                    onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.03)")}
-                                                                                                    onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
-                                                                                                />
-                                                                                                <div style={{
-                                                                                                    position: "absolute", bottom: 0, left: 0, right: 0,
-                                                                                                    background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)",
-                                                                                                    padding: "0.35rem 0.6rem", fontSize: "0.7rem", color: "white",
-                                                                                                    display: "flex", alignItems: "center", justifyContent: "space-between"
-                                                                                                }}>
-                                                                                                    <span>🔍 Click to inspect photo</span>
-                                                                                                    <span style={{ color: "#4ade80", fontWeight: "700" }}>✓ Uploaded Evidence</span>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        ) : (
-                                                                                            <div
-                                                                                                onClick={() => setViewingPhoto({ url: null, title: c.subject, location: c.location, category: c.category })}
-                                                                                                style={{
-                                                                                                    padding: "0.75rem",
-                                                                                                    borderRadius: "0.5rem",
-                                                                                                    background: "rgba(99,102,241,0.08)",
-                                                                                                    border: "1px dashed rgba(99,102,241,0.3)",
-                                                                                                    cursor: "pointer",
-                                                                                                    textAlign: "center",
-                                                                                                }}
-                                                                                            >
-                                                                                                <div style={{ fontSize: "1.2rem", marginBottom: "0.2rem" }}>📎</div>
-                                                                                                <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "#a5b4fc" }}>
-                                                                                                    {c.attachments} Photographic Proof File Recorded
-                                                                                                </div>
-                                                                                                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
-                                                                                                    Click to view evidence details
-                                                                                                </div>
-                                                                                            </div>
-                                                                                        )}
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div
+                                                                                        onClick={() => setViewingPhoto({ url: null, title: c.subject, location: c.location, category: c.category })}
+                                                                                        style={{
+                                                                                            padding: "0.75rem",
+                                                                                            borderRadius: "0.5rem",
+                                                                                            background: "rgba(99,102,241,0.08)",
+                                                                                            border: "1px dashed rgba(99,102,241,0.3)",
+                                                                                            cursor: "pointer",
+                                                                                            textAlign: "center",
+                                                                                        }}
+                                                                                    >
+                                                                                        <div style={{ fontSize: "1.2rem", marginBottom: "0.2rem" }}>📎</div>
+                                                                                        <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "#a5b4fc" }}>
+                                                                                            {c.attachments} Photographic Proof File Recorded
+                                                                                        </div>
+                                                                                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                                                                                            Click to view evidence details
+                                                                                        </div>
                                                                                     </div>
                                                                                 )}
-                                                                            </>
-                                                                        );
-                                                                    })()}
-                                                                </div>
-
-                                                                {/* Col 2 — Meta */}
-                                                                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.1rem" }}>📋 Details</div>
-                                                                    {[
-                                                                        { icon: "📍", label: "Location", val: c.location },
-                                                                        { icon: "📅", label: "Filed", val: c.date },
-                                                                        { icon: "👤", label: "Citizen", val: c.user },
-                                                                        { icon: "📂", label: "Category", val: c.category },
-                                                                    ].map(row => (
-                                                                        <div key={row.label} style={{ display: "flex", gap: "0.5rem", fontSize: "0.83rem" }}>
-                                                                            <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{row.icon}</span>
-                                                                            <span style={{ color: "var(--text-muted)", fontWeight: "600", flexShrink: 0 }}>{row.label}:</span>
-                                                                            <span style={{ color: "var(--text-main)" }}>{row.val}</span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-
-                                                                {/* Col 3 — AI Note + Actions */}
-                                                                <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>🤖 AI Triage Note</div>
-                                                                    <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "0.75rem", padding: "0.75rem 1rem", fontSize: "0.82rem", lineHeight: "1.6", color: "var(--text-main)" }}>
-                                                                        {c.aiNote}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                    {/* Detail actions */}
-                                                                    {c.status !== "Resolved" && c.status !== "Rejected" && (
-                                                                        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                                                            <button
-                                                                                className="btn btn-primary"
-                                                                                style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
-                                                                                onClick={() => handleOpenResolveModal(c)}
-                                                                            >✓ Mark Resolved</button>
-                                                                            <button
-                                                                                style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
-                                                                                onClick={() => updateStatus(c.id, "Rejected")}
-                                                                                onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
-                                                                                onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
-                                                                            >✕ Reject</button>
+
+                                                                    {/* Col 2 — Meta */}
+                                                                    <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                                                        <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.1rem" }}>📋 Details</div>
+                                                                        {[
+                                                                            { icon: "📍", label: "Location", val: c.location },
+                                                                            { icon: "📅", label: "Filed", val: c.date },
+                                                                            { icon: "👤", label: "Citizen", val: c.user },
+                                                                            { icon: "📂", label: "Category", val: c.category },
+                                                                        ].map(row => (
+                                                                            <div key={row.label} style={{ display: "flex", gap: "0.5rem", fontSize: "0.83rem" }}>
+                                                                                <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{row.icon}</span>
+                                                                                <span style={{ color: "var(--text-muted)", fontWeight: "600", flexShrink: 0 }}>{row.label}:</span>
+                                                                                <span style={{ color: "var(--text-main)", wordBreak: "break-word" }}>{row.val}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+
+                                                                    {/* Col 3 — AI Note + Actions */}
+                                                                    <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                                        <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>🤖 AI Triage Note</div>
+                                                                        <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "0.75rem", padding: "0.75rem 1rem", fontSize: "0.82rem", lineHeight: "1.6", color: "var(--text-main)", wordBreak: "break-word" }}>
+                                                                            {c.aiNote}
                                                                         </div>
-                                                                    )}
-                                                                    {(c.status === "Resolved" || c.status === "Rejected") && (
-                                                                        <div style={{ fontSize: "0.82rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                                                                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: sCfg.dot, display: "inline-block" }} />
-                                                                            This complaint is {c.status.toLowerCase()}
-                                                                        </div>
-                                                                    )}
+                                                                        {/* Detail actions */}
+                                                                        {c.status !== "Resolved" && c.status !== "Rejected" && (
+                                                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+                                                                                <button
+                                                                                    className="btn btn-primary"
+                                                                                    style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
+                                                                                    onClick={() => handleOpenResolveModal(c)}
+                                                                                >✓ Mark Resolved</button>
+                                                                                <button
+                                                                                    style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
+                                                                                    onClick={() => updateStatus(c.id, "Rejected")}
+                                                                                    onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
+                                                                                    onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
+                                                                                >✕ Reject</button>
+                                                                            </div>
+                                                                        )}
+                                                                        {(c.status === "Resolved" || c.status === "Rejected") && (
+                                                                            <div style={{ fontSize: "0.82rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: sCfg.dot, display: "inline-block" }} />
+                                                                                This complaint is {c.status.toLowerCase()}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
+
+                                                                {/* ── Official Action Taken Report (ATR) Card when Resolved ── */}
+                                                                {atrData && (
+                                                                    <div style={{
+                                                                        marginTop: "1.5rem",
+                                                                        padding: "1.25rem 1.5rem",
+                                                                        borderRadius: "1rem",
+                                                                        background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.04))",
+                                                                        border: "1.5px solid rgba(16, 185, 129, 0.35)",
+                                                                    }}>
+                                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                                                <span style={{ fontSize: "1.2rem" }}>✅</span>
+                                                                                <span style={{ fontSize: "1rem", fontWeight: "800", color: "#ffffff" }}>
+                                                                                    Official Action Taken Report (ATR)
+                                                                                </span>
+                                                                            </div>
+                                                                            <span style={{
+                                                                                padding: "0.2rem 0.65rem",
+                                                                                borderRadius: "99px",
+                                                                                background: "rgba(16, 185, 129, 0.2)",
+                                                                                color: "#10b981",
+                                                                                border: "1px solid rgba(16, 185, 129, 0.4)",
+                                                                                fontSize: "0.72rem",
+                                                                                fontWeight: "800",
+                                                                            }}>
+                                                                                VERIFIED RESOLUTION
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div style={{
+                                                                            display: "grid",
+                                                                            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                                                                            gap: "0.75rem",
+                                                                            marginBottom: "1rem",
+                                                                            padding: "0.85rem 1rem",
+                                                                            borderRadius: "0.65rem",
+                                                                            background: "rgba(0,0,0,0.3)",
+                                                                            border: "1px solid rgba(255,255,255,0.06)",
+                                                                        }}>
+                                                                            <div>
+                                                                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700" }}>
+                                                                                    👷 Official Staff / Engineer
+                                                                                </div>
+                                                                                <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#ffffff", marginTop: "0.15rem" }}>
+                                                                                    {atrData.officerName || "Municipal Officer"}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700" }}>
+                                                                                    📅 Resolution Date
+                                                                                </div>
+                                                                                <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#ffffff", marginTop: "0.15rem" }}>
+                                                                                    {atrData.resolvedAt ? new Date(atrData.resolvedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : c.date}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div style={{ marginBottom: "1rem" }}>
+                                                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "800", marginBottom: "0.3rem" }}>
+                                                                                📝 Work Executed &amp; Action Taken
+                                                                            </div>
+                                                                            <div style={{
+                                                                                fontSize: "0.88rem",
+                                                                                lineHeight: "1.6",
+                                                                                color: "var(--text-main)",
+                                                                                padding: "0.75rem 1rem",
+                                                                                borderRadius: "0.65rem",
+                                                                                background: "rgba(255,255,255,0.03)",
+                                                                                border: "1px solid rgba(255,255,255,0.08)",
+                                                                                wordBreak: "break-word",
+                                                                            }}>
+                                                                                {atrData.actionDescription}
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Before vs After Photo Proof */}
+                                                                        <div style={{ marginTop: "1rem" }}>
+                                                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "800", marginBottom: "0.5rem" }}>
+                                                                                📸 Resolution Proof &amp; Verification
+                                                                            </div>
+                                                                            <div style={{ display: "grid", gridTemplateColumns: evidencePhoto && atrData.resolutionPhoto ? "1fr 1fr" : "1fr", gap: "1rem", maxWidth: "600px" }}>
+                                                                                {evidencePhoto && (
+                                                                                    <div
+                                                                                        onClick={() => setViewingPhoto({ url: evidencePhoto, title: "Citizen Evidence (Before)", location: c.location, category: c.category })}
+                                                                                        style={{
+                                                                                            borderRadius: "0.65rem",
+                                                                                            overflow: "hidden",
+                                                                                            border: "1px solid rgba(239, 68, 68, 0.4)",
+                                                                                            background: "#000",
+                                                                                            cursor: "pointer",
+                                                                                        }}
+                                                                                    >
+                                                                                        <div style={{ padding: "0.3rem 0.6rem", background: "rgba(239, 68, 68, 0.2)", fontSize: "0.68rem", fontWeight: "800", color: "#f87171" }}>
+                                                                                            BEFORE (CITIZEN EVIDENCE)
+                                                                                        </div>
+                                                                                        <img src={evidencePhoto} alt="Before" style={{ width: "100%", height: "130px", objectFit: "cover" }} />
+                                                                                    </div>
+                                                                                )}
+                                                                                {atrData.resolutionPhoto && (
+                                                                                    <div
+                                                                                        onClick={() => setViewingPhoto({ url: atrData.resolutionPhoto!, title: "Official Resolution (After)", location: c.location, category: c.category })}
+                                                                                        style={{
+                                                                                            borderRadius: "0.65rem",
+                                                                                            overflow: "hidden",
+                                                                                            border: "1px solid rgba(16, 185, 129, 0.5)",
+                                                                                            background: "#000",
+                                                                                            cursor: "pointer",
+                                                                                        }}
+                                                                                    >
+                                                                                        <div style={{ padding: "0.3rem 0.6rem", background: "rgba(16, 185, 129, 0.2)", fontSize: "0.68rem", fontWeight: "800", color: "#34d399" }}>
+                                                                                            AFTER (OFFICIAL RESOLUTION PROOF)
+                                                                                        </div>
+                                                                                        <img src={atrData.resolutionPhoto} alt="After" style={{ width: "100%", height: "130px", objectFit: "cover" }} />
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })()}
                                         </React.Fragment>
                                     );
                                 }))}
@@ -825,65 +954,132 @@ export default function AdminDashboard() {
                                 </div>
 
                                 {/* Expand details panel */}
-                                {isExpanded && (
-                                    <div className="admin-mobile-card-details">
-                                        {/* Description */}
-                                        <div>
-                                            <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
-                                                Description
-                                            </div>
-                                            <p style={{ fontSize: "0.85rem", lineHeight: "1.5", color: "var(--text-main)", margin: 0 }}>
-                                                {c.description}
-                                            </p>
-                                        </div>
+                                {isExpanded && (() => {
+                                    const atrMatch = (c.description || "").match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+                                    let atrData: ActionTakenReportData | null = null;
+                                    if (atrMatch) {
+                                        try { atrData = JSON.parse(atrMatch[1]); } catch {}
+                                    }
+                                    const photoMatch = (c.description || "").match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                                    const evidencePhoto = photoMatch ? photoMatch[1] : null;
+                                    const cleanDesc = (c.description || "")
+                                        .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
+                                        .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
+                                        .trim();
 
-                                        {/* Location info */}
-                                        {c.location && (
+                                    return (
+                                        <div className="admin-mobile-card-details">
+                                            {/* Description */}
                                             <div>
                                                 <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
-                                                    📍 Location
+                                                    Description
                                                 </div>
-                                                <p style={{ fontSize: "0.85rem", color: "var(--text-main)", margin: 0 }}>
-                                                    {c.location}
+                                                <p style={{ fontSize: "0.85rem", lineHeight: "1.5", color: "var(--text-main)", margin: 0, wordBreak: "break-word" }}>
+                                                    {cleanDesc || "No additional description text provided."}
                                                 </p>
                                             </div>
-                                        )}
 
-                                        {/* AI Note */}
-                                        <div>
-                                            <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
-                                                🤖 AI Triage Note
+                                            {/* Evidence photo if present */}
+                                            {evidencePhoto && (
+                                                <div style={{ marginTop: "0.5rem" }}>
+                                                    <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "#a5b4fc", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
+                                                        📷 Citizen Photo Evidence
+                                                    </div>
+                                                    <div
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setViewingPhoto({ url: evidencePhoto, title: c.subject, location: c.location, category: c.category });
+                                                        }}
+                                                        style={{ borderRadius: "0.5rem", overflow: "hidden", border: "1px solid rgba(99,102,241,0.3)", maxHeight: "140px", cursor: "pointer" }}
+                                                    >
+                                                        <img src={evidencePhoto} alt="Evidence" style={{ width: "100%", maxHeight: "140px", objectFit: "cover" }} />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Location info */}
+                                            {c.location && (
+                                                <div>
+                                                    <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
+                                                        📍 Location
+                                                    </div>
+                                                    <p style={{ fontSize: "0.85rem", color: "var(--text-main)", margin: 0, wordBreak: "break-word" }}>
+                                                        {c.location}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* AI Note */}
+                                            <div>
+                                                <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
+                                                    🤖 AI Triage Note
+                                                </div>
+                                                <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: "0.5rem", padding: "0.65rem 0.85rem", fontSize: "0.78rem", lineHeight: "1.5", color: "var(--text-main)", wordBreak: "break-word" }}>
+                                                    {c.aiNote}
+                                                </div>
                                             </div>
-                                            <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: "0.5rem", padding: "0.65rem 0.85rem", fontSize: "0.78rem", lineHeight: "1.5", color: "var(--text-main)" }}>
-                                                {c.aiNote}
-                                            </div>
+
+                                            {/* ATR Card in mobile */}
+                                            {atrData && (
+                                                <div style={{
+                                                    marginTop: "0.75rem",
+                                                    padding: "0.85rem",
+                                                    borderRadius: "0.75rem",
+                                                    background: "rgba(16, 185, 129, 0.08)",
+                                                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                                                }}>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                                                        <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#ffffff" }}>
+                                                            ✅ Action Taken Report
+                                                        </div>
+                                                        <span style={{ fontSize: "0.65rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: "800" }}>VERIFIED</span>
+                                                    </div>
+                                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.25rem" }}>
+                                                        👷 <strong>{atrData.officerName || "Municipal Officer"}</strong>
+                                                    </div>
+                                                    <div style={{ fontSize: "0.78rem", color: "var(--text-main)", lineHeight: "1.4", marginBottom: "0.5rem", wordBreak: "break-word" }}>
+                                                        {atrData.actionDescription}
+                                                    </div>
+                                                    {atrData.resolutionPhoto && (
+                                                        <div
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setViewingPhoto({ url: atrData.resolutionPhoto!, title: "Resolution Proof", location: c.location, category: c.category });
+                                                            }}
+                                                            style={{ borderRadius: "0.5rem", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.4)", cursor: "pointer" }}
+                                                        >
+                                                            <img src={atrData.resolutionPhoto} alt="After" style={{ width: "100%", maxHeight: "120px", objectFit: "cover" }} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Actions */}
+                                            {c.status !== "Resolved" && c.status !== "Rejected" ? (
+                                                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }} onClick={e => e.stopPropagation()}>
+                                                    <button
+                                                        className="btn btn-primary"
+                                                        style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem" }}
+                                                        onClick={() => handleOpenResolveModal(c)}
+                                                    >
+                                                        {t("admin_resolve")}
+                                                    </button>
+                                                    <button
+                                                        style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700" }}
+                                                        onClick={() => updateStatus(c.id, "Rejected")}
+                                                    >
+                                                        ✕ Reject
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div style={{ fontSize: "0.8rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.25rem" }}>
+                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: sCfg.dot }} />
+                                                    This complaint is {c.status.toLowerCase()}
+                                                </div>
+                                            )}
                                         </div>
-
-                                        {/* Actions */}
-                                        {c.status !== "Resolved" && c.status !== "Rejected" ? (
-                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }} onClick={e => e.stopPropagation()}>
-                                                <button
-                                                    className="btn btn-primary"
-                                                    style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem" }}
-                                                    onClick={() => handleOpenResolveModal(c)}
-                                                >
-                                                    {t("admin_resolve")}
-                                                </button>
-                                                <button
-                                                    style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700" }}
-                                                    onClick={() => updateStatus(c.id, "Rejected")}
-                                                >
-                                                    ✕ Reject
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div style={{ fontSize: "0.8rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.25rem" }}>
-                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: sCfg.dot }} />
-                                                This complaint is {c.status.toLowerCase()}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         );
                     })}
