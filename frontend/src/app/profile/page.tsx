@@ -290,7 +290,7 @@ export default function ProfilePage() {
 
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
                                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                📍 Assigned Jurisdiction / Place
+                                                📍 Assigned District / Location
                                             </div>
                                             <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#f97316" }}>
                                                 {profileData.district}, {profileData.state}
@@ -401,10 +401,10 @@ export default function ProfilePage() {
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
                                     <div>
                                         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.25rem 0.65rem", borderRadius: "99px", background: "rgba(249,115,22,0.15)", color: "#f97316", fontSize: "0.72rem", fontWeight: "800", marginBottom: "0.5rem" }}>
-                                            🏛️ Assigned Territorial Jurisdiction
+                                            🏛️ Assigned District Area
                                         </div>
                                         <h3 style={{ margin: "0 0 0.35rem 0", fontSize: "1.15rem", fontWeight: "800" }}>
-                                            📍 {profileData.district} Jurisdiction, {profileData.state}
+                                            📍 {profileData.district} District, {profileData.state}
                                         </h3>
                                         <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: "1.5", maxWidth: "520px" }}>
                                             Operating from <strong>{profileData.workingPlace}</strong>. Authorized to conduct AI triage reviews, inspect citizen photo evidence, and publish official Action Taken Reports (ATRs) with before/after resolution verification.
@@ -521,7 +521,7 @@ export default function ProfilePage() {
                                 <div>
                                     <h2 style={{ fontSize: "1.25rem", fontWeight: "800", margin: 0 }}>✏️ Edit Profile Details</h2>
                                     <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "0.25rem 0 0" }}>
-                                        Update your official details, jurisdiction place, and contact information.
+                                        Update your official details, assigned district, and contact information.
                                     </p>
                                 </div>
                                 <button onClick={() => setShowEditModal(false)} style={{ background: "transparent", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "var(--text-muted)" }}>✕</button>
@@ -566,7 +566,7 @@ export default function ProfilePage() {
                                         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "0.75rem" }}>
                                             <div>
                                                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                    📍 District Jurisdiction
+                                                    📍 Assigned District
                                                 </label>
                                                 <select
                                                     value={editForm.district}

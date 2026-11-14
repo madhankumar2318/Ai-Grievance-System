@@ -1438,7 +1438,7 @@ export default function LoginPage() {
                                                     <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "auto" }}>Government of Tamil Nadu</span>
                                                 </div>
                                                 <div>
-                                                    <Field label="Assigned District Jurisdiction" icon="📍" error={auErrors.district}>
+                                                    <Field label="Assigned District" icon="📍" error={auErrors.district}>
                                                         <select
                                                             value={au.district}
                                                             onChange={e => setAuField("district", e.target.value)}
@@ -1641,7 +1641,7 @@ export default function LoginPage() {
                                         <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.12)" }}>
                                             <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f43f5e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🪪 Officer Identification</div>
                                             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.9rem", borderRadius: "0.65rem", background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.25)", fontSize: "0.84rem", color: "#f43f5e", fontWeight: "700", marginBottom: "0.875rem" }}>
-                                                <span>⭐ Jurisdiction: <strong style={{ color: "white" }}>Tamil Nadu (All 38 Districts)</strong></span>
+                                                <span>⭐ Coverage: <strong style={{ color: "white" }}>Tamil Nadu (All 38 Districts)</strong></span>
                                                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "auto" }}>State Headquarters</span>
                                             </div>
                                             <Field label="Officer ID" icon="⭐" error={chErrors.officerId}>

@@ -58,8 +58,8 @@ export default function Navbar() {
 
         if (user?.role === "authority") {
             notifs.push({
-                id: "auth-jurisdiction",
-                title: "🛡️ Jurisdiction Active",
+                id: "auth-district",
+                title: "🛡️ District Queue Active",
                 message: `Assigned to ${user.district || "Tiruppur"} District queue. New complaints will appear automatically.`,
                 time: "Live",
                 icon: "🏛️",

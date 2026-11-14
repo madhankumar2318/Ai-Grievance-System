@@ -546,7 +546,7 @@ export default function ChiefDashboard() {
                         <div style={{ height: "460px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(99,102,241,0.02)", borderRadius: "1rem" }}>
                             <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem", animation: "bounce 1.5s infinite" }}>🗺️</div>
                             <div style={{ fontWeight: "700", color: "#a5b4fc", fontSize: "1rem" }}>Initializing Geographic Surveillance Map...</div>
-                            <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>Plotting verified jurisdiction coordinates and telemetry</div>
+                            <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>Plotting verified complaint locations across Tamil Nadu</div>
                         </div>
                     ) : (
                         <ComplaintMap title={t("map_title")} subtitle={t("map_subtitle")} initialComplaints={complaints} />
@@ -909,7 +909,7 @@ export default function ChiefDashboard() {
                                                                                 
                                                                                 <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
                                                                                     <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>
-                                                                                        🏛️ Assigned Jurisdiction
+                                                                                        🏛️ Assigned District
                                                                                     </div>
                                                                                     <div style={{ fontSize: "0.82rem", color: "var(--text-main)", fontWeight: "600" }}>
                                                                                         Municipal Corporation / District Collectorate

@@ -260,11 +260,11 @@ export default function AdminDashboard() {
                                 boxShadow: "0 0 15px rgba(16, 185, 129, 0.15)",
                             }}>
                                 <span>🔒</span>
-                                <span>{officerDistrict}, {officerState} Jurisdiction</span>
+                                <span>{officerDistrict}, {officerState} (Assigned District)</span>
                             </div>
                         </div>
                         <p style={{ marginTop: "0.35rem", color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                            Strict jurisdictional isolation: Showing verified grievances assigned to <strong>{officerDistrict} ({officerState})</strong>
+                            Showing verified complaints for <strong>{officerDistrict} ({officerState})</strong>
                         </p>
                     </div>
                     <div className="glass" style={{ padding: "0.5rem 1rem", borderRadius: "0.5rem", fontSize: "0.9rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -326,9 +326,9 @@ export default function AdminDashboard() {
 
                     {/* Right: Jurisdiction Indicator + Department + Search + Clear */}
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                        {/* Locked Jurisdiction Tag */}
+                        {/* Locked District Tag */}
                         <div
-                            title={`Confined to ${officerDistrict}, ${officerState} jurisdiction for citizen data privacy.`}
+                            title={`Showing complaints for ${officerDistrict}, ${officerState}.`}
                             style={{
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -465,7 +465,7 @@ export default function AdminDashboard() {
                                     <tr>
                                         <td colSpan={7} style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
                                             <div style={{ fontSize: "2rem", marginBottom: "0.5rem", animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</div>
-                                            <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "#a5b4fc" }}>Loading jurisdiction records...</div>
+                                            <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "#a5b4fc" }}>Loading complaints...</div>
                                             <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>Synchronizing complaints for {officerDistrict}...</div>
                                         </td>
                                     </tr>
