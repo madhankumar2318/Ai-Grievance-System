@@ -558,7 +558,7 @@ export default function ProfilePage() {
                                                 required
                                                 value={editForm.authorityRole}
                                                 onChange={e => setEditForm({ ...editForm, authorityRole: e.target.value })}
-                                                placeholder="e.g. Public Grievance Redressal Officer"
+                                                placeholder="e.g. District Collector, Municipal Officer"
                                                 style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
                                             />
                                         </div>

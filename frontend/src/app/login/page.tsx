@@ -1396,6 +1396,7 @@ export default function LoginPage() {
                                                         style={selectStyle(!!auErrors.authorityRole)}
                                                     >
                                                         <option value="">— Select Your Authority Role —</option>
+                                                        <option value="District Collector & District Magistrate">🏛️ District Collector &amp; District Magistrate</option>
                                                         <option value="Municipal Corporation Officer">🏙️ Municipal Corporation Officer</option>
                                                         <option value="Health & Sanitation Inspector">🏥 Health &amp; Sanitation Inspector</option>
                                                         <option value="Environment Protection Officer">🌿 Environment Protection Officer</option>
