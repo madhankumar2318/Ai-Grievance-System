@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ComplaintMap from "@/components/ComplaintMap";
 import ChiefPrintReport from "@/components/ChiefPrintReport";
 import ExecutiveReportModal from "@/components/ExecutiveReportModal";
 import { useLang } from "@/context/LanguageContext";
-import { getComplaintsServerAction } from "@/app/actions/complaintActions";
+import { getComplaintsServerAction, ActionTakenReportData } from "@/app/actions/complaintActions";
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -133,6 +133,9 @@ export interface ChiefComplaint {
     date: string;
     created_at: string;
     updated_at: string;
+    description?: string;
+    aiNote?: string;
+    attachments?: number;
 }
 
 export interface DbChiefComplaint {
@@ -150,6 +153,10 @@ export interface DbChiefComplaint {
 export default function ChiefDashboard() {
     const { t } = useLang();
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [viewingPhoto, setViewingPhoto] = useState<{ url: string | null; title: string; location: string; category?: string; } | null>(null);
+    const toggleRow = (id: string) => setExpandedId(prev => prev === id ? null : id);
+
     const [complaints, setComplaints] = useState<ChiefComplaint[]>(() => {
         if (typeof window !== "undefined") {
             try {
@@ -223,6 +230,9 @@ export default function ChiefDashboard() {
                     date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
                     created_at: c.created_at,
                     updated_at: c.updated_at || c.created_at,
+                    description: c.description || "",
+                    aiNote: c.ai_reasoning || "Triage engine verified complaint.",
+                    attachments: c.attachment_count || 0,
                 }));
                 setComplaints(mapped);
                 if (typeof window !== "undefined") {
@@ -643,6 +653,7 @@ export default function ChiefDashboard() {
                                             {[
                                                 t("chief_col_id"), t("chief_col_subject"), t("chief_col_citizen"),
                                                 t("chief_col_location"), t("chief_col_priority"), t("chief_col_status"), t("chief_col_date"),
+                                                "Executive Audit"
                                             ].map(h => (
                                                 <th key={h} style={{ padding: "1rem 1.25rem", fontWeight: "700", fontSize: "0.78rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
                                                     {h}
@@ -651,50 +662,420 @@ export default function ChiefDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {complaints.map((c, idx) => (
-                                            <tr
-                                                key={c.id}
-                                                className="animate-fade-in"
-                                                style={{ borderBottom: "1px solid var(--border)", animationDelay: `${idx * 30}ms`, transition: "background 0.15s ease" }}
-                                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.03)"; }}
-                                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                                            >
-                                                <td style={{ padding: "1rem 1.25rem", fontWeight: "700", fontFamily: "monospace", fontSize: "0.82rem", color: "#6366f1", whiteSpace: "nowrap" }}>{c.id}</td>
-                                                <td style={{ padding: "1rem 1.25rem" }}>
-                                                    <div style={{ fontWeight: "600", marginBottom: "0.2rem", fontSize: "0.9rem" }}>{c.subject}</div>
-                                                    <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: `${CATEGORY_COLORS[c.category] || "#6366f1"}22`, color: CATEGORY_COLORS[c.category] || "#6366f1", fontWeight: "700" }}>
-                                                        {c.category}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.user}</td>
-                                                <td style={{ padding: "1rem 1.25rem", fontSize: "0.82rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>📍 {c.location}</td>
-                                                <td style={{ padding: "1rem 1.25rem" }}>
-                                                    <span style={{ padding: "0.2rem 0.7rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: "700", background: `${PRIORITY_COLORS[c.priority] || "#f59e0b"}22`, color: PRIORITY_COLORS[c.priority] || "#f59e0b", border: `1px solid ${PRIORITY_COLORS[c.priority] || "#f59e0b"}44`, whiteSpace: "nowrap" }}>
-                                                        {priorityLabel(c.priority)}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: "1rem 1.25rem" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                        <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_DOT[c.status] || "#f59e0b", flexShrink: 0 }} />
-                                                        <span style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}>{statusLabel(c.status)}</span>
-                                                    </div>
-                                                </td>
-                                                <td style={{ padding: "1rem 1.25rem", fontSize: "0.8rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{c.date}</td>
-                                            </tr>
-                                        ))}
+                                        {complaints.map((c, idx) => {
+                                            const isExpanded = expandedId === c.id;
+                                            return (
+                                                <React.Fragment key={c.id}>
+                                                    <tr
+                                                        className="animate-fade-in"
+                                                        onClick={() => toggleRow(c.id)}
+                                                        style={{
+                                                            borderBottom: isExpanded ? "none" : "1px solid var(--border)",
+                                                            animationDelay: `${idx * 30}ms`,
+                                                            transition: "background 0.15s ease",
+                                                            cursor: "pointer",
+                                                            background: isExpanded ? "rgba(99,102,241,0.05)" : "transparent",
+                                                        }}
+                                                        onMouseEnter={e => { if (!isExpanded) (e.currentTarget as HTMLElement).style.background = "rgba(99,102,241,0.03)"; }}
+                                                        onMouseLeave={e => { if (!isExpanded) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                                                    >
+                                                        <td style={{ padding: "1rem 1.25rem", fontWeight: "700", fontFamily: "monospace", fontSize: "0.82rem", color: "#6366f1", whiteSpace: "nowrap" }}>{c.id}</td>
+                                                        <td style={{ padding: "1rem 1.25rem" }}>
+                                                            <div style={{ fontWeight: "600", marginBottom: "0.2rem", fontSize: "0.9rem" }}>{c.subject}</div>
+                                                            <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: `${CATEGORY_COLORS[c.category] || "#6366f1"}22`, color: CATEGORY_COLORS[c.category] || "#6366f1", fontWeight: "700" }}>
+                                                                {c.category}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", color: "var(--text-muted)", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.user}</td>
+                                                        <td style={{ padding: "1rem 1.25rem", fontSize: "0.82rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>📍 {c.location}</td>
+                                                        <td style={{ padding: "1rem 1.25rem" }}>
+                                                            <span style={{ padding: "0.2rem 0.7rem", borderRadius: "99px", fontSize: "0.75rem", fontWeight: "700", background: `${PRIORITY_COLORS[c.priority] || "#f59e0b"}22`, color: PRIORITY_COLORS[c.priority] || "#f59e0b", border: `1px solid ${PRIORITY_COLORS[c.priority] || "#f59e0b"}44`, whiteSpace: "nowrap" }}>
+                                                                {priorityLabel(c.priority)}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: "1rem 1.25rem" }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                                <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: STATUS_DOT[c.status] || "#f59e0b", flexShrink: 0 }} />
+                                                                <span style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}>{statusLabel(c.status)}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ padding: "1rem 1.25rem", fontSize: "0.8rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{c.date}</td>
+                                                        {/* Executive Audit CTA */}
+                                                        <td style={{ padding: "1rem 1.25rem", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
+                                                            <button
+                                                                onClick={() => toggleRow(c.id)}
+                                                                style={{
+                                                                    padding: "0.42rem 0.85rem",
+                                                                    fontSize: "0.78rem",
+                                                                    fontWeight: "700",
+                                                                    borderRadius: "0.5rem",
+                                                                    cursor: "pointer",
+                                                                    display: "inline-flex",
+                                                                    alignItems: "center",
+                                                                    gap: "0.4rem",
+                                                                    background: isExpanded
+                                                                        ? "rgba(99,102,241,0.22)"
+                                                                        : c.status === "Resolved"
+                                                                        ? "linear-gradient(135deg, rgba(16,185,129,0.18), rgba(6,182,212,0.18))"
+                                                                        : "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(168,85,247,0.18))",
+                                                                    color: isExpanded
+                                                                        ? "#e0e7ff"
+                                                                        : c.status === "Resolved"
+                                                                        ? "#34d399"
+                                                                        : "#a5b4fc",
+                                                                    border: isExpanded
+                                                                        ? "1px solid rgba(99,102,241,0.5)"
+                                                                        : c.status === "Resolved"
+                                                                        ? "1px solid rgba(16,185,129,0.4)"
+                                                                        : "1px solid rgba(99,102,241,0.3)",
+                                                                    boxShadow: isExpanded ? "none" : "0 2px 6px rgba(0,0,0,0.12)",
+                                                                    transition: "all 0.2s ease",
+                                                                }}
+                                                            >
+                                                                <span>{isExpanded ? "Close" : c.status === "Resolved" ? "Audit ATR ▾" : "Audit Case ▾"}</span>
+                                                                <span style={{ fontSize: "0.7rem", transition: "transform 0.25s ease", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* ── Executive Audit & Case File Drawer ── */}
+                                                    {isExpanded && (() => {
+                                                        const atrMatch = (c.description || "").match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+                                                        let atrData: ActionTakenReportData | null = null;
+                                                        if (atrMatch) {
+                                                            try { atrData = JSON.parse(atrMatch[1]); } catch (e) { console.error(e); }
+                                                        }
+                                                        const photoMatch = (c.description || "").match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                                                        const evidencePhoto = photoMatch ? photoMatch[1] : null;
+                                                        const cleanDesc = (c.description || "")
+                                                            .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
+                                                            .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
+                                                            .trim();
+
+                                                        return (
+                                                            <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                                                                <td colSpan={8} style={{ padding: 0 }}>
+                                                                    <div style={{
+                                                                        padding: "1.75rem 2rem",
+                                                                        background: "rgba(99,102,241,0.03)",
+                                                                        borderTop: `3px solid ${PRIORITY_COLORS[c.priority] || "#6366f1"}`,
+                                                                        animation: "slideDown 0.25s ease",
+                                                                    }}>
+                                                                        {/* Executive Header Banner */}
+                                                                        <div style={{
+                                                                            display: "flex",
+                                                                            justifyContent: "space-between",
+                                                                            alignItems: "center",
+                                                                            padding: "0.85rem 1.25rem",
+                                                                            borderRadius: "0.75rem",
+                                                                            background: "rgba(255,255,255,0.03)",
+                                                                            border: "1px solid var(--border)",
+                                                                            marginBottom: "1.25rem",
+                                                                            flexWrap: "wrap",
+                                                                            gap: "0.75rem"
+                                                                        }}>
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                                                                                <span style={{ fontSize: "1.2rem" }}>⚖️</span>
+                                                                                <div>
+                                                                                    <div style={{ fontSize: "0.92rem", fontWeight: "800", color: "#ffffff" }}>
+                                                                                        Executive Case Audit File: <span style={{ fontFamily: "monospace", color: "#a5b4fc" }}>{c.id}</span>
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                                                                        Chief oversight review · Full citizen testimony &amp; ground verification logs
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                                                <span style={{
+                                                                                    padding: "0.25rem 0.65rem",
+                                                                                    borderRadius: "99px",
+                                                                                    fontSize: "0.72rem",
+                                                                                    fontWeight: "800",
+                                                                                    background: c.status === "Resolved" ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.2)",
+                                                                                    color: c.status === "Resolved" ? "#10b981" : "#f59e0b",
+                                                                                    border: c.status === "Resolved" ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(245,158,11,0.4)",
+                                                                                }}>
+                                                                                    {c.status === "Resolved" ? "✓ GROUND WORK RESOLVED" : `STATUS: ${c.status.toUpperCase()}`}
+                                                                                </span>
+                                                                                <span style={{
+                                                                                    padding: "0.25rem 0.65rem",
+                                                                                    borderRadius: "99px",
+                                                                                    fontSize: "0.72rem",
+                                                                                    fontWeight: "800",
+                                                                                    background: `${PRIORITY_COLORS[c.priority] || "#f59e0b"}22`,
+                                                                                    color: PRIORITY_COLORS[c.priority] || "#f59e0b",
+                                                                                    border: `1px solid ${PRIORITY_COLORS[c.priority] || "#f59e0b"}44`,
+                                                                                }}>
+                                                                                    {c.priority} PRIORITY
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
+                                                                            {/* Col 1 — Citizen Description & Before Evidence */}
+                                                                            <div style={{ minWidth: 0 }}>
+                                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+                                                                                    📁 Citizen Testimony &amp; Description
+                                                                                </div>
+                                                                                <p style={{ fontSize: "0.88rem", lineHeight: "1.65", color: "var(--text-main)", margin: 0, wordBreak: "break-word" }}>
+                                                                                    {cleanDesc || "No additional description text provided."}
+                                                                                </p>
+
+                                                                                {/* Citizen Photo Evidence */}
+                                                                                {(evidencePhoto || (c.attachments && c.attachments > 0)) && (
+                                                                                    <div style={{ marginTop: "1rem", padding: "0.75rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.03)", border: "1px solid var(--border)" }}>
+                                                                                        <div style={{ fontSize: "0.72rem", fontWeight: "800", color: "#a5b4fc", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                                            <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                                                                                <span>📷</span>
+                                                                                                <span>Citizen Evidence Upload</span>
+                                                                                            </span>
+                                                                                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: "600" }}>Tap to inspect</span>
+                                                                                        </div>
+
+                                                                                        {evidencePhoto ? (
+                                                                                            <div
+                                                                                                onClick={() => setViewingPhoto({ url: evidencePhoto, title: c.subject, location: c.location, category: c.category })}
+                                                                                                style={{
+                                                                                                    position: "relative",
+                                                                                                    borderRadius: "0.5rem",
+                                                                                                    overflow: "hidden",
+                                                                                                    cursor: "pointer",
+                                                                                                    border: "1px solid rgba(99,102,241,0.3)",
+                                                                                                    maxHeight: "150px",
+                                                                                                    display: "flex",
+                                                                                                    alignItems: "center",
+                                                                                                    justifyContent: "center",
+                                                                                                    background: "#000",
+                                                                                                }}
+                                                                                            >
+                                                                                                <img
+                                                                                                    src={evidencePhoto}
+                                                                                                    alt="Citizen Uploaded Evidence"
+                                                                                                    style={{ width: "100%", maxHeight: "150px", objectFit: "cover", transition: "transform 0.2s" }}
+                                                                                                    onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.03)")}
+                                                                                                    onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+                                                                                                />
+                                                                                                <div style={{
+                                                                                                    position: "absolute", bottom: 0, left: 0, right: 0,
+                                                                                                    background: "linear-gradient(to top, rgba(0,0,0,0.85), transparent)",
+                                                                                                    padding: "0.35rem 0.6rem", fontSize: "0.7rem", color: "white",
+                                                                                                    display: "flex", alignItems: "center", justifyContent: "space-between"
+                                                                                                }}>
+                                                                                                    <span>🔍 Click to inspect photo</span>
+                                                                                                    <span style={{ color: "#4ade80", fontWeight: "700" }}>✓ Citizen Proof</span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <div style={{ padding: "0.75rem", borderRadius: "0.5rem", background: "rgba(99,102,241,0.08)", border: "1px dashed rgba(99,102,241,0.3)", textAlign: "center" }}>
+                                                                                                <div style={{ fontSize: "1.2rem", marginBottom: "0.2rem" }}>📎</div>
+                                                                                                <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "#a5b4fc" }}>Photographic Evidence Tagged</div>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Col 2 — Case Details & Geotag */}
+                                                                            <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.1rem" }}>📋 Case Geotag &amp; Metadata</div>
+                                                                                {[
+                                                                                    { icon: "📍", label: "Location", val: c.location },
+                                                                                    { icon: "📅", label: "Date Filed", val: c.date },
+                                                                                    { icon: "👤", label: "Citizen Account", val: c.user },
+                                                                                    { icon: "📂", label: "Department", val: c.category },
+                                                                                    { icon: "⏱️", label: "Last Updated", val: c.updated_at ? new Date(c.updated_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : c.date },
+                                                                                ].map(row => (
+                                                                                    <div key={row.label} style={{ display: "flex", gap: "0.5rem", fontSize: "0.83rem" }}>
+                                                                                        <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>{row.icon}</span>
+                                                                                        <span style={{ color: "var(--text-muted)", fontWeight: "600", flexShrink: 0 }}>{row.label}:</span>
+                                                                                        <span style={{ color: "var(--text-main)", wordBreak: "break-word" }}>{row.val}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+
+                                                                            {/* Col 3 — AI Triage & Chief Executive Oversight */}
+                                                                            <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                                                                                <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>🤖 AI Triage &amp; Risk Assessment</div>
+                                                                                <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: "0.75rem", padding: "0.85rem 1rem", fontSize: "0.82rem", lineHeight: "1.6", color: "var(--text-main)", wordBreak: "break-word" }}>
+                                                                                    {c.aiNote || "Automated triage completed. Priority and category verified by system."}
+                                                                                </div>
+                                                                                
+                                                                                <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)" }}>
+                                                                                    <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.4rem" }}>
+                                                                                        🏛️ Assigned Jurisdiction
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: "0.82rem", color: "var(--text-main)", fontWeight: "600" }}>
+                                                                                        Municipal Corporation / District Collectorate
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                                                                                        Field execution managed by local ward authority officers.
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* ── Official Action Taken Report (ATR) Card when Resolved ── */}
+                                                                        {atrData && (
+                                                                            <div style={{
+                                                                                marginTop: "1.5rem",
+                                                                                padding: "1.25rem 1.5rem",
+                                                                                borderRadius: "1rem",
+                                                                                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.04))",
+                                                                                border: "1.5px solid rgba(16, 185, 129, 0.35)",
+                                                                            }}>
+                                                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                                                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                                                        <span style={{ fontSize: "1.2rem" }}>✅</span>
+                                                                                        <span style={{ fontSize: "1rem", fontWeight: "800", color: "#ffffff" }}>
+                                                                                            Official Action Taken Report (ATR) — Ground Verification
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <span style={{
+                                                                                        padding: "0.2rem 0.65rem",
+                                                                                        borderRadius: "99px",
+                                                                                        background: "rgba(16, 185, 129, 0.2)",
+                                                                                        color: "#10b981",
+                                                                                        border: "1px solid rgba(16, 185, 129, 0.4)",
+                                                                                        fontSize: "0.72rem",
+                                                                                        fontWeight: "800",
+                                                                                    }}>
+                                                                                        AUDITED &amp; VERIFIED
+                                                                                    </span>
+                                                                                </div>
+
+                                                                                <div style={{
+                                                                                    display: "grid",
+                                                                                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                                                                                    gap: "0.75rem",
+                                                                                    marginBottom: "1rem",
+                                                                                    padding: "0.85rem 1rem",
+                                                                                    borderRadius: "0.65rem",
+                                                                                    background: "rgba(0,0,0,0.3)",
+                                                                                    border: "1px solid rgba(255,255,255,0.06)",
+                                                                                }}>
+                                                                                    <div>
+                                                                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700" }}>
+                                                                                            👷 Executing Staff / Engineer
+                                                                                        </div>
+                                                                                        <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#ffffff", marginTop: "0.15rem" }}>
+                                                                                            {atrData.officerName || "Municipal Field Officer"}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700" }}>
+                                                                                            📅 Official Resolution Timestamp
+                                                                                        </div>
+                                                                                        <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#ffffff", marginTop: "0.15rem" }}>
+                                                                                            {atrData.resolvedAt ? new Date(atrData.resolvedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : c.date}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700" }}>
+                                                                                            🏢 Executing Department
+                                                                                        </div>
+                                                                                        <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#ffffff", marginTop: "0.15rem" }}>
+                                                                                            {atrData.department || c.category}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div style={{ marginBottom: "1rem" }}>
+                                                                                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "800", marginBottom: "0.3rem" }}>
+                                                                                        📝 Action Taken &amp; Work Executed:
+                                                                                    </div>
+                                                                                    <div style={{
+                                                                                        fontSize: "0.88rem",
+                                                                                        lineHeight: "1.6",
+                                                                                        color: "var(--text-main)",
+                                                                                        padding: "0.75rem 1rem",
+                                                                                        borderRadius: "0.65rem",
+                                                                                        background: "rgba(255,255,255,0.03)",
+                                                                                        border: "1px solid rgba(255,255,255,0.08)",
+                                                                                        wordBreak: "break-word",
+                                                                                    }}>
+                                                                                        {atrData.actionDescription}
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {/* Before vs After Photo Proof Comparison */}
+                                                                                <div style={{ marginTop: "1rem" }}>
+                                                                                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "800", marginBottom: "0.5rem" }}>
+                                                                                        📸 Resolution Proof &amp; Photographic Evidence Verification
+                                                                                    </div>
+                                                                                    <div style={{ display: "grid", gridTemplateColumns: evidencePhoto && atrData.resolutionPhoto ? "1fr 1fr" : "1fr", gap: "1rem", maxWidth: "600px" }}>
+                                                                                        {evidencePhoto && (
+                                                                                            <div
+                                                                                                onClick={() => setViewingPhoto({ url: evidencePhoto, title: "Citizen Evidence (Before)", location: c.location, category: c.category })}
+                                                                                                style={{
+                                                                                                    borderRadius: "0.65rem",
+                                                                                                    overflow: "hidden",
+                                                                                                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                                                                                                    background: "#000",
+                                                                                                    cursor: "pointer",
+                                                                                                }}
+                                                                                            >
+                                                                                                <div style={{ padding: "0.3rem 0.6rem", background: "rgba(239, 68, 68, 0.2)", fontSize: "0.68rem", fontWeight: "800", color: "#f87171" }}>
+                                                                                                    BEFORE (CITIZEN EVIDENCE)
+                                                                                                </div>
+                                                                                                <img src={evidencePhoto} alt="Before" style={{ width: "100%", height: "130px", objectFit: "cover" }} />
+                                                                                            </div>
+                                                                                        )}
+                                                                                        {atrData.resolutionPhoto && (
+                                                                                            <div
+                                                                                                onClick={() => setViewingPhoto({ url: atrData.resolutionPhoto!, title: "Official Resolution (After)", location: c.location, category: c.category })}
+                                                                                                style={{
+                                                                                                    borderRadius: "0.65rem",
+                                                                                                    overflow: "hidden",
+                                                                                                    border: "1px solid rgba(16, 185, 129, 0.5)",
+                                                                                                    background: "#000",
+                                                                                                    cursor: "pointer",
+                                                                                                }}
+                                                                                            >
+                                                                                                <div style={{ padding: "0.3rem 0.6rem", background: "rgba(16, 185, 129, 0.2)", fontSize: "0.68rem", fontWeight: "800", color: "#34d399" }}>
+                                                                                                    AFTER (OFFICIAL RESOLUTION PROOF)
+                                                                                                </div>
+                                                                                                <img src={atrData.resolutionPhoto} alt="After" style={{ width: "100%", height: "130px", objectFit: "cover" }} />
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })()}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
 
-                            {/* Mobile View (Cards list) */}
+                            {/* Mobile View (Cards list with Expandable Audit File) */}
                             <div className="chief-mobile-cards">
                                 {complaints.map((c) => {
                                     const statusDotColor = STATUS_DOT[c.status] || "#f59e0b";
+                                    const isExpanded = expandedId === c.id;
+                                    const atrMatch = (c.description || "").match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+                                    let atrData: ActionTakenReportData | null = null;
+                                    if (atrMatch) {
+                                        try { atrData = JSON.parse(atrMatch[1]); } catch {}
+                                    }
+                                    const photoMatch = (c.description || "").match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                                    const evidencePhoto = photoMatch ? photoMatch[1] : null;
+                                    const cleanDesc = (c.description || "")
+                                        .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
+                                        .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
+                                        .trim();
+
                                     return (
                                         <div
                                             key={c.id}
-                                            className="chief-mobile-card"
-                                            style={{ borderTop: `4px solid ${PRIORITY_COLORS[c.priority] || "#6366f1"}` }}
+                                            className={`chief-mobile-card${isExpanded ? " chief-mobile-card--expanded" : ""}`}
+                                            onClick={() => toggleRow(c.id)}
+                                            style={{ borderTop: `4px solid ${PRIORITY_COLORS[c.priority] || "#6366f1"}`, cursor: "pointer" }}
                                         >
                                             <div className="chief-mobile-card-header">
                                                 <span className="chief-mobile-card-id">{c.id}</span>
@@ -720,6 +1101,84 @@ export default function ChiefDashboard() {
                                                 <span>👤 {c.user.length > 28 ? c.user.substring(0, 26) + "..." : c.user}</span>
                                                 <span>📍 {c.location}</span>
                                             </div>
+
+                                            <div style={{ marginTop: "0.5rem", textAlign: "right" }}>
+                                                <span style={{ fontSize: "0.75rem", color: "#a5b4fc", fontWeight: "700" }}>
+                                                    {isExpanded ? "Close Audit ▲" : "Tap to Audit Case ▼"}
+                                                </span>
+                                            </div>
+
+                                            {/* Expand details in mobile */}
+                                            {isExpanded && (
+                                                <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid var(--border)" }}>
+                                                    <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "0.3rem" }}>
+                                                        Description
+                                                    </div>
+                                                    <p style={{ fontSize: "0.82rem", lineHeight: "1.5", color: "var(--text-main)", margin: "0 0 0.5rem 0", wordBreak: "break-word" }}>
+                                                        {cleanDesc || "No description provided."}
+                                                    </p>
+
+                                                    {/* Evidence photo */}
+                                                    {evidencePhoto && (
+                                                        <div style={{ marginBottom: "0.75rem" }}>
+                                                            <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "#a5b4fc", marginBottom: "0.25rem" }}>
+                                                                📷 Citizen Evidence
+                                                            </div>
+                                                            <div
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setViewingPhoto({ url: evidencePhoto, title: c.subject, location: c.location, category: c.category });
+                                                                }}
+                                                                style={{ borderRadius: "0.5rem", overflow: "hidden", maxHeight: "130px", cursor: "pointer", border: "1px solid rgba(99,102,241,0.3)" }}
+                                                            >
+                                                                <img src={evidencePhoto} alt="Evidence" style={{ width: "100%", maxHeight: "130px", objectFit: "cover" }} />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* AI Triage Note */}
+                                                    <div style={{ marginBottom: "0.75rem" }}>
+                                                        <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "var(--text-muted)", marginBottom: "0.25rem" }}>
+                                                            🤖 AI Triage Note
+                                                        </div>
+                                                        <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", borderRadius: "0.5rem", padding: "0.5rem 0.75rem", fontSize: "0.76rem", lineHeight: "1.4", color: "var(--text-main)" }}>
+                                                            {c.aiNote || "Automated triage completed."}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* ATR Card in Mobile */}
+                                                    {atrData && (
+                                                        <div style={{
+                                                            padding: "0.75rem",
+                                                            borderRadius: "0.65rem",
+                                                            background: "rgba(16, 185, 129, 0.08)",
+                                                            border: "1px solid rgba(16, 185, 129, 0.35)",
+                                                        }}>
+                                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                                                                <span style={{ fontSize: "0.82rem", fontWeight: "800", color: "#ffffff" }}>✅ Action Taken Report</span>
+                                                                <span style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem", borderRadius: "99px", background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: "800" }}>VERIFIED</span>
+                                                            </div>
+                                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.2rem" }}>
+                                                                👷 <strong>{atrData.officerName || "Municipal Field Officer"}</strong>
+                                                            </div>
+                                                            <div style={{ fontSize: "0.78rem", color: "var(--text-main)", lineHeight: "1.4", marginBottom: "0.5rem", wordBreak: "break-word" }}>
+                                                                {atrData.actionDescription}
+                                                            </div>
+                                                            {atrData.resolutionPhoto && (
+                                                                <div
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setViewingPhoto({ url: atrData.resolutionPhoto!, title: "Resolution Proof", location: c.location, category: c.category });
+                                                                    }}
+                                                                    style={{ borderRadius: "0.5rem", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.4)", cursor: "pointer" }}
+                                                                >
+                                                                    <img src={atrData.resolutionPhoto} alt="After" style={{ width: "100%", maxHeight: "120px", objectFit: "cover" }} />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -758,6 +1217,94 @@ export default function ChiefDashboard() {
                 trendData={trendData}
                 priorityCounts={priorityCounts}
             />
+
+            {/* Photo Lightbox Modal */}
+            {viewingPhoto && (
+                <div
+                    style={{
+                        position: "fixed", inset: 0, zIndex: 99999,
+                        background: "rgba(5, 5, 12, 0.9)", backdropFilter: "blur(12px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: "1rem"
+                    }}
+                    onClick={() => setViewingPhoto(null)}
+                >
+                    <div
+                        style={{
+                            maxWidth: "720px", width: "100%", background: "var(--bg-card, #1e293b)",
+                            borderRadius: "1.1rem", border: "1px solid var(--border)",
+                            overflow: "hidden", boxShadow: "0 25px 60px -15px rgba(0,0,0,0.8)",
+                            animation: "zoomIn 0.2s ease",
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div style={{
+                            padding: "0.9rem 1.25rem", borderBottom: "1px solid var(--border)",
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            background: "rgba(255,255,255,0.02)"
+                        }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                    📷 Executive Photographic Evidence Audit
+                                </h3>
+                                <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                    {viewingPhoto.title}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setViewingPhoto(null)}
+                                style={{
+                                    background: "transparent", border: "none", color: "var(--text-muted)",
+                                    fontSize: "1.3rem", cursor: "pointer", padding: "0.2rem 0.5rem",
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Modal Body / Image */}
+                        <div style={{ padding: "1.25rem", textAlign: "center", background: "#0b0f19" }}>
+                            {viewingPhoto.url ? (
+                                <img
+                                    src={viewingPhoto.url}
+                                    alt="Evidence Full View"
+                                    style={{ maxWidth: "100%", maxHeight: "65vh", borderRadius: "0.5rem", objectFit: "contain", border: "1px solid rgba(255,255,255,0.1)" }}
+                                />
+                            ) : (
+                                <div style={{ padding: "3rem 1.5rem", textAlign: "center" }}>
+                                    <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>📸</div>
+                                    <h4 style={{ color: "var(--text-main)", margin: "0 0 0.5rem 0", fontSize: "1.1rem" }}>
+                                        {viewingPhoto.category || "Civic"} Evidence Tagged
+                                    </h4>
+                                    <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", maxWidth: "420px", margin: "0 auto 1.25rem auto", lineHeight: 1.5 }}>
+                                        Citizen recorded photographic evidence with this grievance. Location timestamp geotag: <strong>{viewingPhoto.location || "Recorded"}</strong>.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div style={{
+                            padding: "0.85rem 1.25rem", borderTop: "1px solid var(--border)",
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            fontSize: "0.75rem", color: "var(--text-muted)", background: "rgba(255,255,255,0.02)"
+                        }}>
+                            <span>📍 Geotag: {viewingPhoto.location}</span>
+                            <button
+                                onClick={() => setViewingPhoto(null)}
+                                style={{
+                                    padding: "0.4rem 0.9rem", borderRadius: "0.5rem",
+                                    background: "rgba(255,255,255,0.1)", border: "1px solid var(--border)",
+                                    color: "var(--text-main)", fontSize: "0.78rem", cursor: "pointer", fontWeight: "600"
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </main>
 
