@@ -177,13 +177,10 @@ Output ONLY valid JSON (no markdown, no extra text):
     }
   }
 
-  // High-entropy tracking ID: GRV-YYYY-XXXXXX (unguessable, prevents IDOR enumeration)
-  const randomSuffix = Array.from(crypto.getRandomValues(new Uint8Array(4)))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase();
+  // Govt-style tracking ID: GRV-YYYY-XXXXX (e.g. GRV-2026-58392)
+  const randomNum = 10000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000);
   const year = new Date().getFullYear();
-  const complaintId = `GRV-${year}-${randomSuffix}`;
+  const complaintId = `GRV-${year}-${randomNum}`;
   const now = new Date().toISOString();
 
   // 3. Persist to Supabase Database

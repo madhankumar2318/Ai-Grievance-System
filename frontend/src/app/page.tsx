@@ -767,12 +767,9 @@ export default function Home() {
       }
     } catch (err) {
       console.warn("Server action failed, using client fallback:", err);
-      const randomSuffix = Array.from(crypto.getRandomValues(new Uint8Array(4)))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")
-        .toUpperCase();
+      const randomNum = 10000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000);
       const year = new Date().getFullYear();
-      const fallbackId = `GRV-${year}-${randomSuffix}`;
+      const fallbackId = `GRV-${year}-${randomNum}`;
       const fallbackResult = {
         success: true,
         data: {
