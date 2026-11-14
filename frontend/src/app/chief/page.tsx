@@ -150,8 +150,24 @@ export interface DbChiefComplaint {
 export default function ChiefDashboard() {
     const { t } = useLang();
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
-    const [complaints, setComplaints] = useState<ChiefComplaint[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [complaints, setComplaints] = useState<ChiefComplaint[]>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const cached = sessionStorage.getItem("gs_chief_complaints_cache");
+                if (cached) return JSON.parse(cached);
+            } catch {}
+        }
+        return [];
+    });
+    const [loading, setLoading] = useState(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const cached = sessionStorage.getItem("gs_chief_complaints_cache");
+                if (cached && JSON.parse(cached).length > 0) return false;
+            } catch {}
+        }
+        return true;
+    });
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
@@ -192,11 +208,11 @@ export default function ChiefDashboard() {
 
     /* ── Fetch from Supabase / Spring Boot ────────────────────────────────────────────── */
     const fetchComplaints = async () => {
-        setLoading(true);
+        if (complaints.length === 0) setLoading(true);
         try {
             const res = await getComplaintsServerAction();
             if (res.success && res.complaints) {
-                setComplaints(res.complaints.map((c) => ({
+                const mapped: ChiefComplaint[] = res.complaints.map((c) => ({
                     id: c.id,
                     subject: c.subject,
                     category: c.category || "Other",
@@ -207,7 +223,13 @@ export default function ChiefDashboard() {
                     date: c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
                     created_at: c.created_at,
                     updated_at: c.updated_at || c.created_at,
-                })));
+                }));
+                setComplaints(mapped);
+                if (typeof window !== "undefined") {
+                    try {
+                        sessionStorage.setItem("gs_chief_complaints_cache", JSON.stringify(mapped));
+                    } catch {}
+                }
                 setLastRefresh(new Date());
             }
         } catch (err) {
@@ -353,8 +375,26 @@ export default function ChiefDashboard() {
                     )}
                 </div>
 
-                {/* ── Analytics Charts ── */}
-                {!loading && total > 0 && (
+                {/* ── Analytics Charts (Space Pre-allocated & Skeleton Supported) ── */}
+                {loading && complaints.length === 0 ? (
+                    <div className="chief-analytics-section no-print" style={{ marginBottom: "3rem" }}>
+                        <div style={{ height: "26px", width: "220px", borderRadius: "0.5rem", background: "rgba(99,102,241,0.15)", marginBottom: "1.5rem" }} />
+                        {/* Area Chart Skeleton */}
+                        <div className="glass chief-trend-card" style={{ height: "280px", borderRadius: "1.25rem", marginBottom: "1.5rem", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                            <div style={{ fontSize: "1.5rem", animation: "spin 1.5s linear infinite" }}>⏳</div>
+                            <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", fontWeight: "600" }}>Loading system telemetry &amp; velocity analytics...</div>
+                        </div>
+                        {/* 2-Column Row Skeletons */}
+                        <div className="chief-charts-row">
+                            <div className="glass" style={{ height: "260px", borderRadius: "1.25rem", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Analyzing priority distribution...</div>
+                            </div>
+                            <div className="glass" style={{ height: "260px", borderRadius: "1.25rem", background: "rgba(255,255,255,0.02)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <div style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Analyzing category telemetry...</div>
+                            </div>
+                        </div>
+                    </div>
+                ) : total > 0 ? (
                     <div className="chief-analytics-section" style={{ marginBottom: "3rem" }}>
                         <h2 className="no-print" style={{ fontSize: "1.5rem", fontWeight: "800", marginBottom: "1.5rem" }}>
                             📊 <span className="gradient-text">Analytics Overview</span>
@@ -434,7 +474,7 @@ export default function ChiefDashboard() {
                                                         onMouseLeave={() => setActiveIndex(null)}
                                                     >
                                                         {pieData.map((entry, index) => (
-                                                            <Cell
+                                                             <Cell
                                                                 key={entry.name}
                                                                 fill={CATEGORY_COLORS[entry.name] || "#6366f1"}
                                                                 opacity={activeIndex === null || activeIndex === index ? 1 : 0.5}
@@ -464,7 +504,7 @@ export default function ChiefDashboard() {
                             </div>
                         </div>
                     </div>
-                )}
+                ) : null}
 
                 {/* ── Empty state (no complaints yet) ── */}
                 {!loading && total === 0 && (
@@ -477,7 +517,15 @@ export default function ChiefDashboard() {
 
                 {/* ── Interactive Complaint Map ── */}
                 <div className="glass no-print" style={{ padding: "2rem", borderRadius: "1.5rem", marginBottom: "3rem" }}>
-                    <ComplaintMap title={t("map_title")} subtitle={t("map_subtitle")} initialComplaints={complaints} />
+                    {loading && complaints.length === 0 ? (
+                        <div style={{ height: "460px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "rgba(99,102,241,0.02)", borderRadius: "1rem" }}>
+                            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem", animation: "bounce 1.5s infinite" }}>🗺️</div>
+                            <div style={{ fontWeight: "700", color: "#a5b4fc", fontSize: "1rem" }}>Initializing Geographic Surveillance Map...</div>
+                            <div style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>Plotting verified jurisdiction coordinates and telemetry</div>
+                        </div>
+                    ) : (
+                        <ComplaintMap title={t("map_title")} subtitle={t("map_subtitle")} initialComplaints={complaints} />
+                    )}
                 </div>
 
                 {/* ── Category + Officers Row ── */}
