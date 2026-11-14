@@ -60,11 +60,12 @@ export async function submitComplaintServerAction(params: SubmitComplaintParams)
   const location = cleanLocation;
   const email = cleanEmail;
 
-  // 1. Try Java Spring Boot REST API first if running
+  // 1. Try Java Spring Boot REST API first only if reachable
   const springBootUrl = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
-  try {
+  const shouldTryBoot = !springBootUrl.includes("localhost") || (!process.env.VERCEL && process.env.NODE_ENV !== "production");
+  if (shouldTryBoot) try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // Fast 2s check
+    const timeoutId = setTimeout(() => controller.abort(), 400); // Fast 2s check
     const res = await fetch(`${springBootUrl}/api/complaints`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

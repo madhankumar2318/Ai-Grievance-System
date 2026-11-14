@@ -24,6 +24,20 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publi
 const SPRING_BOOT_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
 
 /**
+ * Fast-path check: On Vercel cloud / production, localhost does not exist.
+ * Skipping dead localhost timeouts cuts 2.5 to 5.0 seconds off page loading.
+ */
+function shouldAttemptSpringBoot(): boolean {
+  if (!SPRING_BOOT_URL) return false;
+  const isLocalhost = SPRING_BOOT_URL.includes("localhost") || SPRING_BOOT_URL.includes("127.0.0.1");
+  const isCloudOrProd = !!process.env.VERCEL || process.env.NODE_ENV === "production";
+  if (isLocalhost && isCloudOrProd) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Server-side PII masking helper.
  * Runs on the server before any JSON is serialised to the browser.
  * e.g. "rajan.kumar@gmail.com" → "r***r@gmail.com"
@@ -64,36 +78,38 @@ export async function getComplaintsServerAction(): Promise<{
     };
   }
 
-  // 1. Try Java Spring Boot REST API first if running locally
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+  // 1. Try Java Spring Boot REST API only if reachable (local dev with Spring Boot active)
+  if (shouldAttemptSpringBoot()) {
+    try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get("auth_token")?.value;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch(`${SPRING_BOOT_URL}/api/complaints`, {
-      method: "GET",
-      headers,
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    clearTimeout(timeoutId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 400); // Fast 400ms local timeout
+      const res = await fetch(`${SPRING_BOOT_URL}/api/complaints`, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+        cache: "no-store",
+      });
+      clearTimeout(timeoutId);
 
-    if (res.ok) {
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : data.complaints || [];
-      if (list.length > 0) {
-        return {
-          success: true,
-          complaints: list,
-          source: "spring-boot",
-        };
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data.complaints || [];
+        if (list.length > 0) {
+          return {
+            success: true,
+            complaints: list,
+            source: "spring-boot",
+          };
+        }
       }
+    } catch {
+      // Spring Boot offline, proceed with direct Supabase fetch
     }
-  } catch {
-    // Spring Boot offline or on Vercel cloud, proceed with direct Supabase fetch
   }
 
   // 2. Direct Supabase Cloud REST API Fetch
@@ -262,14 +278,14 @@ export async function updateComplaintStatusServerAction(
   }
 
   // 5. Try Java Spring Boot REST API
-  try {
+  if (shouldAttemptSpringBoot()) try {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 400);
     const res = await fetch(`${SPRING_BOOT_URL}/api/complaints/update-status`, {
       method: "POST",
       headers,

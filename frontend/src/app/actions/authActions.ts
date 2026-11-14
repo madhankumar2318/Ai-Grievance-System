@@ -7,6 +7,20 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
 const SPRING_BOOT_URL = process.env.NEXT_PUBLIC_SPRING_BOOT_URL || "http://localhost:8080";
+
+/**
+ * Fast-path check: On Vercel cloud / production, localhost does not exist.
+ * Skipping dead localhost timeouts cuts 2.5 to 5.0 seconds off page loading.
+ */
+function shouldAttemptSpringBoot(): boolean {
+  if (!SPRING_BOOT_URL) return false;
+  const isLocalhost = SPRING_BOOT_URL.includes("localhost") || SPRING_BOOT_URL.includes("127.0.0.1");
+  const isCloudOrProd = !!process.env.VERCEL || process.env.NODE_ENV === "production";
+  if (isLocalhost && isCloudOrProd) {
+    return false;
+  }
+  return true;
+}
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret === "default_super_secret_key_change_me_in_production") {
@@ -178,9 +192,9 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
   }
 
   // 1. Try Java Spring Boot REST API first if running locally
-  try {
+  if (shouldAttemptSpringBoot()) try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 400);
     const res = await fetch(`${SPRING_BOOT_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

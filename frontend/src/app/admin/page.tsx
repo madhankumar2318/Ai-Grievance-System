@@ -129,6 +129,9 @@ export default function AdminDashboard() {
                     aiNote: c.ai_reasoning || "Triage complete.",
                 }));
                 setComplaints(mapped);
+                try {
+                    sessionStorage.setItem("cached_admin_complaints", JSON.stringify(mapped));
+                } catch {}
             }
         } catch (err) {
             console.error("Error fetching complaints in admin dashboard:", err);
@@ -138,6 +141,18 @@ export default function AdminDashboard() {
     };
 
     useEffect(() => {
+        // Fast-path: instantly load cached records from session storage (< 5ms)
+        try {
+            const cached = sessionStorage.getItem("cached_admin_complaints");
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setComplaints(parsed);
+                    setLoading(false);
+                }
+            }
+        } catch {}
+
         fetchComplaints();
     }, []);
 
@@ -268,7 +283,7 @@ export default function AdminDashboard() {
                             <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px", borderRadius: "10px", background: grad, fontSize: "1.1rem", marginBottom: "0.75rem", boxShadow: `0 4px 12px ${color}44` }}>
                                 {icon}
                             </div>
-                            <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{value}</div>
+                            <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35 }}>—</span> : value}</div>
                             <div style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-muted)" }}>{label}</div>
                         </div>
                     ))}
@@ -446,7 +461,15 @@ export default function AdminDashboard() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.length === 0 ? (
+                                {loading && complaints.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+                                            <div style={{ fontSize: "2rem", marginBottom: "0.5rem", animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</div>
+                                            <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "#a5b4fc" }}>Loading jurisdiction records...</div>
+                                            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>Synchronizing complaints for {officerDistrict}...</div>
+                                        </td>
+                                    </tr>
+                                ) : filtered.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} style={{ padding: "3.5rem 1.5rem", textAlign: "center", color: "var(--text-muted)" }}>
                                             <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🔍</div>
