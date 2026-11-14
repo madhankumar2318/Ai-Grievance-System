@@ -455,7 +455,7 @@ export default function AdminDashboard() {
                         <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                             <thead>
                                 <tr style={{ background: "rgba(99,102,241,0.05)", borderBottom: "1px solid var(--border)" }}>
-                                    {[t("admin_col_id"), t("admin_col_subject"), t("admin_col_citizen"), t("admin_col_priority"), t("admin_col_status"), t("admin_col_attachments"), t("admin_col_actions"), ""].map((h, i) => (
+                                    {[t("admin_col_id"), t("admin_col_subject"), t("admin_col_citizen"), t("admin_col_priority"), t("admin_col_status"), t("admin_col_attachments"), t("admin_col_actions")].map((h, i) => (
                                         <th key={i} style={{ padding: "1.1rem 1.25rem", fontWeight: "700", fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
                                     ))}
                                 </tr>
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
                             <tbody>
                                 {loading && complaints.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
+                                        <td colSpan={7} style={{ padding: "3.5rem 1.5rem", textAlign: "center" }}>
                                             <div style={{ fontSize: "2rem", marginBottom: "0.5rem", animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</div>
                                             <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "#a5b4fc" }}>Loading jurisdiction records...</div>
                                             <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>Synchronizing complaints for {officerDistrict}...</div>
@@ -471,7 +471,7 @@ export default function AdminDashboard() {
                                     </tr>
                                 ) : filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={8} style={{ padding: "3.5rem 1.5rem", textAlign: "center", color: "var(--text-muted)" }}>
+                                        <td colSpan={7} style={{ padding: "3.5rem 1.5rem", textAlign: "center", color: "var(--text-muted)" }}>
                                             <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🔍</div>
                                             <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "var(--text-main)" }}>No matching complaints found</div>
                                             <div style={{ fontSize: "0.8rem", marginTop: "0.25rem", color: "var(--text-muted)" }}>
@@ -544,37 +544,61 @@ export default function AdminDashboard() {
                                                     )}
                                                 </td>
                                                 {/* Actions */}
-                                                <td style={{ padding: "1.1rem 1.25rem" }} onClick={e => e.stopPropagation()}>
-                                                    {c.status === "Resolved" ? (
-                                                        <span style={{ color: "#10b981", fontWeight: "700", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>✅ {t("admin_done")}</span>
-                                                    ) : c.status === "Rejected" ? (
-                                                        <span style={{ color: "#ef4444", fontWeight: "700", fontSize: "0.82rem" }}>✕ Rejected</span>
-                                                    ) : (
-                                                        <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                                                            <button
-                                                                className="btn btn-primary"
-                                                                style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem" }}
-                                                                onClick={() => handleOpenResolveModal(c)}
-                                                            >{t("admin_resolve")}</button>
-                                                            <button
-                                                                style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
-                                                                onClick={() => updateStatus(c.id, "Rejected")}
-                                                                onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
-                                                                onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
-                                                            >✕ Reject</button>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                {/* Chevron */}
-                                                <td style={{ padding: "1.1rem 0.75rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.8rem" }}>
-                                                    <span style={{ display: "inline-block", transition: "transform 0.3s ease", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                                                <td style={{ padding: "1.1rem 1.25rem", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
+                                                    <button
+                                                        onClick={() => toggleRow(c.id)}
+                                                        style={{
+                                                            padding: "0.45rem 0.95rem",
+                                                            fontSize: "0.78rem",
+                                                            fontWeight: "700",
+                                                            borderRadius: "0.5rem",
+                                                            cursor: "pointer",
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: "0.4rem",
+                                                            background: isExpanded
+                                                                ? "rgba(99,102,241,0.22)"
+                                                                : c.status === "Resolved" || c.status === "Rejected"
+                                                                ? "rgba(255,255,255,0.06)"
+                                                                : "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(168,85,247,0.18))",
+                                                            color: isExpanded
+                                                                ? "#e0e7ff"
+                                                                : c.status === "Resolved" || c.status === "Rejected"
+                                                                ? "var(--text-muted)"
+                                                                : "#a5b4fc",
+                                                            border: isExpanded
+                                                                ? "1px solid rgba(99,102,241,0.5)"
+                                                                : c.status === "Resolved" || c.status === "Rejected"
+                                                                ? "1px solid var(--border)"
+                                                                : "1px solid rgba(99,102,241,0.3)",
+                                                            boxShadow: isExpanded ? "none" : "0 2px 6px rgba(0,0,0,0.1)",
+                                                            transition: "all 0.2s ease",
+                                                        }}
+                                                        onMouseEnter={e => {
+                                                            if (!isExpanded) {
+                                                                e.currentTarget.style.background = c.status === "Resolved" || c.status === "Rejected"
+                                                                    ? "rgba(255,255,255,0.1)"
+                                                                    : "linear-gradient(135deg, rgba(99,102,241,0.28), rgba(168,85,247,0.28))";
+                                                            }
+                                                        }}
+                                                        onMouseLeave={e => {
+                                                            if (!isExpanded) {
+                                                                e.currentTarget.style.background = c.status === "Resolved" || c.status === "Rejected"
+                                                                    ? "rgba(255,255,255,0.06)"
+                                                                    : "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(168,85,247,0.18))";
+                                                            }
+                                                        }}
+                                                    >
+                                                        <span>{isExpanded ? "Close Details" : c.status === "Resolved" || c.status === "Rejected" ? "View Details" : "Inspect & Review"}</span>
+                                                        <span style={{ fontSize: "0.72rem", transition: "transform 0.25s ease", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
+                                                    </button>
                                                 </td>
                                             </tr>
 
                                             {/* ── Detail Panel ── */}
                                             {isExpanded && (
                                                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                                                    <td colSpan={8} style={{ padding: 0 }}>
+                                                    <td colSpan={7} style={{ padding: 0 }}>
                                                         <div style={{
                                                             padding: "1.5rem 2rem",
                                                             background: "rgba(99,102,241,0.03)",
