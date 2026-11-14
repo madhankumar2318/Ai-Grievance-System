@@ -41,6 +41,16 @@ export const DISTRICTS_BY_STATE: Record<string, string[]> = {
 
 export const INDIAN_STATES: string[] = Object.keys(DISTRICTS_BY_STATE).sort();
 
+/* ── Official 38 Districts of Tamil Nadu ─────────────────────────────────── */
+export const TAMIL_NADU_DISTRICTS: string[] = [
+    "Ariyalur", "Chengalpattu", "Chennai", "Coimbatore", "Cuddalore", "Dharmapuri", "Dindigul",
+    "Erode", "Kallakurichi", "Kancheepuram", "Karur", "Krishnagiri", "Madurai", "Mayiladuthurai",
+    "Nagapattinam", "Namakkal", "Nilgiris", "Perambalur", "Pudukkottai", "Ramanathapuram",
+    "Ranipet", "Salem", "Sivaganga", "Tenkasi", "Thanjavur", "Theni", "Thoothukudi",
+    "Tiruchirappalli", "Tirunelveli", "Tirupathur", "Tiruppur", "Tiruvallur", "Tiruvannamalai",
+    "Tiruvarur", "Vellore", "Viluppuram", "Virudhunagar"
+];
+
 /* ── Popular Towns / Taluks by District ───────────────────────────────────── */
 export const TOWNS_BY_DISTRICT: Record<string, string[]> = {
     // Tamil Nadu

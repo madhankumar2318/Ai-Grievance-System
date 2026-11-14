@@ -945,7 +945,7 @@ export default function Home() {
                           cursor: "pointer",
                         }}
                       >
-                        <option value="">-- Select District --</option>
+                        <option value="">-- Select Tamil Nadu District --</option>
                         {districtsList.map((d) => (
                           <option key={d} value={d} style={{ background: "#1e293b", color: "#fff" }}>
                             {d}

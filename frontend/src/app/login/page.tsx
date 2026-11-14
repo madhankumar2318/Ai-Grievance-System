@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useLang } from "@/context/LanguageContext";
 import { registerUserServerAction, loginUserServerAction } from "@/app/actions/authActions";
-import { DISTRICTS_BY_STATE, INDIAN_STATES } from "@/lib/indiaGeoData";
+import { DISTRICTS_BY_STATE, INDIAN_STATES, TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 
 
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
         name: "", email: "", phone: "",
         dob: "",                              // Date of Birth
         idType: "aadhaar", idNumber: "",
-        state: "", district: "", pincode: "",
+        state: "Tamil Nadu", district: "", pincode: "",
         password: "", confirm: "",
         otpToken: "",
     });
@@ -168,7 +168,7 @@ export default function LoginPage() {
     const [au, setAu] = useState({
         name: "", email: "", phone: "",
         authorityRole: "", serviceId: "",
-        workingPlace: "", state: "", district: "",
+        workingPlace: "", state: "Tamil Nadu", district: "",
         password: "", confirm: "",
         passcode: "",
         otpToken: "",
@@ -487,8 +487,7 @@ export default function LoginPage() {
             return false;
         }
 
-        if (!su.state) errs.state = "Please select your state.";
-        if (!su.district.trim()) errs.district = "District name is required.";
+        if (!su.district.trim()) errs.district = "Please select your Tamil Nadu district.";
         if (!/^\d{6}$/.test(su.pincode)) errs.pincode = "Enter a valid 6-digit pincode.";
         if (Object.keys(errs).length > 0) {
             setSuStep(3);
@@ -524,8 +523,7 @@ export default function LoginPage() {
         if (!au.serviceId.trim()) errs.serviceId = "Service Card ID is required.";
         else if (au.serviceId.trim().length < 5) errs.serviceId = "Service Card ID must be at least 5 characters.";
         if (!au.workingPlace.trim()) errs.workingPlace = "Working place / office name is required.";
-        if (!au.state) errs.state = "Please select your state.";
-        if (!au.district.trim()) errs.district = "District name is required.";
+        if (!au.district.trim()) errs.district = "Please select your assigned Tamil Nadu district.";
         if (!au.passcode.trim()) errs.passcode = "Department security passcode is required.";
         if (Object.keys(errs).length > 0) {
             setAuStep(2);
@@ -735,6 +733,8 @@ export default function LoginPage() {
                 phone: ch.phone,
                 serviceId: ch.officerId.trim().toUpperCase(),
                 passcode: ch.passcode,
+                state: "Tamil Nadu",
+                district: "All 38 Districts",
             });
 
             if (res.success && res.user) {
@@ -1204,26 +1204,19 @@ export default function LoginPage() {
                                         <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.12)" }}>
                                             <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#10b981", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>📍 Location Details</div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                                                <Field label="State" icon="🗺️" error={suErrors.state}>
-                                                    <select
-                                                        value={su.state}
-                                                        onChange={e => { setSuField("state", e.target.value); setSuField("district", ""); }}
-                                                        style={selectStyle(!!suErrors.state)}
-                                                    >
-                                                        <option value="">— Select State / UT —</option>
-                                                        {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                                                    </select>
-                                                </Field>
-                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.9rem", borderRadius: "0.65rem", background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.25)", fontSize: "0.84rem", color: "#a5b4fc", fontWeight: "700" }}>
+                                                    <span>🗺️ State: <strong style={{ color: "white" }}>Tamil Nadu</strong></span>
+                                                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "auto" }}>Official Grievance Portal</span>
+                                                </div>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "0.75rem" }}>
                                                     <Field label="District" icon="🏘️" error={suErrors.district}>
                                                         <select
                                                             value={su.district}
                                                             onChange={e => setSuField("district", e.target.value)}
                                                             style={selectStyle(!!suErrors.district)}
-                                                            disabled={!su.state}
                                                         >
-                                                            <option value="">{su.state ? "— Select District —" : "— Select State first —"}</option>
-                                                            {(DISTRICTS_BY_STATE[su.state] || []).map(d => <option key={d} value={d}>{d}</option>)}
+                                                            <option value="">— Select District —</option>
+                                                            {TAMIL_NADU_DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
                                                         </select>
                                                     </Field>
                                                     <Field label="Pincode" icon="📮" error={suErrors.pincode}>
@@ -1439,29 +1432,20 @@ export default function LoginPage() {
                                                     </Field>
                                                 </div>
 
-                                                {/* State + District */}
-                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                                                    <Field label="State" icon="🗺️" error={auErrors.state}>
-                                                        <select
-                                                            value={au.state}
-                                                            onChange={e => { setAuField("state", e.target.value); setAuField("district", ""); }}
-                                                            style={selectStyle(!!auErrors.state)}
-                                                        >
-                                                            <option value="">— Select State —</option>
-                                                            {Object.keys(DISTRICTS_BY_STATE).sort().map(s => (
-                                                                <option key={s} value={s}>{s}</option>
-                                                            ))}
-                                                        </select>
-                                                    </Field>
-                                                    <Field label="District" icon="📍" error={auErrors.district}>
+                                                {/* State Badge & District */}
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.9rem", borderRadius: "0.65rem", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", fontSize: "0.84rem", color: "#fb923c", fontWeight: "700" }}>
+                                                    <span>🗺️ State: <strong style={{ color: "white" }}>Tamil Nadu</strong></span>
+                                                    <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "auto" }}>Government of Tamil Nadu</span>
+                                                </div>
+                                                <div>
+                                                    <Field label="Assigned District Jurisdiction" icon="📍" error={auErrors.district}>
                                                         <select
                                                             value={au.district}
                                                             onChange={e => setAuField("district", e.target.value)}
-                                                            disabled={!au.state}
                                                             style={selectStyle(!!auErrors.district)}
                                                         >
-                                                            <option value="">{au.state ? "— Select District —" : "Select state first"}</option>
-                                                            {(DISTRICTS_BY_STATE[au.state] || []).map((d: string) => (
+                                                            <option value="">— Select Assigned District —</option>
+                                                            {TAMIL_NADU_DISTRICTS.map(d => (
                                                                 <option key={d} value={d}>{d}</option>
                                                             ))}
                                                         </select>
@@ -1656,6 +1640,10 @@ export default function LoginPage() {
                                     <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                         <div style={{ padding: "1rem", borderRadius: "0.875rem", background: "rgba(244,63,94,0.05)", border: "1px solid rgba(244,63,94,0.12)" }}>
                                             <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#f43f5e", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🪪 Officer Identification</div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.9rem", borderRadius: "0.65rem", background: "rgba(236,72,153,0.08)", border: "1px solid rgba(236,72,153,0.25)", fontSize: "0.84rem", color: "#f43f5e", fontWeight: "700", marginBottom: "0.875rem" }}>
+                                                <span>⭐ Jurisdiction: <strong style={{ color: "white" }}>Tamil Nadu (All 38 Districts)</strong></span>
+                                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "auto" }}>State Headquarters</span>
+                                            </div>
                                             <Field label="Officer ID" icon="⭐" error={chErrors.officerId}>
                                                 <input
                                                     style={{ ...inputStyle(!!chErrors.officerId), fontFamily: "monospace", letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "1rem", fontWeight: "700" }}

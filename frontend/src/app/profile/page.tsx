@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { getUserComplaintsServerAction, getComplaintsServerAction } from "@/app/actions/complaintActions";
 import { getFullUserProfileServerAction, updateUserProfileServerAction } from "@/app/actions/authActions";
+import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 
 const ROLE_CONFIG = {
     user: { label: "Citizen", icon: "👤", color: "#6366f1", gradient: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
@@ -562,19 +563,20 @@ export default function ProfilePage() {
                                             />
                                         </div>
 
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "0.75rem" }}>
                                             <div>
                                                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                    📍 District / Jurisdiction Place
+                                                    📍 District Jurisdiction
                                                 </label>
-                                                <input
-                                                    type="text"
-                                                    required
+                                                <select
                                                     value={editForm.district}
                                                     onChange={e => setEditForm({ ...editForm, district: e.target.value })}
-                                                    placeholder="e.g. Tiruchirappalli"
                                                     style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
-                                                />
+                                                >
+                                                    {TAMIL_NADU_DISTRICTS.map(d => (
+                                                        <option key={d} value={d}>{d}</option>
+                                                    ))}
+                                                </select>
                                             </div>
 
                                             <div>
@@ -583,11 +585,9 @@ export default function ProfilePage() {
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    required
-                                                    value={editForm.state}
-                                                    onChange={e => setEditForm({ ...editForm, state: e.target.value })}
-                                                    placeholder="e.g. Tamil Nadu"
-                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                                    disabled
+                                                    value="Tamil Nadu"
+                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed" }}
                                                 />
                                             </div>
                                         </div>

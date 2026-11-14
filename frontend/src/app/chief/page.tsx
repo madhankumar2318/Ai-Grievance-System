@@ -7,6 +7,7 @@ import ChiefPrintReport from "@/components/ChiefPrintReport";
 import ExecutiveReportModal from "@/components/ExecutiveReportModal";
 import { useLang } from "@/context/LanguageContext";
 import { getComplaintsServerAction, ActionTakenReportData } from "@/app/actions/complaintActions";
+import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 import {
     AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -177,6 +178,7 @@ export default function ChiefDashboard() {
     });
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
     const [isViewerOpen, setIsViewerOpen] = useState(false);
+    const [selectedDistrictFilter, setSelectedDistrictFilter] = useState("all");
     const [isPrinting, setIsPrinting] = useState(false);
     const isPrintStatePushed = useRef(false);
 
@@ -306,6 +308,12 @@ export default function ChiefDashboard() {
         }));
     }, [complaints]);
 
+    const filteredComplaints = useMemo(() => {
+        if (selectedDistrictFilter === "all") return complaints;
+        const dLower = selectedDistrictFilter.toLowerCase();
+        return complaints.filter(c => (c.location || "").toLowerCase().includes(dLower));
+    }, [complaints, selectedDistrictFilter]);
+
     /* ── Render ─────────────────────────────────────────────────────────── */
     const statusLabel = (s: string) =>
         s === "Pending" ? t("status_pending") : s === "In Progress" ? t("status_in_progress") : s === "Resolved" ? t("status_resolved") : s;
@@ -323,9 +331,16 @@ export default function ChiefDashboard() {
                     <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.5rem" }}>
                             <span style={{ fontSize: "2.5rem" }}>⭐</span>
-                            <h1 className="gradient-text" style={{ fontSize: "2.5rem" }}>{t("chief_title")}</h1>
+                            <div>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.2rem 0.65rem", borderRadius: "99px", background: "rgba(236,72,153,0.12)", color: "#ec4899", fontSize: "0.72rem", fontWeight: "800", marginBottom: "0.25rem" }}>
+                                    🏛️ Government of Tamil Nadu · State Command
+                                </div>
+                                <h1 className="gradient-text" style={{ fontSize: "2.35rem", margin: 0 }}>{t("chief_title")}</h1>
+                            </div>
                         </div>
-                        <p style={{ color: "var(--text-muted)", marginLeft: "3.5rem" }}>{t("chief_subtitle")}</p>
+                        <p style={{ color: "var(--text-muted)", marginLeft: "3.5rem" }}>
+                            State-wide grievance analytics and district authority oversight across all 38 districts of Tamil Nadu
+                        </p>
                         {lastRefresh && (
                             <p style={{ color: "var(--text-faint)", marginLeft: "3.5rem", fontSize: "0.75rem", marginTop: "0.25rem" }}>
                                 🔄 Live data · Last synced {lastRefresh.toLocaleTimeString("en-IN")}
@@ -622,16 +637,40 @@ export default function ChiefDashboard() {
 
                 {/* ── All Complaints Table ── */}
                 <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
-                    <div className="chief-table-header-block" style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="chief-table-header-block" style={{ padding: "1.25rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
                         <div>
                             <h3 style={{ margin: 0 }}>{t("chief_all_grievances")}</h3>
                             <p style={{ margin: "0.3rem 0 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
                                 👆 Click any grievance row to view full case details &amp; Action Taken Reports
                             </p>
                         </div>
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                            {loading ? "Loading..." : `${total} ${t("chief_complaints_total")}`}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: "600" }}>📍 District:</span>
+                                <select
+                                    value={selectedDistrictFilter}
+                                    onChange={e => setSelectedDistrictFilter(e.target.value)}
+                                    style={{
+                                        padding: "0.4rem 0.8rem",
+                                        borderRadius: "0.5rem",
+                                        fontSize: "0.8rem",
+                                        fontWeight: "700",
+                                        background: "var(--bg-main)",
+                                        color: "var(--text-main)",
+                                        border: "1px solid var(--border)",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <option value="all">Tamil Nadu (All 38 Districts)</option>
+                                    {TAMIL_NADU_DISTRICTS.map(d => (
+                                        <option key={d} value={d}>{d}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
+                                {loading ? "Loading..." : `${filteredComplaints.length} of ${total} complaints`}
+                            </span>
+                        </div>
                     </div>
 
                     {loading && (
@@ -666,7 +705,7 @@ export default function ChiefDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {complaints.map((c, idx) => {
+                                        {filteredComplaints.map((c, idx) => {
                                             const isExpanded = expandedId === c.id;
                                             return (
                                                 <React.Fragment key={c.id}>
@@ -1023,7 +1062,7 @@ export default function ChiefDashboard() {
 
                             {/* Mobile View (Cards list with Expandable Audit File) */}
                             <div className="chief-mobile-cards">
-                                {complaints.map((c) => {
+                                {filteredComplaints.map((c) => {
                                     const statusDotColor = STATUS_DOT[c.status] || "#f59e0b";
                                     const isExpanded = expandedId === c.id;
                                     const atrMatch = (c.description || "").match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
