@@ -499,23 +499,6 @@ export default function Navbar() {
                                         >
                                             📋 {user.role === "user" ? "My Grievances" : "My Profile"}
                                         </Link>
-                                        {user.role === "chief" && (
-                                            <Link
-                                                href="/chief"
-                                                onClick={() => setShowUserMenu(false)}
-                                                style={{
-                                                    display: "flex", alignItems: "center", gap: "0.5rem",
-                                                    padding: "0.65rem 1rem", textDecoration: "none",
-                                                    fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)",
-                                                    borderBottom: "1px solid var(--border)",
-                                                    transition: "background 0.15s",
-                                                }}
-                                                onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-main)"; }}
-                                                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                                            >
-                                                ⭐ Chief Dashboard
-                                            </Link>
-                                        )}
                                         {/* Logout */}
                                         <button
                                             onClick={() => { setShowUserMenu(false); handleLogout(); }}
