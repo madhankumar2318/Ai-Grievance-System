@@ -555,7 +555,7 @@ export default function AdminDashboard() {
                                                                 className="btn btn-primary"
                                                                 style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem" }}
                                                                 onClick={() => handleOpenResolveModal(c)}
-                                                            >✓ {t("admin_resolve")}</button>
+                                                            >{t("admin_resolve")}</button>
                                                             <button
                                                                 style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
                                                                 onClick={() => updateStatus(c.id, "Rejected")}
@@ -843,7 +843,7 @@ export default function AdminDashboard() {
                                                     style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem" }}
                                                     onClick={() => handleOpenResolveModal(c)}
                                                 >
-                                                    ✓ Resolve
+                                                    {t("admin_resolve")}
                                                 </button>
                                                 <button
                                                     style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700" }}
@@ -997,6 +997,15 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Action Taken Report (ATR) & Proof of Resolution Modal */}
+            <ActionTakenReportModal
+                isOpen={!!resolvingComplaint}
+                onClose={() => setResolvingComplaint(null)}
+                complaint={resolvingComplaint}
+                officerDistrict={officerDistrict}
+                onResolveSuccess={handleResolveSuccess}
+            />
 
         </ProtectedRoute>
     );
