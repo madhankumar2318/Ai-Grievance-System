@@ -59,7 +59,7 @@ export interface DbAdminComplaint {
 }
 
 export default function AdminDashboard() {
-    const { t } = useLang();
+    const { t, lang } = useLang();
     const { user } = useAuth();
     const [complaints, setComplaints] = useState<AdminComplaint[]>([]);
     const [loading, setLoading] = useState(true);
@@ -204,7 +204,7 @@ export default function AdminDashboard() {
         { label: t("admin_pending"), value: pending, color: "#f59e0b", icon: "⏳", grad: "linear-gradient(135deg,#f59e0b,#f97316)" },
         { label: t("admin_in_progress"), value: inProgress, color: "#6366f1", icon: "🔄", grad: "linear-gradient(135deg,#06b6d4,#6366f1)" },
         { label: t("admin_resolved"), value: resolved, color: "#10b981", icon: "✅", grad: "linear-gradient(135deg,#10b981,#06b6d4)" },
-        { label: "Rejected", value: rejected, color: "#ef4444", icon: "✕", grad: "linear-gradient(135deg,#ef4444,#f97316)" },
+        { label: t("admin_rejected"), value: rejected, color: "#ef4444", icon: "✕", grad: "linear-gradient(135deg,#ef4444,#f97316)" },
     ];
 
     const FILTERS = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
@@ -277,8 +277,8 @@ export default function AdminDashboard() {
 
                 {/* ── Stat Cards ── */}
                 <div className="stagger-children admin-stats-grid">
-                    {STATS.map(({ label, value, color, icon, grad }) => (
-                        <div key={label} className="glass card-hover animate-fade-in" style={{ padding: "1.75rem 1.25rem", borderRadius: "var(--radius)", textAlign: "center", borderTop: `3px solid ${color}`, position: "relative", overflow: "hidden" }}>
+                    {STATS.map(({ label, value, color, icon, grad }, idx) => (
+                        <div key={`${lang}-${idx}`} className="glass card-hover animate-fade-in" style={{ padding: "1.75rem 1.25rem", borderRadius: "var(--radius)", textAlign: "center", borderTop: `3px solid ${color}`, position: "relative", overflow: "hidden" }}>
                             <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "80px", height: "80px", borderRadius: "50%", background: `${color}18`, filter: "blur(20px)" }} />
                             <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px", borderRadius: "10px", background: grad, fontSize: "1.1rem", marginBottom: "0.75rem", boxShadow: `0 4px 12px ${color}44` }}>
                                 {icon}

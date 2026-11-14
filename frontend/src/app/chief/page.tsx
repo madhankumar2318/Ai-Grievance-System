@@ -152,7 +152,7 @@ export interface DbChiefComplaint {
 }
 
 export default function ChiefDashboard() {
-    const { t } = useLang();
+    const { t, lang } = useLang();
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [viewingPhoto, setViewingPhoto] = useState<{ url: string | null; title: string; location: string; category?: string; } | null>(null);
@@ -389,12 +389,12 @@ export default function ChiefDashboard() {
                         Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
                     ) : (
                         <>
-                            <StatCard icon="📋" label={t("chief_total")}       value={total}         color="#6366f1" />
-                            <StatCard icon="⏳" label={t("chief_pending")}     value={pending}       color="#f59e0b" />
-                            <StatCard icon="🔄" label={t("chief_in_progress")} value={inProgress}    color="#6366f1" />
-                            <StatCard icon="✅" label={t("chief_resolved")}    value={resolved}      color="#10b981" />
-                            <StatCard icon="🚨" label={t("chief_critical")}    value={critical}      color="#ef4444" />
-                            <StatCard icon="📈" label="Resolution Rate"        value={`${resolutionRate}%`} color="#06b6d4"
+                            <StatCard key={`${lang}-total`} icon="📋" label={t("chief_total")}       value={total}         color="#6366f1" />
+                            <StatCard key={`${lang}-pending`} icon="⏳" label={t("chief_pending")}     value={pending}       color="#f59e0b" />
+                            <StatCard key={`${lang}-in_progress`} icon="🔄" label={t("chief_in_progress")} value={inProgress}    color="#6366f1" />
+                            <StatCard key={`${lang}-resolved`} icon="✅" label={t("chief_resolved")}    value={resolved}      color="#10b981" />
+                            <StatCard key={`${lang}-critical`} icon="🚨" label={t("chief_critical")}    value={critical}      color="#ef4444" />
+                            <StatCard key={`${lang}-rate`} icon="📈" label={t("chief_resolution_rate")} value={`${resolutionRate}%`} color="#06b6d4"
                                 sub={total > 0 ? `${resolved} of ${total} resolved` : "No data yet"} />
                         </>
                     )}

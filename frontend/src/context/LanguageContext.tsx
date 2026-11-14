@@ -30,7 +30,7 @@ export type TranslationKey =
     | "btn_track_status" | "btn_new_complaint" | "btn_file_complaint"
     | "notif_title" | "notif_enable" | "notif_enabled"
     | "admin_title" | "admin_subtitle" | "admin_active_officers"
-    | "admin_total" | "admin_pending" | "admin_in_progress" | "admin_resolved"
+    | "admin_total" | "admin_pending" | "admin_in_progress" | "admin_resolved" | "admin_rejected"
     | "admin_col_id" | "admin_col_subject" | "admin_col_citizen" | "admin_col_priority"
     | "admin_col_status" | "admin_col_attachments" | "admin_col_actions"
     | "admin_resolve" | "admin_done"
@@ -40,13 +40,13 @@ export type TranslationKey =
     | "login_authority_label" | "login_authority_desc"
     | "login_chief_label" | "login_chief_desc"
     | "chief_title" | "chief_subtitle" | "chief_export_pdf"
-    | "chief_total" | "chief_pending" | "chief_in_progress" | "chief_resolved" | "chief_critical"
+    | "chief_total" | "chief_pending" | "chief_in_progress" | "chief_resolved" | "chief_critical" | "chief_resolution_rate"
     | "chief_category_breakdown" | "chief_authority_status"
     | "chief_all_grievances" | "chief_complaints_total"
     | "chief_col_id" | "chief_col_subject" | "chief_col_citizen" | "chief_col_location"
     | "chief_col_priority" | "chief_col_status" | "chief_col_date"
     | "chief_active" | "chief_busy" | "chief_available" | "chief_active_cases"
-    | "status_pending" | "status_in_progress" | "status_resolved"
+    | "status_pending" | "status_in_progress" | "status_resolved" | "status_rejected"
     | "priority_critical" | "priority_high" | "priority_medium" | "priority_low";
 
 type Translations = Record<TranslationKey, string>;
@@ -112,6 +112,7 @@ const translations: Record<Language, Translations> = {
         admin_pending: "Pending",
         admin_in_progress: "In Progress",
         admin_resolved: "Resolved",
+        admin_rejected: "Rejected",
         admin_col_id: "ID",
         admin_col_subject: "Subject & Category",
         admin_col_citizen: "Citizen",
@@ -143,6 +144,7 @@ const translations: Record<Language, Translations> = {
         chief_in_progress: "In Progress",
         chief_resolved: "Resolved",
         chief_critical: "Critical",
+        chief_resolution_rate: "Resolution Rate",
         chief_category_breakdown: "📊 Category Breakdown",
         chief_authority_status: "🏗️ Authority Status",
         chief_all_grievances: "🗂️ All System Grievances",
@@ -161,6 +163,7 @@ const translations: Record<Language, Translations> = {
         status_pending: "Pending",
         status_in_progress: "In Progress",
         status_resolved: "Resolved",
+        status_rejected: "Rejected",
         priority_critical: "Critical",
         priority_high: "High",
         priority_medium: "Medium",
@@ -226,6 +229,7 @@ const translations: Record<Language, Translations> = {
         admin_pending: "நிலுவையில்",
         admin_in_progress: "நடைபெறுகிறது",
         admin_resolved: "தீர்க்கப்பட்டது",
+        admin_rejected: "நிராகரிக்கப்பட்டது",
         admin_col_id: "ஐடி",
         admin_col_subject: "தலைப்பு & வகை",
         admin_col_citizen: "குடிமகன்",
@@ -257,6 +261,7 @@ const translations: Record<Language, Translations> = {
         chief_in_progress: "நடைபெறுகிறது",
         chief_resolved: "தீர்க்கப்பட்டது",
         chief_critical: "குரிப்பிட்டம்",
+        chief_resolution_rate: "தீர்வு விகிதம்",
         chief_category_breakdown: "📊 வகை பகுப்பு",
         chief_authority_status: "🏗️ அதிகார நிலை",
         chief_all_grievances: "🗂️ அனைத்து புகார்கள்",
@@ -275,6 +280,7 @@ const translations: Record<Language, Translations> = {
         status_pending: "நிலுவையில்",
         status_in_progress: "நடைபெறுகிறது",
         status_resolved: "தீர்க்கப்பட்டது",
+        status_rejected: "நிராகரிக்கப்பட்டது",
         priority_critical: "குரிப்பிட்டம்",
         priority_high: "உயர்வு",
         priority_medium: "மத்திமம்",
