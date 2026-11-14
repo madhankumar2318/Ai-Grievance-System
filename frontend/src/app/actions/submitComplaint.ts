@@ -178,10 +178,9 @@ Output ONLY valid JSON (no markdown, no extra text):
     }
   }
 
-  // Govt-style tracking ID: GRV-YYYY-XXXXX (e.g. GRV-2026-58392)
+  // 5-digit Tracking ID: GRV-XXXXX (e.g. GRV-49033)
   const randomNum = 10000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000);
-  const year = new Date().getFullYear();
-  const complaintId = `GRV-${year}-${randomNum}`;
+  const complaintId = `GRV-${randomNum}`;
   const now = new Date().toISOString();
 
   // 3. Persist to Supabase Database

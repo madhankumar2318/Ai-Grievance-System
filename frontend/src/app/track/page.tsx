@@ -311,7 +311,7 @@ export default function TrackPage() {
                 {/* Tip row */}
                 <div style={{ marginTop: "0.75rem", textAlign: "center", fontSize: "0.78rem", color: "var(--text-muted)" }}>
                     💡 Enter the Complaint ID you received when submitting your grievance (e.g.&nbsp;
-                    <span style={{ fontFamily: "monospace", fontWeight: "700", color: "var(--primary)" }}>GRV-2026-58392</span>)
+                    <span style={{ fontFamily: "monospace", fontWeight: "700", color: "var(--primary)" }}>GRV-49033</span>)
                 </div>
             </div>
 

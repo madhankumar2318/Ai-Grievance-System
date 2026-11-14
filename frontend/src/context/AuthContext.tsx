@@ -12,6 +12,11 @@ export interface AuthUser {
     role: UserRole;
     state?: string;
     district?: string;
+    authorityRole?: string;
+    serviceId?: string;
+    workingPlace?: string;
+    phone?: string;
+    department?: string;
 }
 
 interface AuthContextType {
@@ -59,12 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = (authUser: AuthUser) => {
         setUser(authUser);
-        // Only store safe metadata — NO passwords ever stored here
-        localStorage.setItem("grievance_user", JSON.stringify({
-            username: authUser.username,
-            email: authUser.email,
-            role: authUser.role,
-        }));
+        // Store full non-sensitive metadata (no passwords)
+        localStorage.setItem("grievance_user", JSON.stringify(authUser));
     };
 
     const logout = async () => {

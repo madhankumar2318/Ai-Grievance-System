@@ -43,9 +43,8 @@ public class ComplaintService {
 
     @Transactional
     public Map<String, Object> createComplaint(ComplaintRequest request) {
-        String randomSuffix = java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        int year = java.time.Year.now().getValue();
-        String complaintId = "GRV-" + year + "-" + randomSuffix;
+        int randomDigits = 10000 + new java.security.SecureRandom().nextInt(90000);
+        String complaintId = "GRV-" + randomDigits;
 
         // Sanitize all incoming user inputs
         String safeSubject = sanitizeInput(request.getSubject(), 200);

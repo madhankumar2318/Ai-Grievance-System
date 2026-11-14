@@ -70,7 +70,18 @@ export async function signJWT(payload: { email: string; username: string; role: 
   return `${encodedHeader}.${encodedPayload}.${encodedSignature}`;
 }
 
-async function setAuthCookie(user: { email: string; username: string; role: string; state?: string; district?: string }) {
+async function setAuthCookie(user: {
+  email: string;
+  username: string;
+  role: string;
+  state?: string;
+  district?: string;
+  authorityRole?: string;
+  serviceId?: string;
+  workingPlace?: string;
+  phone?: string;
+  department?: string;
+}) {
   try {
     const token = await signJWT(user);
     const cookieStore = await cookies();
@@ -320,16 +331,49 @@ export async function loginUserServerAction(credentials: {
 
   // Demo accounts (only active when explicitly enabled in environment)
   const isDemoEnabled = process.env.ENABLE_DEMO_ACCOUNTS === "true" || process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-  const DEMO_USERS: Record<string, { name: string; pass: string; role: string; state?: string; district?: string }> = {
+  const DEMO_USERS: Record<string, {
+    name: string;
+    pass: string;
+    role: string;
+    state?: string;
+    district?: string;
+    authorityRole?: string;
+    serviceId?: string;
+    workingPlace?: string;
+    phone?: string;
+    department?: string;
+  }> = {
     "user@demo.com": { name: "Rahul Sharma", pass: "user123", role: "user", state: "Tamil Nadu", district: "Tiruchirappalli" },
-    "authority@demo.com": { name: "Officer Priya", pass: "auth123", role: "authority", state: "Tamil Nadu", district: "Tiruchirappalli" },
+    "authority@demo.com": {
+      name: "Officer Priya",
+      pass: "auth123",
+      role: "authority",
+      state: "Tamil Nadu",
+      district: "Tiruchirappalli",
+      authorityRole: "Assistant Municipal Commissioner",
+      serviceId: "TN-GOV-2024-8841",
+      workingPlace: "Tiruchirappalli City Municipal Corporation",
+      phone: "+91 98401 23456",
+      department: "Public Grievance Redressal Division",
+    },
     "chief@demo.com": { name: "Chief Kumar", pass: "chief123", role: "chief", state: "Tamil Nadu", district: "All Districts" },
   };
 
   if (isDemoEnabled && DEMO_USERS[email]) {
     const demo = DEMO_USERS[email];
     if (demo.role === role && demo.pass === password) {
-      const user = { email, username: demo.name, role: demo.role, state: demo.state, district: demo.district };
+      const user = {
+        email,
+        username: demo.name,
+        role: demo.role,
+        state: demo.state,
+        district: demo.district,
+        authorityRole: demo.authorityRole,
+        serviceId: demo.serviceId,
+        workingPlace: demo.workingPlace,
+        phone: demo.phone,
+        department: demo.department,
+      };
       await setAuthCookie(user);
       return { success: true, user };
     }
@@ -389,6 +433,11 @@ export async function loginUserServerAction(credentials: {
             role: user.role,
             state: user.state || (role === "authority" ? "Tamil Nadu" : undefined),
             district: user.district || (role === "authority" ? "Tiruchirappalli" : undefined),
+            authorityRole: user.authority_role || (role === "authority" ? "Public Grievance Redressal Officer" : undefined),
+            serviceId: user.service_id || (role === "authority" ? "TN-AUTH-2024-8841" : undefined),
+            workingPlace: user.working_place || (role === "authority" ? `${user.district || "Tiruchirappalli"} Municipal Administration Office` : undefined),
+            phone: user.phone || undefined,
+            department: user.department || (role === "authority" ? "Municipal Administration & Grievance Cell" : undefined),
           };
           await setAuthCookie(authUser);
           console.log(
@@ -423,7 +472,18 @@ export async function loginUserServerAction(credentials: {
  */
 export async function getVerifiedSessionServerAction(): Promise<{
   authenticated: boolean;
-  user: { email: string; username: string; role: "user" | "authority" | "chief"; state?: string; district?: string } | null;
+  user: {
+    email: string;
+    username: string;
+    role: "user" | "authority" | "chief";
+    state?: string;
+    district?: string;
+    authorityRole?: string;
+    serviceId?: string;
+    workingPlace?: string;
+    phone?: string;
+    department?: string;
+  } | null;
 }> {
   try {
     const cookieStore = await cookies();
@@ -468,6 +528,11 @@ export async function getVerifiedSessionServerAction(): Promise<{
         role: payload.role,
         state: payload.state || undefined,
         district: payload.district || undefined,
+        authorityRole: payload.authorityRole || undefined,
+        serviceId: payload.serviceId || undefined,
+        workingPlace: payload.workingPlace || undefined,
+        phone: payload.phone || undefined,
+        department: payload.department || undefined,
       },
     };
   } catch (err) {
@@ -518,4 +583,105 @@ export async function logoutServerAction() {
     console.error("Failed to delete auth cookie:", err);
     return { success: false };
   }
+}
+
+/**
+ * Fetch complete user profile from Supabase including authority designation, working place, and district
+ */
+export async function getFullUserProfileServerAction(): Promise<{
+  success: boolean;
+  user?: any;
+  error?: string;
+}> {
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Not authenticated" };
+  }
+  const email = session.user.email.toLowerCase().trim();
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=*`,
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (res.ok) {
+      const users = await res.json();
+      if (Array.isArray(users) && users.length > 0) {
+        const u = users[0];
+        return {
+          success: true,
+          user: {
+            ...session.user,
+            username: u.username || session.user.username,
+            phone: u.phone || session.user.phone,
+            state: u.state || session.user.state,
+            district: u.district || session.user.district,
+            authorityRole: u.authority_role || session.user.authorityRole,
+            serviceId: u.service_id || session.user.serviceId,
+            workingPlace: u.working_place || session.user.workingPlace,
+            created_at: u.created_at,
+          },
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Fetch full profile error:", err);
+  }
+  return { success: true, user: session.user };
+}
+
+/**
+ * Update user profile details and refresh session cookie
+ */
+export async function updateUserProfileServerAction(data: {
+  username?: string;
+  phone?: string;
+  state?: string;
+  district?: string;
+  authorityRole?: string;
+  serviceId?: string;
+  workingPlace?: string;
+  department?: string;
+}): Promise<{ success: boolean; user?: any; error?: string }> {
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Not authenticated" };
+  }
+  const email = session.user.email.toLowerCase().trim();
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify({
+          ...(data.username && { username: data.username }),
+          ...(data.phone && { phone: data.phone }),
+          ...(data.state && { state: data.state }),
+          ...(data.district && { district: data.district }),
+          ...(data.authorityRole && { authority_role: data.authorityRole }),
+          ...(data.serviceId && { service_id: data.serviceId }),
+          ...(data.workingPlace && { working_place: data.workingPlace }),
+        }),
+      }
+    );
+  } catch (err) {
+    console.warn("Supabase profile update warning:", err);
+  }
+
+  const updatedUser = {
+    ...session.user,
+    ...data,
+  };
+  await setAuthCookie(updatedUser);
+  return { success: true, user: updatedUser };
 }

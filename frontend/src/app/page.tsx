@@ -768,8 +768,7 @@ export default function Home() {
     } catch (err) {
       console.warn("Server action failed, using client fallback:", err);
       const randomNum = 10000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 90000);
-      const year = new Date().getFullYear();
-      const fallbackId = `GRV-${year}-${randomNum}`;
+      const fallbackId = `GRV-${randomNum}`;
       const fallbackResult = {
         success: true,
         data: {
