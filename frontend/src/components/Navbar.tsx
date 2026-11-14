@@ -160,6 +160,7 @@ export default function Navbar() {
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
+                                <NavLink href="/profile" active={isActive("/profile")}>📋 My Grievances</NavLink>
                             </>)}
                             {user?.role === "authority" && (
                                 <NavLink href="/admin" active={isActive("/admin")}>🛡️ Authority Portal</NavLink>
@@ -481,6 +482,23 @@ export default function Navbar() {
                                             <div style={{ fontWeight: "700", fontSize: "0.875rem" }}>{user.username}</div>
                                             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>{user.email}</div>
                                         </div>
+
+                                        {/* My Grievances & Profile link */}
+                                        <Link
+                                            href="/profile"
+                                            onClick={() => setShowUserMenu(false)}
+                                            style={{
+                                                display: "flex", alignItems: "center", gap: "0.5rem",
+                                                padding: "0.65rem 1rem", textDecoration: "none",
+                                                fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)",
+                                                borderBottom: "1px solid var(--border)",
+                                                transition: "background 0.15s",
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-main)"; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                                        >
+                                            📋 {user.role === "user" ? "My Grievances" : "My Profile"}
+                                        </Link>
                                         {user.role === "authority" && (
                                             <Link
                                                 href="/admin"
@@ -580,6 +598,13 @@ export default function Navbar() {
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 🔍 {t("nav_track")}
+                            </Link>
+                            <Link
+                                href="/profile"
+                                className={`mobile-menu-drawer-item${isActive("/profile") ? " mobile-menu-drawer-item--active" : ""}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                📋 My Grievances
                             </Link>
                         </>
                     )}

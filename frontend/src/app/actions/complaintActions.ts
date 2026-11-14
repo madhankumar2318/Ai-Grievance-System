@@ -516,44 +516,46 @@ export async function getUserComplaintsServerAction(targetEmail?: string): Promi
     };
   }
 
-  // 3. Try Spring Boot REST API
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
-    const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
+  // 3. Try Spring Boot REST API (only when reachable, skipping dead localhost on Vercel cloud)
+  if (shouldAttemptSpringBoot()) {
+    try {
+      const cookieStore = await cookies();
+      const token = cookieStore.get("auth_token")?.value;
+      const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch(
-      `${SPRING_BOOT_URL}/api/complaints/user/${encodeURIComponent(requestedEmail)}`,
-      { method: "GET", headers: reqHeaders, signal: controller.signal, cache: "no-store" }
-    );
-    clearTimeout(timeoutId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 400);
+      const res = await fetch(
+        `${SPRING_BOOT_URL}/api/complaints/user/${encodeURIComponent(requestedEmail)}`,
+        { method: "GET", headers: reqHeaders, signal: controller.signal, cache: "no-store" }
+      );
+      clearTimeout(timeoutId);
 
-    if (res.ok) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data: any = await res.json();
-      const list = Array.isArray(data) ? data : data.complaints || [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapped: DbComplaintRecord[] = list.map((c: any) => ({
-        id: c.id,
-        subject: c.subject ?? "",
-        description: c.description ?? "",
-        category: c.category ?? "Other",
-        priority: c.priority ?? "Medium",
-        status: c.status ?? "Pending",
-        user_email: c.userEmail ?? c.user_email ?? requestedEmail,
-        location: c.location ?? "",
-        attachment_count: c.attachmentCount ?? c.attachment_count ?? 0,
-        created_at: c.createdAt ?? c.created_at ?? new Date().toISOString(),
-        updated_at: c.updatedAt ?? c.updated_at ?? c.createdAt ?? c.created_at,
-        ai_reasoning: c.aiReasoning ?? c.ai_reasoning ?? "",
-      }));
-      return { success: true, complaints: mapped };
+      if (res.ok) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data: any = await res.json();
+        const list = Array.isArray(data) ? data : data.complaints || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mapped: DbComplaintRecord[] = list.map((c: any) => ({
+          id: c.id,
+          subject: c.subject ?? "",
+          description: c.description ?? "",
+          category: c.category ?? "Other",
+          priority: c.priority ?? "Medium",
+          status: c.status ?? "Pending",
+          user_email: c.userEmail ?? c.user_email ?? requestedEmail,
+          location: c.location ?? "",
+          attachment_count: c.attachmentCount ?? c.attachment_count ?? 0,
+          created_at: c.createdAt ?? c.created_at ?? new Date().toISOString(),
+          updated_at: c.updatedAt ?? c.updated_at ?? c.createdAt ?? c.created_at,
+          ai_reasoning: c.aiReasoning ?? c.ai_reasoning ?? "",
+        }));
+        return { success: true, complaints: mapped };
+      }
+    } catch {
+      // Spring Boot offline — fall through to Supabase
     }
-  } catch {
-    // Spring Boot offline — fall through to Supabase
   }
 
   // 4. Try Supabase cloud database
