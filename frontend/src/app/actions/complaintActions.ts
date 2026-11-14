@@ -157,9 +157,18 @@ const VALID_COMPLAINT_STATUSES = new Set([
  *  3. Rate limiting — 30 updates per minute per IP (anti-mass-tampering).
  *  4. Structured security audit log on every call (allowed or blocked).
  */
+export interface ActionTakenReportData {
+  actionDescription: string;
+  officerName: string;
+  department?: string;
+  resolvedAt: string;
+  resolutionPhoto?: string | null;
+}
+
 export async function updateComplaintStatusServerAction(
   id: string,
-  newStatus: "Pending" | "In Progress" | "Under Review" | "Resolved" | "Escalated" | "Rejected"
+  newStatus: "Pending" | "In Progress" | "Under Review" | "Resolved" | "Escalated" | "Rejected",
+  atr?: ActionTakenReportData | null
 ): Promise<{ success: boolean; error?: string }> {
   const ip = await getClientIp();
 
@@ -213,6 +222,45 @@ export async function updateComplaintStatusServerAction(
 
   const now = new Date().toISOString();
 
+  // If Action Taken Report (ATR) is attached for resolution, prepare updated description
+  let updatedDescription: string | undefined = undefined;
+  if (atr && newStatus === "Resolved") {
+    try {
+      const fetchRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}&select=description`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      );
+      if (fetchRes.ok) {
+        const rows = await fetchRes.json();
+        if (rows && rows.length > 0) {
+          const rawDesc = rows[0].description || "";
+          // Clean out any prior ATR block
+          const baseDesc = rawDesc.replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "").trim();
+          updatedDescription = `${baseDesc}\n\n[ACTION_TAKEN_REPORT:${JSON.stringify(atr)}]`;
+        }
+      }
+    } catch (err) {
+      console.error("Error reading description for ATR attachment:", err);
+    }
+
+    if (!updatedDescription) {
+      updatedDescription = `Official resolution recorded.\n\n[ACTION_TAKEN_REPORT:${JSON.stringify(atr)}]`;
+    }
+  }
+
+  const patchPayload: Record<string, unknown> = {
+    status: newStatus,
+    updated_at: now,
+  };
+  if (updatedDescription) {
+    patchPayload.description = updatedDescription;
+  }
+
   // 5. Try Java Spring Boot REST API
   try {
     const cookieStore = await cookies();
@@ -225,7 +273,7 @@ export async function updateComplaintStatusServerAction(
     const res = await fetch(`${SPRING_BOOT_URL}/api/complaints/update-status`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ id, status: newStatus }),
+      body: JSON.stringify({ id, status: newStatus, description: updatedDescription }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -241,7 +289,7 @@ export async function updateComplaintStatusServerAction(
             "Content-Type": "application/json",
             Prefer: "return=minimal",
           },
-          body: JSON.stringify({ status: newStatus, updated_at: now }),
+          body: JSON.stringify(patchPayload),
         });
       } catch {}
       return { success: true };
@@ -262,10 +310,7 @@ export async function updateComplaintStatusServerAction(
           "Content-Type": "application/json",
           Prefer: "return=minimal",
         },
-        body: JSON.stringify({
-          status: newStatus,
-          updated_at: now,
-        }),
+        body: JSON.stringify(patchPayload),
       }
     );
 

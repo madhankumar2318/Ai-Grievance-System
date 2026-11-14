@@ -93,11 +93,19 @@ function buildTimeline(c: Record<string, string>) {
         ];
     }
     if (c.status === "Resolved") {
+        const atrMatch = (c.description || "").match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+        let resolvedNote = "Grievance resolved successfully. ✅";
+        if (atrMatch) {
+            try {
+                const atr = JSON.parse(atrMatch[1]);
+                resolvedNote = `Resolved by ${atr.officerName}: ${atr.actionDescription}`;
+            } catch {}
+        }
         return [
             ...base,
             { stage: "Assigned", time: createdAt, done: true, note: "Assigned to field officer." },
             { stage: "In Progress", time: updatedAt, done: true, note: "Field team deployed. Work completed." },
-            { stage: "Resolved", time: updatedAt, done: true, note: "Grievance resolved successfully. ✅" },
+            { stage: "Resolved", time: updatedAt, done: true, note: resolvedNote },
         ];
     }
     if (c.status === "Rejected") {
@@ -138,6 +146,7 @@ export default function TrackPage() {
     const [loading, setLoading] = useState(false);
     const [complaint, setComplaint] = useState<Complaint | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
+    const [viewingModalPhoto, setViewingModalPhoto] = useState<{ url: string; title: string } | null>(null);
 
     /* ── Search handler ─────────────────────────────────────────────────── */
     const handleSearch = async (e: React.FormEvent) => {
@@ -181,6 +190,7 @@ export default function TrackPage() {
                         category: c.category,
                         priority: c.priority,
                         ai_reasoning: c.ai_reasoning || "",
+                        description: c.description || "",
                     }),
                 });
                 return;
@@ -357,7 +367,15 @@ export default function TrackPage() {
                                 {(() => {
                                     const photoMatch = complaint.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
                                     const evidencePhoto = photoMatch ? photoMatch[1] : null;
-                                    const cleanDesc = complaint.description.replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "").trim();
+                                    const atrMatch = complaint.description.match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+                                    let atrData = null;
+                                    if (atrMatch) {
+                                        try { atrData = JSON.parse(atrMatch[1]); } catch {}
+                                    }
+                                    const cleanDesc = complaint.description
+                                        .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
+                                        .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
+                                        .trim();
                                     return (
                                         <>
                                             <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{cleanDesc}</p>
@@ -369,7 +387,8 @@ export default function TrackPage() {
                                                     <img
                                                         src={evidencePhoto}
                                                         alt="Evidence"
-                                                        style={{ maxWidth: "240px", maxHeight: "160px", borderRadius: "0.5rem", border: "1px solid var(--border)", objectFit: "cover" }}
+                                                        style={{ maxWidth: "240px", maxHeight: "160px", borderRadius: "0.5rem", border: "1px solid var(--border)", objectFit: "cover", cursor: "pointer" }}
+                                                        onClick={() => setViewingModalPhoto({ url: evidencePhoto, title: "Citizen Evidence Photo" })}
                                                     />
                                                 </div>
                                             )}
@@ -544,17 +563,202 @@ export default function TrackPage() {
                         </div>
                     </div>
 
-                    {/* Before & After Slider — only for resolved complaints */}
-                    {complaint.status === "Resolved" && (
-                        <div className="glass animate-fade-in" style={{ padding: "2rem", borderRadius: "1.5rem" }}>
-                            <BeforeAfterSlider
-                                complaintCategory={complaint.category}
-                                title="📸 Resolution Evidence"
-                                beforeLabel="BEFORE"
-                                afterLabel="AFTER ✓"
-                            />
-                        </div>
-                    )}
+                    {/* ── Official Action Taken Report (ATR) & Proof Section ── */}
+                    {complaint.status === "Resolved" && (() => {
+                        const atrMatch = complaint.description.match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+                        let atrData = null;
+                        if (atrMatch) {
+                            try { atrData = JSON.parse(atrMatch[1]); } catch {}
+                        }
+                        const photoMatch = complaint.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                        const citizenBeforePhoto = photoMatch ? photoMatch[1] : null;
+
+                        if (atrData) {
+                            return (
+                                <div className="glass animate-fade-in" style={{
+                                    padding: "2rem",
+                                    borderRadius: "1.5rem",
+                                    border: "1.5px solid rgba(16, 185, 129, 0.4)",
+                                    background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.04))",
+                                    boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+                                }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
+                                        <div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem" }}>
+                                                <span style={{ fontSize: "1.3rem" }}>✅</span>
+                                                <h3 style={{ fontSize: "1.25rem", fontWeight: "800", color: "#ffffff", margin: 0 }}>
+                                                    Official Action Taken Report (ATR)
+                                                </h3>
+                                            </div>
+                                            <p style={{ fontSize: "0.82rem", color: "#34d399", margin: 0, fontWeight: "600" }}>
+                                                ✓ Ground repair verified and documented by municipal authorities
+                                            </p>
+                                        </div>
+                                        <span style={{
+                                            padding: "0.25rem 0.75rem",
+                                            borderRadius: "99px",
+                                            background: "rgba(16, 185, 129, 0.2)",
+                                            color: "#10b981",
+                                            border: "1px solid rgba(16, 185, 129, 0.4)",
+                                            fontSize: "0.75rem",
+                                            fontWeight: "800",
+                                        }}>
+                                            VERIFIED RESOLUTION
+                                        </span>
+                                    </div>
+
+                                    {/* Officer & Date details */}
+                                    <div style={{
+                                        display: "grid",
+                                        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                                        gap: "1rem",
+                                        marginBottom: "1.25rem",
+                                        padding: "1rem",
+                                        borderRadius: "0.85rem",
+                                        background: "rgba(0,0,0,0.25)",
+                                        border: "1px solid rgba(255,255,255,0.06)",
+                                    }}>
+                                        <div>
+                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", marginBottom: "0.2rem" }}>
+                                                👷 Official Staff / Engineer
+                                            </div>
+                                            <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "#ffffff" }}>
+                                                {atrData.officerName || "Municipal Field Officer"}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "700", marginBottom: "0.2rem" }}>
+                                                📅 Resolution Date
+                                            </div>
+                                            <div style={{ fontSize: "0.95rem", fontWeight: "700", color: "#ffffff" }}>
+                                                {atrData.resolvedAt ? new Date(atrData.resolvedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : complaint.date}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Description */}
+                                    <div style={{ marginBottom: "1.5rem" }}>
+                                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", fontWeight: "800", marginBottom: "0.35rem" }}>
+                                            📝 Work Executed &amp; Action Taken:
+                                        </div>
+                                        <div style={{
+                                            fontSize: "0.92rem",
+                                            lineHeight: 1.6,
+                                            color: "#e2e8f0",
+                                            padding: "1rem 1.25rem",
+                                            borderRadius: "0.75rem",
+                                            background: "rgba(255,255,255,0.04)",
+                                            borderLeft: "4px solid #10b981",
+                                        }}>
+                                            "{atrData.actionDescription}"
+                                        </div>
+                                    </div>
+
+                                    {/* Before vs After Photo Proofs */}
+                                    <div>
+                                        <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#ffffff", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                            <span>📸</span>
+                                            <span>Ground Evidence: Before vs. After Repair</span>
+                                        </div>
+
+                                        <div style={{
+                                            display: "grid",
+                                            gridTemplateColumns: citizenBeforePhoto && atrData.resolutionPhoto ? "repeat(auto-fit, minmax(280px, 1fr))" : "1fr",
+                                            gap: "1.25rem",
+                                        }}>
+                                            {/* Citizen's Before Photo */}
+                                            {citizenBeforePhoto && (
+                                                <div style={{
+                                                    borderRadius: "0.85rem",
+                                                    overflow: "hidden",
+                                                    border: "1.5px solid rgba(239, 68, 68, 0.4)",
+                                                    background: "#080b12",
+                                                }}>
+                                                    <div style={{ position: "relative", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", background: "#000" }}>
+                                                        <img
+                                                            src={citizenBeforePhoto}
+                                                            alt="Citizen Reported Evidence"
+                                                            style={{ maxHeight: "220px", width: "100%", objectFit: "contain", cursor: "pointer" }}
+                                                            onClick={() => setViewingModalPhoto({ url: citizenBeforePhoto, title: "Citizen Evidence (Before Repair)" })}
+                                                        />
+                                                        <div style={{
+                                                            position: "absolute", top: "0.6rem", left: "0.6rem",
+                                                            background: "rgba(239, 68, 68, 0.9)", color: "white",
+                                                            padding: "0.2rem 0.65rem", borderRadius: "99px",
+                                                            fontSize: "0.7rem", fontWeight: "800",
+                                                        }}>
+                                                            BEFORE REPAIR
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "var(--text-muted)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                        <span>📷 Citizen's Reported Evidence</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setViewingModalPhoto({ url: citizenBeforePhoto, title: "Citizen Evidence (Before Repair)" })}
+                                                            style={{ background: "none", border: "none", color: "#a5b4fc", cursor: "pointer", fontWeight: "600", fontSize: "0.75rem" }}
+                                                        >
+                                                            🔍 Inspect
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Officer's Resolution Photo */}
+                                            {atrData.resolutionPhoto && (
+                                                <div style={{
+                                                    borderRadius: "0.85rem",
+                                                    overflow: "hidden",
+                                                    border: "1.5px solid rgba(16, 185, 129, 0.5)",
+                                                    background: "#080b12",
+                                                    boxShadow: "0 0 25px rgba(16, 185, 129, 0.2)",
+                                                }}>
+                                                    <div style={{ position: "relative", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", background: "#000" }}>
+                                                        <img
+                                                            src={atrData.resolutionPhoto}
+                                                            alt="Officer Resolution Proof"
+                                                            style={{ maxHeight: "220px", width: "100%", objectFit: "contain", cursor: "pointer" }}
+                                                            onClick={() => setViewingModalPhoto({ url: atrData.resolutionPhoto, title: "Official Resolution Proof (After Repair)" })}
+                                                        />
+                                                        <div style={{
+                                                            position: "absolute", top: "0.6rem", left: "0.6rem",
+                                                            background: "rgba(16, 185, 129, 0.95)", color: "white",
+                                                            padding: "0.2rem 0.65rem", borderRadius: "99px",
+                                                            fontSize: "0.7rem", fontWeight: "800",
+                                                            boxShadow: "0 2px 8px rgba(16, 185, 129, 0.4)",
+                                                        }}>
+                                                            AFTER REPAIR ✓
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "#34d399", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: "600" }}>
+                                                        <span>✓ Verified Ground Repair Proof</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setViewingModalPhoto({ url: atrData.resolutionPhoto, title: "Official Resolution Proof (After Repair)" })}
+                                                            style={{ background: "none", border: "none", color: "#34d399", cursor: "pointer", fontWeight: "700", fontSize: "0.75rem" }}
+                                                        >
+                                                            🔍 Inspect Full Size
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // Fallback to slider if legacy complaint without ATR
+                        return (
+                            <div className="glass animate-fade-in" style={{ padding: "2rem", borderRadius: "1.5rem" }}>
+                                <BeforeAfterSlider
+                                    complaintCategory={complaint.category}
+                                    title="📸 Resolution Evidence"
+                                    beforeLabel="BEFORE"
+                                    afterLabel="AFTER ✓"
+                                />
+                            </div>
+                        );
+                    })()}
 
                     {/* AI Advocate Card — only for rejected complaints */}
                     {complaint.status === "Rejected" && (
@@ -568,7 +772,60 @@ export default function TrackPage() {
                         </div>
                     )}
 
-                    {/* Back button */}
+                    {/* ── Photo Evidence Viewer Lightbox Modal ── */}
+            {viewingModalPhoto && (
+                <div
+                    onClick={() => setViewingModalPhoto(null)}
+                    style={{
+                        position: "fixed", inset: 0, zIndex: 9999,
+                        background: "rgba(5,5,10,0.85)", backdropFilter: "blur(8px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: "1.5rem",
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        className="animate-fade-in"
+                        style={{
+                            maxWidth: "900px", width: "100%", maxHeight: "90vh",
+                            background: "rgba(15,15,26,0.98)", border: "1px solid rgba(99,102,241,0.3)",
+                            borderRadius: "1.25rem", overflow: "hidden", display: "flex", flexDirection: "column",
+                            boxShadow: "0 25px 60px rgba(0,0,0,0.7)",
+                        }}
+                    >
+                        <div style={{
+                            padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)",
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            background: "rgba(255,255,255,0.02)",
+                        }}>
+                            <span style={{ fontWeight: "800", fontSize: "0.95rem", color: "#ffffff" }}>
+                                {viewingModalPhoto.title}
+                            </span>
+                            <button
+                                onClick={() => setViewingModalPhoto(null)}
+                                style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "1.4rem", cursor: "pointer" }}
+                            >✕</button>
+                        </div>
+                        <div style={{ padding: "1.25rem", display: "flex", alignItems: "center", justifyContent: "center", background: "#000" }}>
+                            <img
+                                src={viewingModalPhoto.url}
+                                alt={viewingModalPhoto.title}
+                                style={{ maxHeight: "70vh", maxWidth: "100%", objectFit: "contain" }}
+                            />
+                        </div>
+                        <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid var(--border)", textAlign: "right" }}>
+                            <button
+                                onClick={() => setViewingModalPhoto(null)}
+                                style={{ padding: "0.4rem 1rem", borderRadius: "0.5rem", background: "var(--primary)", border: "none", color: "white", fontSize: "0.8rem", fontWeight: "700", cursor: "pointer" }}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Back button */}
                     <div style={{ textAlign: "center" }}>
                         <Link
                             href="/"

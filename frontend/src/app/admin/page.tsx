@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-import { getComplaintsServerAction, updateComplaintStatusServerAction } from "@/app/actions/complaintActions";
+import { getComplaintsServerAction, updateComplaintStatusServerAction, ActionTakenReportData } from "@/app/actions/complaintActions";
+import ActionTakenReportModal from "@/components/ActionTakenReportModal";
 
 
 const PRIORITY_CONFIG: Record<string, { color: string; icon: string }> = {
@@ -67,6 +68,40 @@ export default function AdminDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [viewingPhoto, setViewingPhoto] = useState<{ url: string | null; title: string; location: string; category?: string } | null>(null);
+    const [resolvingComplaint, setResolvingComplaint] = useState<{
+        id: string;
+        subject: string;
+        category: string;
+        location: string;
+        citizenEvidencePhoto?: string | null;
+    } | null>(null);
+
+    const handleOpenResolveModal = (c: AdminComplaint) => {
+        const photoMatch = c.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+        const citizenEvidencePhoto = photoMatch ? photoMatch[1] : null;
+        setResolvingComplaint({
+            id: c.id,
+            subject: c.subject,
+            category: c.category,
+            location: c.location,
+            citizenEvidencePhoto,
+        });
+    };
+
+    const handleResolveSuccess = (id: string, atr: ActionTakenReportData) => {
+        setComplaints(prev => prev.map(c => {
+            if (c.id === id) {
+                const baseDesc = c.description.replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, '').trim();
+                return {
+                    ...c,
+                    status: 'Resolved',
+                    description: baseDesc + '\n\n[ACTION_TAKEN_REPORT:' + JSON.stringify(atr) + ']',
+                };
+            }
+            return c;
+        }));
+        setExpandedId(null);
+    };
 
     // Authority Officer's locked jurisdiction (strictly derived from their login / profile)
     const officerState = user?.state || "Tamil Nadu";
@@ -496,7 +531,7 @@ export default function AdminDashboard() {
                                                             <button
                                                                 className="btn btn-primary"
                                                                 style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem" }}
-                                                                onClick={() => updateStatus(c.id, "Resolved")}
+                                                                onClick={() => handleOpenResolveModal(c)}
                                                             >✓ {t("admin_resolve")}</button>
                                                             <button
                                                                 style={{ padding: "0.35rem 0.75rem", fontSize: "0.78rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
@@ -641,7 +676,7 @@ export default function AdminDashboard() {
                                                                             <button
                                                                                 className="btn btn-primary"
                                                                                 style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
-                                                                                onClick={() => updateStatus(c.id, "Resolved")}
+                                                                                onClick={() => handleOpenResolveModal(c)}
                                                                             >✓ Mark Resolved</button>
                                                                             <button
                                                                                 style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
@@ -783,7 +818,7 @@ export default function AdminDashboard() {
                                                 <button
                                                     className="btn btn-primary"
                                                     style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem" }}
-                                                    onClick={() => updateStatus(c.id, "Resolved")}
+                                                    onClick={() => handleOpenResolveModal(c)}
                                                 >
                                                     ✓ Resolve
                                                 </button>
