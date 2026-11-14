@@ -623,7 +623,12 @@ export default function ChiefDashboard() {
                 {/* ── All Complaints Table ── */}
                 <div className="glass chief-table-card" style={{ borderRadius: "1.5rem", overflow: "hidden", border: "1px solid var(--border)" }}>
                     <div className="chief-table-header-block" style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <h3>{t("chief_all_grievances")}</h3>
+                        <div>
+                            <h3 style={{ margin: 0 }}>{t("chief_all_grievances")}</h3>
+                            <p style={{ margin: "0.3rem 0 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                                👆 Click any grievance row to view full case details &amp; Action Taken Reports
+                            </p>
+                        </div>
                         <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
                             {loading ? "Loading..." : `${total} ${t("chief_complaints_total")}`}
                         </span>
@@ -652,8 +657,7 @@ export default function ChiefDashboard() {
                                         <tr>
                                             {[
                                                 t("chief_col_id"), t("chief_col_subject"), t("chief_col_citizen"),
-                                                t("chief_col_location"), t("chief_col_priority"), t("chief_col_status"), t("chief_col_date"),
-                                                "Executive Audit"
+                                                t("chief_col_location"), t("chief_col_priority"), t("chief_col_status"), t("chief_col_date")
                                             ].map(h => (
                                                 <th key={h} style={{ padding: "1rem 1.25rem", fontWeight: "700", fontSize: "0.78rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
                                                     {h}
@@ -700,42 +704,6 @@ export default function ChiefDashboard() {
                                                             </div>
                                                         </td>
                                                         <td style={{ padding: "1rem 1.25rem", fontSize: "0.8rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>{c.date}</td>
-                                                        {/* Executive Audit CTA */}
-                                                        <td style={{ padding: "1rem 1.25rem", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
-                                                            <button
-                                                                onClick={() => toggleRow(c.id)}
-                                                                style={{
-                                                                    padding: "0.42rem 0.85rem",
-                                                                    fontSize: "0.78rem",
-                                                                    fontWeight: "700",
-                                                                    borderRadius: "0.5rem",
-                                                                    cursor: "pointer",
-                                                                    display: "inline-flex",
-                                                                    alignItems: "center",
-                                                                    gap: "0.4rem",
-                                                                    background: isExpanded
-                                                                        ? "rgba(99,102,241,0.22)"
-                                                                        : c.status === "Resolved"
-                                                                        ? "linear-gradient(135deg, rgba(16,185,129,0.18), rgba(6,182,212,0.18))"
-                                                                        : "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(168,85,247,0.18))",
-                                                                    color: isExpanded
-                                                                        ? "#e0e7ff"
-                                                                        : c.status === "Resolved"
-                                                                        ? "#34d399"
-                                                                        : "#a5b4fc",
-                                                                    border: isExpanded
-                                                                        ? "1px solid rgba(99,102,241,0.5)"
-                                                                        : c.status === "Resolved"
-                                                                        ? "1px solid rgba(16,185,129,0.4)"
-                                                                        : "1px solid rgba(99,102,241,0.3)",
-                                                                    boxShadow: isExpanded ? "none" : "0 2px 6px rgba(0,0,0,0.12)",
-                                                                    transition: "all 0.2s ease",
-                                                                }}
-                                                            >
-                                                                <span>{isExpanded ? "Close" : c.status === "Resolved" ? "Audit ATR ▾" : "Audit Case ▾"}</span>
-                                                                <span style={{ fontSize: "0.7rem", transition: "transform 0.25s ease", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>▾</span>
-                                                            </button>
-                                                        </td>
                                                     </tr>
 
                                                     {/* ── Executive Audit & Case File Drawer ── */}
@@ -754,7 +722,7 @@ export default function ChiefDashboard() {
 
                                                         return (
                                                             <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                                                                <td colSpan={8} style={{ padding: 0 }}>
+                                                                <td colSpan={7} style={{ padding: 0 }}>
                                                                     <div style={{
                                                                         padding: "1.75rem 2rem",
                                                                         background: "rgba(99,102,241,0.03)",
@@ -1104,7 +1072,7 @@ export default function ChiefDashboard() {
 
                                             <div style={{ marginTop: "0.5rem", textAlign: "right" }}>
                                                 <span style={{ fontSize: "0.75rem", color: "#a5b4fc", fontWeight: "700" }}>
-                                                    {isExpanded ? "Close Audit ▲" : "Tap to Audit Case ▼"}
+                                                    {isExpanded ? "Close ▲" : "Tap to View Details ▼"}
                                                 </span>
                                             </div>
 
