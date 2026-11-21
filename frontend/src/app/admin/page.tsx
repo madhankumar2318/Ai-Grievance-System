@@ -822,19 +822,37 @@ export default function AdminDashboard() {
                                                                         </div>
                                                                         {/* Detail actions */}
                                                                         {c.status !== "Resolved" && c.status !== "Rejected" && (
-                                                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                                                                <button
-                                                                                    className="btn btn-primary"
-                                                                                    style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
-                                                                                    onClick={() => handleOpenResolveModal(c)}
-                                                                                >✓ Mark Resolved</button>
-                                                                                <button
-                                                                                    style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
-                                                                                    onClick={() => updateStatus(c.id, "Rejected")}
-                                                                                    onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
-                                                                                    onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
-                                                                                >✕ Reject</button>
-                                                                            </div>
+                                                                            !isDistrictHead ? (
+                                                                                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+                                                                                    <button
+                                                                                        className="btn btn-primary"
+                                                                                        style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
+                                                                                        onClick={() => handleOpenResolveModal(c)}
+                                                                                    >✓ Mark Resolved</button>
+                                                                                    <button
+                                                                                        style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
+                                                                                        onClick={() => updateStatus(c.id, "Rejected")}
+                                                                                        onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
+                                                                                        onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
+                                                                                    >✕ Reject</button>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div style={{
+                                                                                    marginTop: "0.25rem",
+                                                                                    padding: "0.6rem 0.85rem",
+                                                                                    borderRadius: "0.625rem",
+                                                                                    background: "rgba(245,158,11,0.06)",
+                                                                                    border: "1px solid rgba(245,158,11,0.2)",
+                                                                                    display: "flex",
+                                                                                    alignItems: "center",
+                                                                                    gap: "0.45rem",
+                                                                                    fontSize: "0.78rem",
+                                                                                    color: "#f59e0b"
+                                                                                }}>
+                                                                                    <span>🏛️</span>
+                                                                                    <span><strong>Collector Oversight:</strong> Ground action &amp; ATR submission assigned to <strong>{c.category} Officer</strong>.</span>
+                                                                                </div>
+                                                                            )
                                                                         )}
                                                                         {(c.status === "Resolved" || c.status === "Rejected") && (
                                                                             <div style={{ fontSize: "0.82rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.4rem" }}>
@@ -1151,21 +1169,27 @@ export default function AdminDashboard() {
 
                                             {/* Actions */}
                                             {c.status !== "Resolved" && c.status !== "Rejected" ? (
-                                                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }} onClick={e => e.stopPropagation()}>
-                                                    <button
-                                                        className="btn btn-primary"
-                                                        style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem" }}
-                                                        onClick={() => handleOpenResolveModal(c)}
-                                                    >
-                                                        {t("admin_resolve")}
-                                                    </button>
-                                                    <button
-                                                        style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700" }}
-                                                        onClick={() => updateStatus(c.id, "Rejected")}
-                                                    >
-                                                        ✕ Reject
-                                                    </button>
-                                                </div>
+                                                !isDistrictHead ? (
+                                                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }} onClick={e => e.stopPropagation()}>
+                                                        <button
+                                                            className="btn btn-primary"
+                                                            style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem" }}
+                                                            onClick={() => handleOpenResolveModal(c)}
+                                                        >
+                                                            {t("admin_resolve")}
+                                                        </button>
+                                                        <button
+                                                            style={{ flex: 1, padding: "0.65rem 0", fontSize: "0.82rem", borderRadius: "0.5rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700" }}
+                                                            onClick={() => updateStatus(c.id, "Rejected")}
+                                                        >
+                                                            ✕ Reject
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#f59e0b", background: "rgba(245,158,11,0.08)", padding: "0.45rem 0.75rem", borderRadius: "0.5rem", border: "1px solid rgba(245,158,11,0.2)" }} onClick={e => e.stopPropagation()}>
+                                                        🏛️ <strong>Oversight:</strong> Assigned to {c.category} Officer.
+                                                    </div>
+                                                )
                                             ) : (
                                                 <div style={{ fontSize: "0.8rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.25rem" }}>
                                                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: sCfg.dot }} />
