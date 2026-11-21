@@ -209,12 +209,12 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
   if (role === "chief") {
     const enteredPass = (params.passcode || "").trim().toLowerCase();
     if (!enteredPass || !validChiefCodes.includes(enteredPass)) {
-      return { success: false, error: "Access Denied: Invalid Chief Administrator verification passphrase. (Use code: 2026)" };
+      return { success: false, error: "Access Denied: Invalid Chief Administrator verification passphrase." };
     }
   } else if (role === "authority") {
     const enteredPass = (params.passcode || "").trim().toLowerCase();
     if (!enteredPass || !validAuthorityCodes.includes(enteredPass)) {
-      return { success: false, error: "Access Denied: Invalid Field Officer verification passphrase. (Use code: 1234)" };
+      return { success: false, error: "Access Denied: Invalid Field Officer verification passphrase." };
     }
   }
 

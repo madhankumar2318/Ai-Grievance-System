@@ -93,12 +93,12 @@ public class AuthService {
         if ("chief".equalsIgnoreCase(role)) {
             String pass = request.getPasscode() != null ? request.getPasscode().trim().toLowerCase() : "";
             if (!pass.equals(chiefPassphrase.toLowerCase()) && !pass.equals("2026") && !pass.equals("1234") && !pass.equals("admin") && !pass.equals("ch-falcon20")) {
-                return new AuthResponse(false, "Access Denied: Invalid Chief Administrator verification passphrase. (Use code: 2026)");
+                return new AuthResponse(false, "Access Denied: Invalid Chief Administrator verification passphrase.");
             }
         } else if ("authority".equalsIgnoreCase(role)) {
             String pass = request.getPasscode() != null ? request.getPasscode().trim().toLowerCase() : "";
             if (!pass.equals(authorityPassphrase.toLowerCase()) && !pass.equals("1234") && !pass.equals("admin") && !pass.equals("au-titan18")) {
-                return new AuthResponse(false, "Access Denied: Invalid Field Officer verification passphrase. (Use code: 1234)");
+                return new AuthResponse(false, "Access Denied: Invalid Field Officer verification passphrase.");
             }
         }
 
