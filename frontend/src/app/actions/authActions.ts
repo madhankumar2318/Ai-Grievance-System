@@ -118,7 +118,18 @@ export interface RegisterUserParams {
 export async function registerUserServerAction(params: RegisterUserParams): Promise<{
   success: boolean;
   error?: string;
-  user?: { email: string; username: string; role: string; state?: string; district?: string };
+  user?: {
+    email: string;
+    username: string;
+    role: string;
+    state?: string;
+    district?: string;
+    authorityRole?: string;
+    serviceId?: string;
+    workingPlace?: string;
+    phone?: string;
+    department?: string;
+  };
 }> {
   const ip = await getClientIp();
 
@@ -312,7 +323,18 @@ export async function loginUserServerAction(credentials: {
 }): Promise<{
   success: boolean;
   error?: string;
-  user?: { email: string; username: string; role: string; state?: string; district?: string };
+  user?: {
+    email: string;
+    username: string;
+    role: string;
+    state?: string;
+    district?: string;
+    authorityRole?: string;
+    serviceId?: string;
+    workingPlace?: string;
+    phone?: string;
+    department?: string;
+  };
 }> {
   const ip = await getClientIp();
 
@@ -350,11 +372,23 @@ export async function loginUserServerAction(credentials: {
       role: "authority",
       state: "Tamil Nadu",
       district: "Tiruchirappalli",
-      authorityRole: "Assistant Municipal Commissioner",
+      authorityRole: "Environment Protection Officer",
       serviceId: "TN-GOV-2024-8841",
       workingPlace: "Tiruchirappalli City Municipal Corporation",
       phone: "+91 98401 23456",
-      department: "Public Grievance Redressal Division",
+      department: "Environment & Sanitation Division",
+    },
+    "collector@demo.com": {
+      name: "Dr. S. Madhan Kumar IAS",
+      pass: "collector123",
+      role: "authority",
+      state: "Tamil Nadu",
+      district: "Tiruchirappalli",
+      authorityRole: "District Collector & District Magistrate",
+      serviceId: "TN-IAS-2024-0012",
+      workingPlace: "Tiruchirappalli District Collectorate",
+      phone: "+91 98401 55555",
+      department: "Revenue & District Administration",
     },
     "chief@demo.com": { name: "Chief Kumar", pass: "chief123", role: "chief", state: "Tamil Nadu", district: "All 38 Districts" },
   };

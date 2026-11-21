@@ -114,8 +114,8 @@ export default function LoginPage() {
             label: t("login_authority_label"), icon: "🏛️",
             description: t("login_authority_desc"), color: "#f97316",
             gradient: "linear-gradient(135deg, #f97316, #fb923c)",
-            hint: "authority@demo.com / auth123",
-            demoEmail: "authority@demo.com", demoPassword: "auth123",
+            hint: "collector@demo.com (Collector) or authority@demo.com (Officer)",
+            demoEmail: "collector@demo.com", demoPassword: "collector123",
         },
         chief: {
             label: t("login_chief_label"), icon: "⭐",
@@ -379,6 +379,11 @@ export default function LoginPage() {
                     role: res.user.role as UserRole,
                     state: res.user.state,
                     district: res.user.district,
+                    authorityRole: res.user.authorityRole,
+                    serviceId: res.user.serviceId,
+                    workingPlace: res.user.workingPlace,
+                    phone: res.user.phone,
+                    department: res.user.department,
                 });
 
                 // Safe post-login redirect with whitelist validation against open redirect attacks
@@ -958,11 +963,26 @@ export default function LoginPage() {
                                 </div>
                             </div>
                             {DEMO_MODE && (
-                                <button type="button" onClick={fillDemo}
-                                    style={{ padding: "0.35rem 0.85rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "700", background: `${cfg.color}18`, color: cfg.color, border: `1px solid ${cfg.color}40`, cursor: "pointer", transition: "var(--transition)" }}
-                                    onMouseEnter={e => { e.currentTarget.style.background = `${cfg.color}30`; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = `${cfg.color}18`; }}
-                                >⚡ Fill Demo</button>
+                                <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+                                    {selectedRole === "authority" ? (
+                                        <>
+                                            <button type="button" onClick={() => { setEmail("collector@demo.com"); setPassword("collector123"); setLoginError(""); }}
+                                                style={{ padding: "0.35rem 0.75rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "700", background: "rgba(245, 158, 11, 0.15)", color: "#fbbf24", border: "1px solid rgba(245, 158, 11, 0.4)", cursor: "pointer", transition: "var(--transition)" }}
+                                                title="Login as District Collector (All Departments)"
+                                            >🏛️ Fill Collector</button>
+                                            <button type="button" onClick={() => { setEmail("authority@demo.com"); setPassword("auth123"); setLoginError(""); }}
+                                                style={{ padding: "0.35rem 0.75rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "700", background: `${cfg.color}18`, color: cfg.color, border: `1px solid ${cfg.color}40`, cursor: "pointer", transition: "var(--transition)" }}
+                                                title="Login as Environment Protection Officer"
+                                            >🌿 Fill Officer</button>
+                                        </>
+                                    ) : (
+                                        <button type="button" onClick={fillDemo}
+                                            style={{ padding: "0.35rem 0.85rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "700", background: `${cfg.color}18`, color: cfg.color, border: `1px solid ${cfg.color}40`, cursor: "pointer", transition: "var(--transition)" }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = `${cfg.color}30`; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = `${cfg.color}18`; }}
+                                        >⚡ Fill Demo</button>
+                                    )}
+                                </div>
                             )}
                         </div>
 

@@ -77,6 +77,10 @@ export default function AdminDashboard() {
     } | null>(null);
 
     const handleOpenResolveModal = (c: AdminComplaint) => {
+        if (assignedDepartment && c.category !== assignedDepartment && !isDistrictHead) {
+            alert(`Security Restriction: You are authorized to resolve grievances only within the ${assignedDepartment} department.`);
+            return;
+        }
         const photoMatch = c.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
         const citizenEvidencePhoto = photoMatch ? photoMatch[1] : null;
         setResolvingComplaint({
@@ -106,6 +110,35 @@ export default function AdminDashboard() {
     // Authority Officer's locked jurisdiction (strictly derived from their login / profile)
     const officerState = user?.state || "Tamil Nadu";
     const officerDistrict = user?.district || "Tiruchirappalli";
+
+    // ── Role-Based Department Access Control (RBAC) ──────────────────────────────
+    // District Collector / Magistrate / Chief: Supervisory authority over All Departments in the district.
+    // Department Officer (Environment, Infrastructure, Health, Safety, etc.): Securely isolated to their assigned department.
+    const roleStr = (user?.authorityRole || "").toLowerCase();
+    const isDistrictHead =
+        roleStr.includes("collector") ||
+        roleStr.includes("magistrate") ||
+        roleStr.includes("commissioner") ||
+        user?.role === "chief";
+
+    // Map specific authority roles to their domain department
+    const assignedDepartment = React.useMemo(() => {
+        if (isDistrictHead) return null; // Collector / Magistrate has supervisory access over All Departments
+        if (roleStr.includes("environment")) return "Environment";
+        if (roleStr.includes("health") || roleStr.includes("sanitation")) return "Public Health";
+        if (roleStr.includes("infrastructure") || roleStr.includes("pwd") || roleStr.includes("electricity") || roleStr.includes("water") || roleStr.includes("engineer")) return "Infrastructure";
+        if (roleStr.includes("safety") || roleStr.includes("traffic") || roleStr.includes("police")) return "Safety";
+        if (roleStr.includes("revenue") || roleStr.includes("education") || roleStr.includes("administrative")) return "Administrative";
+        return null; // Fallback to broad access if unspecified municipal officer
+    }, [isDistrictHead, roleStr]);
+
+    useEffect(() => {
+        if (assignedDepartment) {
+            setDepartmentFilter(assignedDepartment);
+        } else {
+            setDepartmentFilter("All");
+        }
+    }, [assignedDepartment]);
 
     const toggleRow = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
@@ -157,6 +190,11 @@ export default function AdminDashboard() {
     }, []);
 
     const updateStatus = async (id: string, newStatus: "Resolved" | "Rejected") => {
+        const target = complaints.find(c => c.id === id);
+        if (target && assignedDepartment && target.category !== assignedDepartment && !isDistrictHead) {
+            alert(`Security Restriction: Action not permitted outside your assigned ${assignedDepartment} department.`);
+            return;
+        }
         setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
         setExpandedId(null);
         try {
@@ -194,13 +232,23 @@ export default function AdminDashboard() {
         });
     }, [complaints, officerDistrict, officerState]);
 
-    const pending = jurisdictionComplaints.filter(c => c.status === "Pending").length;
-    const resolved = jurisdictionComplaints.filter(c => c.status === "Resolved").length;
-    const inProgress = jurisdictionComplaints.filter(c => c.status === "In Progress").length;
-    const rejected = jurisdictionComplaints.filter(c => c.status === "Rejected").length;
+    // Department-isolated complaints:
+    // If officer is assigned to a specific department (e.g. Environment), they only see their domain.
+    // District Collector sees all complaints across departments in the district.
+    const officerDomainComplaints = React.useMemo(() => {
+        if (assignedDepartment) {
+            return jurisdictionComplaints.filter(c => c.category === assignedDepartment);
+        }
+        return jurisdictionComplaints;
+    }, [jurisdictionComplaints, assignedDepartment]);
+
+    const pending = officerDomainComplaints.filter(c => c.status === "Pending").length;
+    const resolved = officerDomainComplaints.filter(c => c.status === "Resolved").length;
+    const inProgress = officerDomainComplaints.filter(c => c.status === "In Progress").length;
+    const rejected = officerDomainComplaints.filter(c => c.status === "Rejected").length;
 
     const STATS = [
-        { label: t("admin_total"), value: jurisdictionComplaints.length, color: "#6366f1", icon: "📋", grad: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
+        { label: t("admin_total"), value: officerDomainComplaints.length, color: "#6366f1", icon: "📋", grad: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
         { label: t("admin_pending"), value: pending, color: "#f59e0b", icon: "⏳", grad: "linear-gradient(135deg,#f59e0b,#f97316)" },
         { label: t("admin_in_progress"), value: inProgress, color: "#6366f1", icon: "🔄", grad: "linear-gradient(135deg,#06b6d4,#6366f1)" },
         { label: t("admin_resolved"), value: resolved, color: "#10b981", icon: "✅", grad: "linear-gradient(135deg,#10b981,#06b6d4)" },
@@ -215,10 +263,10 @@ export default function AdminDashboard() {
         return ["All", ...Array.from(set).sort()];
     }, [jurisdictionComplaints]);
 
-    // Combined filtering within the officer's jurisdiction
-    const filtered = jurisdictionComplaints.filter(c => {
+    // Combined filtering within the officer's jurisdiction & departmental domain
+    const filtered = officerDomainComplaints.filter(c => {
         if (filter !== "All" && c.status !== filter) return false;
-        if (departmentFilter !== "All" && c.category !== departmentFilter) return false;
+        if (!assignedDepartment && departmentFilter !== "All" && c.category !== departmentFilter) return false;
 
         // Search Query
         if (searchQuery.trim()) {
@@ -245,7 +293,7 @@ export default function AdminDashboard() {
                     <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
                             <h1 className="gradient-text" style={{ fontSize: "2.5rem", margin: 0 }}>{t("admin_title")}</h1>
-                            {/* Locked Jurisdiction Badge */}
+                            {/* Locked District Badge */}
                             <div style={{
                                 display: "inline-flex",
                                 alignItems: "center",
@@ -262,9 +310,34 @@ export default function AdminDashboard() {
                                 <span>🔒</span>
                                 <span>{officerDistrict}, {officerState} (Assigned District)</span>
                             </div>
+
+                            {/* Officer Role / Authority Badge */}
+                            <div style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "0.4rem",
+                                padding: "0.35rem 0.85rem",
+                                borderRadius: "99px",
+                                background: isDistrictHead ? "rgba(245, 158, 11, 0.14)" : "rgba(99, 102, 241, 0.14)",
+                                border: isDistrictHead ? "1.5px solid rgba(245, 158, 11, 0.4)" : "1.5px solid rgba(99, 102, 241, 0.4)",
+                                color: isDistrictHead ? "#fbbf24" : "#a5b4fc",
+                                fontSize: "0.82rem",
+                                fontWeight: "700",
+                            }}>
+                                <span>{isDistrictHead ? "🏛️" : (CATEGORY_ICONS[assignedDepartment || ""] || "🎖️")}</span>
+                                <span>{user?.authorityRole || (isDistrictHead ? "District Collector & District Magistrate" : "Department Authority Officer")}</span>
+                            </div>
                         </div>
                         <p style={{ marginTop: "0.35rem", color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                            Showing verified complaints for <strong>{officerDistrict} ({officerState})</strong>
+                            {isDistrictHead ? (
+                                <>
+                                    🏛️ <strong>District Collector Oversight:</strong> Supervising all department grievances across <strong>{officerDistrict} ({officerState})</strong>
+                                </>
+                            ) : (
+                                <>
+                                    🔒 <strong>Departmental Security Boundary:</strong> Exclusively assigned to <strong>{assignedDepartment || "Assigned"} Department</strong> in <strong>{officerDistrict}</strong>
+                                </>
+                            )}
                         </p>
                     </div>
                     <div className="glass" style={{ padding: "0.5rem 1rem", borderRadius: "0.5rem", fontSize: "0.9rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -348,31 +421,53 @@ export default function AdminDashboard() {
                             <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>🔒</span>
                         </div>
 
-                        {/* Department Filter */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                            <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "var(--text-muted)" }}>🏢 Dept:</span>
-                            <select
-                                value={departmentFilter}
-                                onChange={e => setDepartmentFilter(e.target.value)}
+                        {/* Department Filter / Locked Boundary */}
+                        {assignedDepartment ? (
+                            <div
+                                title={`Security Locked: As ${user?.authorityRole || "Department Officer"}, your access is strictly confined to the ${assignedDepartment} department.`}
                                 style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.35rem",
                                     padding: "0.35rem 0.75rem",
                                     borderRadius: "0.5rem",
-                                    border: departmentFilter !== "All" ? "1.5px solid #6366f1" : "1.5px solid var(--border)",
-                                    background: "var(--bg-card)",
-                                    color: departmentFilter !== "All" ? "#818cf8" : "var(--text-main)",
+                                    background: "rgba(99, 102, 241, 0.12)",
+                                    border: "1.5px solid rgba(99, 102, 241, 0.35)",
+                                    color: "#a5b4fc",
                                     fontSize: "0.76rem",
-                                    fontWeight: "600",
-                                    cursor: "pointer",
-                                    outline: "none",
+                                    fontWeight: "700",
                                 }}
                             >
-                                {availableDepartments.map(dept => (
-                                    <option key={dept} value={dept} style={{ background: "#0f172a", color: "#f8fafc" }}>
-                                        {dept === "All" ? "All Departments" : `${CATEGORY_ICONS[dept] || "📁"} ${dept}`}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                                <span>{CATEGORY_ICONS[assignedDepartment] || "📁"}</span>
+                                <span>Dept: {assignedDepartment}</span>
+                                <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>🔒</span>
+                            </div>
+                        ) : (
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                                <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "#fbbf24" }}>🏛️ Collector Oversight:</span>
+                                <select
+                                    value={departmentFilter}
+                                    onChange={e => setDepartmentFilter(e.target.value)}
+                                    style={{
+                                        padding: "0.35rem 0.75rem",
+                                        borderRadius: "0.5rem",
+                                        border: departmentFilter !== "All" ? "1.5px solid #f59e0b" : "1.5px solid var(--border)",
+                                        background: "var(--bg-card)",
+                                        color: departmentFilter !== "All" ? "#fbbf24" : "var(--text-main)",
+                                        fontSize: "0.76rem",
+                                        fontWeight: "600",
+                                        cursor: "pointer",
+                                        outline: "none",
+                                    }}
+                                >
+                                    {availableDepartments.map(dept => (
+                                        <option key={dept} value={dept} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                                            {dept === "All" ? "All Departments" : `${CATEGORY_ICONS[dept] || "📁"} ${dept}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
 
                         {/* Search Input */}
                         <div style={{ position: "relative" }}>
@@ -437,14 +532,20 @@ export default function AdminDashboard() {
                         <span>👆</span> Click any row to view full complaint details
                     </p>
                     <span style={{ fontWeight: "600" }}>
-                        Showing <strong>{filtered.length}</strong> of {jurisdictionComplaints.length} grievances in <strong>{officerDistrict}</strong>
-                        {(departmentFilter !== "All" || searchQuery) && (
-                            <span style={{ color: "var(--primary)", marginLeft: "0.4rem" }}>
-                                ({[
-                                    departmentFilter !== "All" ? departmentFilter : null,
-                                    searchQuery ? `"${searchQuery}"` : null,
-                                ].filter(Boolean).join(" · ")})
+                        Showing <strong>{filtered.length}</strong> of {officerDomainComplaints.length} grievances in <strong>{officerDistrict}</strong>
+                        {assignedDepartment ? (
+                            <span style={{ color: "#818cf8", marginLeft: "0.4rem" }}>
+                                ({assignedDepartment} Department Only)
                             </span>
+                        ) : (
+                            (departmentFilter !== "All" || searchQuery) && (
+                                <span style={{ color: "var(--primary)", marginLeft: "0.4rem" }}>
+                                    ({[
+                                        departmentFilter !== "All" ? departmentFilter : null,
+                                        searchQuery ? `"${searchQuery}"` : null,
+                                    ].filter(Boolean).join(" · ")})
+                                </span>
+                            )
                         )}
                     </span>
                 </div>
