@@ -340,12 +340,6 @@ export default function AdminDashboard() {
                             )}
                         </p>
                     </div>
-                    <div className="glass" style={{ padding: "0.5rem 1rem", borderRadius: "0.5rem", fontSize: "0.9rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", display: "inline-block", position: "relative" }}>
-                            <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#10b981", animation: "ping 1.5s ease-out infinite" }} />
-                        </span>
-                        {t("admin_active_officers")}
-                    </div>
                 </div>
 
                 {/* ── Stat Cards ── */}
