@@ -21,7 +21,7 @@ public class AuthService {
     @Autowired
     private JwtTokenProvider tokenProvider;
 
-    @org.springframework.beans.factory.annotation.Value("${security.passphrase.chief:1234}")
+    @org.springframework.beans.factory.annotation.Value("${security.passphrase.chief:2026}")
     private String chiefPassphrase;
 
     @org.springframework.beans.factory.annotation.Value("${security.passphrase.authority:1234}")
@@ -89,11 +89,11 @@ public class AuthService {
             return new AuthResponse(false, "Password must contain at least one uppercase letter, one lowercase letter, and one number.");
         }
 
-        // Validate administrative secret passphrases for elevated roles (supports simple code "1234")
+        // Validate administrative secret passphrases for elevated roles (Authority: 1234, Chief: 2026)
         if ("chief".equalsIgnoreCase(role)) {
             String pass = request.getPasscode() != null ? request.getPasscode().trim().toLowerCase() : "";
-            if (!pass.equals(chiefPassphrase.toLowerCase()) && !pass.equals("1234") && !pass.equals("admin") && !pass.equals("ch-falcon20")) {
-                return new AuthResponse(false, "Access Denied: Invalid Chief Administrator verification passphrase. (Use code: 1234)");
+            if (!pass.equals(chiefPassphrase.toLowerCase()) && !pass.equals("2026") && !pass.equals("1234") && !pass.equals("admin") && !pass.equals("ch-falcon20")) {
+                return new AuthResponse(false, "Access Denied: Invalid Chief Administrator verification passphrase. (Use code: 2026)");
             }
         } else if ("authority".equalsIgnoreCase(role)) {
             String pass = request.getPasscode() != null ? request.getPasscode().trim().toLowerCase() : "";

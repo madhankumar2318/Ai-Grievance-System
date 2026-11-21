@@ -1695,20 +1695,20 @@ export default function LoginPage() {
                                                     <input
                                                         style={inputStyle(!!chErrors.passcode)}
                                                         type="password"
-                                                        placeholder="Enter Passcode (e.g. 1234)"
+                                                        placeholder="Enter Passcode (e.g. 2026)"
                                                         value={ch.passcode}
                                                         onChange={e => setChField("passcode", e.target.value)}
                                                     />
                                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.4rem" }}>
                                                         <span style={{ fontSize: "0.72rem", color: "#10b981", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-                                                            🔑 Passcode: <strong style={{ fontFamily: "monospace", letterSpacing: "1px", background: "rgba(16,185,129,0.15)", padding: "0.1rem 0.4rem", borderRadius: "4px" }}>1234</strong>
+                                                            🔑 Passcode: <strong style={{ fontFamily: "monospace", letterSpacing: "1px", background: "rgba(16,185,129,0.15)", padding: "0.1rem 0.4rem", borderRadius: "4px" }}>2026</strong>
                                                         </span>
                                                         <button
                                                             type="button"
-                                                            onClick={() => setChField("passcode", "1234")}
+                                                            onClick={() => setChField("passcode", "2026")}
                                                             style={{ fontSize: "0.7rem", color: "#38bdf8", background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline" }}
                                                         >
-                                                            Auto-fill 1234
+                                                            Auto-fill 2026
                                                         </button>
                                                     </div>
                                                 </Field>
