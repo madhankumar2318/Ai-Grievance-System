@@ -11,6 +11,7 @@ import { getDistrictOfficersServerAction, RegisteredOfficer } from "@/app/action
 interface GrievanceItem {
     id: string;
     subject: string;
+    description?: string;
     category: string;
     priority: string;
     status: string;
@@ -119,6 +120,7 @@ export default function DistrictOfficersPage() {
                     const mapped: GrievanceItem[] = complaintsRes.complaints.map(c => ({
                         id: c.id,
                         subject: c.subject || "Grievance",
+                        description: c.description || "",
                         category: c.category || "General",
                         priority: c.priority || "Medium",
                         status: c.status || "Pending",
@@ -144,17 +146,29 @@ export default function DistrictOfficersPage() {
         };
     }, [officerDistrict]);
 
-    // Filter grievances strictly to the Collector's district (e.g. Tiruchirappalli)
+    // Filter grievances strictly to the Collector's district (e.g. Tiruchirappalli, Coimbatore, Madurai, Chennai, etc.)
     const districtComplaints = useMemo(() => {
+        const isAll = officerDistrict.toLowerCase().includes("all");
+        if (isAll) return complaints;
+
         return complaints.filter(c => {
-            if (officerDistrict === "Tiruchirappalli") {
+            if (officerDistrict.toLowerCase() === "tiruchirappalli") {
                 return (
                     /trichy|tiruchirappalli|kaikatti|10\.95|78\.44/i.test(c.location || "") ||
+                    /trichy|tiruchirappalli|kaikatti/i.test(c.description || "") ||
                     /green valley|shanti nagar|gandhi nagar|city mall|industrial area|rampur|nh-48|general hospital/i.test(c.location || "")
                 );
             }
             const dLower = officerDistrict.toLowerCase();
-            return (c.location || "").toLowerCase().includes(dLower);
+            const locLower = (c.location || "").toLowerCase();
+            const descLower = (c.description || "").toLowerCase();
+            const subjLower = (c.subject || "").toLowerCase();
+
+            return (
+                locLower.includes(dLower) ||
+                descLower.includes(dLower) ||
+                subjLower.includes(dLower)
+            );
         });
     }, [complaints, officerDistrict]);
 

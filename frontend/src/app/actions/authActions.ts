@@ -759,11 +759,16 @@ export async function getDistrictOfficersServerAction(targetDistrict?: string): 
     return { success: false, error: "Unauthorized: Access restricted to District Collector." };
   }
 
-  const district = targetDistrict || session.user.district || "Tiruchirappalli";
+  const district = (targetDistrict || session.user.district || "Tiruchirappalli").trim();
 
   try {
+    const isAllDistricts = district.toLowerCase().includes("all") || district === "*";
+    const districtFilter = isAllDistricts
+      ? ""
+      : `&district=ilike.${encodeURIComponent(district)}`;
+
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/users?role=eq.authority&district=eq.${encodeURIComponent(district)}&select=email,username,role,state,district,authority_role,service_id,phone,created_at`,
+      `${SUPABASE_URL}/rest/v1/users?role=eq.authority${districtFilter}&select=email,username,role,state,district,authority_role,service_id,phone,created_at`,
       {
         headers: {
           "apikey": SUPABASE_ANON_KEY,
