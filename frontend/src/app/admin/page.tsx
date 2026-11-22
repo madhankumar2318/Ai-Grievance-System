@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-import { getComplaintsServerAction, updateComplaintStatusServerAction, ActionTakenReportData } from "@/app/actions/complaintActions";
+import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, ActionTakenReportData } from "@/app/actions/complaintActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
 
 
@@ -23,6 +23,7 @@ const STATUS_CONFIG: Record<string, { color: string; dot: string }> = {
 };
 
 const CATEGORY_ICONS: Record<string, string> = {
+    Administrative: "📁",
     Infrastructure: "🏗️",
     Environment: "🌿",
     Safety: "🛡️",
@@ -75,6 +76,31 @@ export default function AdminDashboard() {
         location: string;
         citizenEvidencePhoto?: string | null;
     } | null>(null);
+
+    // ── Collector Executive Transfer State ───────────────────────────────────────
+    const [transferSelections, setTransferSelections] = useState<Record<string, string>>({});
+    const [transferringId, setTransferringId] = useState<string | null>(null);
+    const [transferSuccessId, setTransferSuccessId] = useState<string | null>(null);
+
+    const handleTransferDepartment = async (id: string, newDept: string) => {
+        if (!newDept || transferringId) return;
+        setTransferringId(id);
+        try {
+            const res = await transferComplaintDepartmentServerAction(id, newDept as any);
+            if (res.success) {
+                setComplaints(prev => prev.map(c => c.id === id ? { ...c, category: newDept } : c));
+                setTransferSuccessId(id);
+                setTimeout(() => setTransferSuccessId(null), 3500);
+            } else {
+                alert(res.error || "Failed to transfer department.");
+            }
+        } catch (err) {
+            console.error("Department transfer error:", err);
+            alert("Network error while transferring department.");
+        } finally {
+            setTransferringId(null);
+        }
+    };
 
     const handleOpenResolveModal = (c: AdminComplaint) => {
         if (assignedDepartment && c.category !== assignedDepartment && !isDistrictHead) {
@@ -836,6 +862,85 @@ export default function AdminDashboard() {
                                                                                 >✕ Reject</button>
                                                                             </div>
                                                                         )}
+
+                                                                        {/* Collector Executive Control: Transfer Department */}
+                                                                        {isDistrictHead && c.status !== "Resolved" && c.status !== "Rejected" && (
+                                                                            <div
+                                                                                onClick={e => e.stopPropagation()}
+                                                                                style={{
+                                                                                    marginTop: "0.25rem",
+                                                                                    padding: "0.75rem 0.9rem",
+                                                                                    borderRadius: "0.75rem",
+                                                                                    background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))",
+                                                                                    border: "1px solid rgba(168, 85, 247, 0.25)",
+                                                                                    display: "flex",
+                                                                                    flexDirection: "column",
+                                                                                    gap: "0.45rem",
+                                                                                }}
+                                                                            >
+                                                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                                    <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                                                                        <span>🔄</span>
+                                                                                        <span>Transfer Department</span>
+                                                                                    </span>
+                                                                                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                                                                        Current: <strong style={{ color: "#e2e8f0" }}>{c.category}</strong>
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                                                                    <select
+                                                                                        value={transferSelections[c.id] || c.category}
+                                                                                        onChange={e => setTransferSelections(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                                                                        style={{
+                                                                                            flex: 1,
+                                                                                            padding: "0.45rem 0.65rem",
+                                                                                            borderRadius: "0.5rem",
+                                                                                            background: "#0f172a",
+                                                                                            border: "1px solid rgba(255, 255, 255, 0.15)",
+                                                                                            color: "#ffffff",
+                                                                                            fontSize: "0.8rem",
+                                                                                            outline: "none",
+                                                                                            cursor: "pointer",
+                                                                                        }}
+                                                                                    >
+                                                                                        {["Administrative", "Environment", "Infrastructure", "Public Health", "Safety"].map(d => (
+                                                                                            <option key={d} value={d} style={{ background: "#0f172a", color: "#ffffff" }}>
+                                                                                                {d === "Administrative" ? "📁 Administrative" :
+                                                                                                 d === "Environment" ? "🌿 Environment" :
+                                                                                                 d === "Infrastructure" ? "🏗️ Infrastructure" :
+                                                                                                 d === "Public Health" ? "🏥 Public Health" : "🛡️ Safety"}
+                                                                                            </option>
+                                                                                        ))}
+                                                                                    </select>
+                                                                                    <button
+                                                                                        disabled={transferringId === c.id || ((transferSelections[c.id] || c.category) === c.category)}
+                                                                                        onClick={() => handleTransferDepartment(c.id, transferSelections[c.id] || c.category)}
+                                                                                        style={{
+                                                                                            padding: "0.45rem 0.85rem",
+                                                                                            borderRadius: "0.5rem",
+                                                                                            background: ((transferSelections[c.id] || c.category) !== c.category)
+                                                                                                ? "linear-gradient(135deg, #a855f7, #6366f1)"
+                                                                                                : "rgba(255, 255, 255, 0.08)",
+                                                                                            color: ((transferSelections[c.id] || c.category) !== c.category) ? "#ffffff" : "var(--text-muted)",
+                                                                                            border: "none",
+                                                                                            fontSize: "0.78rem",
+                                                                                            fontWeight: "700",
+                                                                                            cursor: ((transferSelections[c.id] || c.category) !== c.category) ? "pointer" : "not-allowed",
+                                                                                            whiteSpace: "nowrap",
+                                                                                            transition: "all 0.2s ease",
+                                                                                        }}
+                                                                                    >
+                                                                                        {transferringId === c.id ? "Transferring..." : "Apply Transfer"}
+                                                                                    </button>
+                                                                                </div>
+                                                                                {transferSuccessId === c.id && (
+                                                                                    <div style={{ fontSize: "0.72rem", color: "#10b981", fontWeight: "700", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                                                                                        <span>✓</span>
+                                                                                        <span>Transferred successfully to {c.category}!</span>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
                                                                         {(c.status === "Resolved" || c.status === "Rejected") && (
                                                                             <div style={{ fontSize: "0.82rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.4rem" }}>
                                                                                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: sCfg.dot, display: "inline-block" }} />
@@ -1167,7 +1272,32 @@ export default function AdminDashboard() {
                                                             ✕ Reject
                                                         </button>
                                                     </div>
-                                                ) : null
+                                                ) : (
+                                                    <div onClick={e => e.stopPropagation()} style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.4rem", padding: "0.6rem 0.75rem", borderRadius: "0.625rem", background: "rgba(168, 85, 247, 0.08)", border: "1px solid rgba(168, 85, 247, 0.25)" }}>
+                                                        <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#c084fc", textTransform: "uppercase" }}>🔄 Transfer Department</div>
+                                                        <div style={{ display: "flex", gap: "0.4rem" }}>
+                                                            <select
+                                                                value={transferSelections[c.id] || c.category}
+                                                                onChange={e => setTransferSelections(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                                                style={{ flex: 1, padding: "0.4rem", borderRadius: "0.4rem", background: "#0f172a", color: "#fff", border: "1px solid rgba(255,255,255,0.15)", fontSize: "0.78rem" }}
+                                                            >
+                                                                {["Administrative", "Environment", "Infrastructure", "Public Health", "Safety"].map(d => (
+                                                                    <option key={d} value={d}>{d}</option>
+                                                                ))}
+                                                            </select>
+                                                            <button
+                                                                disabled={transferringId === c.id || ((transferSelections[c.id] || c.category) === c.category)}
+                                                                onClick={() => handleTransferDepartment(c.id, transferSelections[c.id] || c.category)}
+                                                                style={{ padding: "0.4rem 0.65rem", borderRadius: "0.4rem", background: ((transferSelections[c.id] || c.category) !== c.category) ? "linear-gradient(135deg, #a855f7, #6366f1)" : "rgba(255,255,255,0.1)", color: "#fff", border: "none", fontSize: "0.75rem", fontWeight: "700" }}
+                                                            >
+                                                                {transferringId === c.id ? "..." : "Apply"}
+                                                            </button>
+                                                        </div>
+                                                        {transferSuccessId === c.id && (
+                                                            <span style={{ fontSize: "0.7rem", color: "#10b981", fontWeight: "700" }}>✓ Transferred!</span>
+                                                        )}
+                                                    </div>
+                                                )
                                             ) : (
                                                 <div style={{ fontSize: "0.8rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.25rem" }}>
                                                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: sCfg.dot }} />

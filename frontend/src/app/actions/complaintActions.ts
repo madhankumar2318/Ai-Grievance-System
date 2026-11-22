@@ -344,6 +344,122 @@ export async function updateComplaintStatusServerAction(
 }
 
 /**
+ * Transfer complaint department / category.
+ * Executive authority: Only District Collectors and Chief Administrators can re-route complaints between departments.
+ */
+export async function transferComplaintDepartmentServerAction(
+  id: string,
+  newDepartment: "Administrative" | "Environment" | "Infrastructure" | "Public Health" | "Safety"
+): Promise<{ success: boolean; error?: string }> {
+  const ip = await getClientIp();
+
+  // 1. Rate limiting
+  const rateResult = checkRateLimit(ip, "transfer_department", 30, 60000);
+  if (!rateResult.allowed) {
+    return { success: false, error: "Too many transfer requests. Please slow down." };
+  }
+
+  if (!id || !newDepartment) {
+    return { success: false, error: "Complaint ID and target department are required." };
+  }
+
+  // 2. Department whitelist validation
+  const VALID_DEPARTMENTS = new Set([
+    "Administrative",
+    "Environment",
+    "Infrastructure",
+    "Public Health",
+    "Safety",
+  ]);
+  if (!VALID_DEPARTMENTS.has(newDepartment)) {
+    return { success: false, error: "Invalid target department." };
+  }
+
+  // 3. Enforce server-side authorization check: only Collectors and Chiefs can re-route
+  const session = await getSession();
+  if (!session || !session.user) {
+    return { success: false, error: "Authentication required to transfer department." };
+  }
+
+  const roleStr = (session.user.authorityRole || "").toLowerCase();
+  const isDistrictHead =
+    roleStr.includes("collector") ||
+    roleStr.includes("magistrate") ||
+    roleStr.includes("commissioner") ||
+    session.user.role === "chief";
+
+  if (!isDistrictHead) {
+    return {
+      success: false,
+      error: "Access Denied: Only District Collectors and Chief Administrators have the executive power to transfer complaints between departments.",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const patchPayload = {
+    category: newDepartment,
+    updated_at: now,
+  };
+
+  // 4. Try Spring Boot if running locally
+  if (shouldAttemptSpringBoot()) try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 400);
+    const res = await fetch(`${SPRING_BOOT_URL}/api/complaints/update-category`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, category: newDepartment }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      // Also update Supabase in background
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify(patchPayload),
+        });
+      } catch {}
+      return { success: true };
+    }
+  } catch {}
+
+  // 5. Direct Supabase Cloud REST API Update
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(patchPayload),
+      }
+    );
+
+    if (res.ok) {
+      return { success: true };
+    } else {
+      const errText = await res.text();
+      console.error("Supabase category update error:", errText);
+      return { success: false, error: errText };
+    }
+  } catch (err) {
+    console.error("Supabase category update network error:", err);
+    return { success: false, error: "Network error transferring department." };
+  }
+}
+
+/**
  * Public complaint lookup by ID — fully server-side.
  *
  * Security guarantees:
