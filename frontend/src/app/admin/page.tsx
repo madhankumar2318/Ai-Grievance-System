@@ -59,6 +59,56 @@ export interface DbAdminComplaint {
     ai_reasoning: string | null;
 }
 
+// ── Smooth Count-Up on Initial Dashboard Load Only ───────────────────────────
+function InitialCountUp({ value, duration = 650, isReady = true }: { value: number; duration?: number; isReady?: boolean }) {
+    const hasAnimatedRef = React.useRef(false);
+    const [displayValue, setDisplayValue] = useState<number>(0);
+
+    useEffect(() => {
+        // Only trigger after data is loaded
+        if (!isReady) return;
+
+        // If already animated on initial load, update instantly without animation on filter change
+        if (hasAnimatedRef.current) {
+            setDisplayValue(value);
+            return;
+        }
+
+        if (value === 0) {
+            setDisplayValue(0);
+            hasAnimatedRef.current = true;
+            return;
+        }
+
+        let startTime: number | null = null;
+        let animationFrameId: number;
+
+        const step = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            // Ease-out cubic curve: smooth and natural deceleration
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const current = Math.round(value * easeOut);
+            setDisplayValue(current);
+
+            if (progress < 1) {
+                animationFrameId = requestAnimationFrame(step);
+            } else {
+                hasAnimatedRef.current = true;
+                setDisplayValue(value);
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(step);
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [value, duration, isReady]);
+
+    return <span>{displayValue}</span>;
+}
+
 export default function AdminDashboard() {
     const { t, lang } = useLang();
     const { user } = useAuth();
@@ -389,7 +439,7 @@ export default function AdminDashboard() {
                             <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px", borderRadius: "10px", background: grad, fontSize: "1.1rem", marginBottom: "0.75rem", boxShadow: `0 4px 12px ${color}44` }}>
                                 {icon}
                             </div>
-                            <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35 }}>—</span> : value}</div>
+                            <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35 }}>—</span> : <InitialCountUp value={value} isReady={!loading && complaints.length > 0} />}</div>
                             <div style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-muted)" }}>{label}</div>
                             {isDistrictHead && (
                                 <div style={{ fontSize: "0.68rem", fontWeight: "700", color: departmentFilter !== "All" ? color : "var(--text-muted)", marginTop: "0.3rem", opacity: departmentFilter !== "All" ? 0.95 : 0.65 }}>
