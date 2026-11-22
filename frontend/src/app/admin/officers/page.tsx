@@ -39,13 +39,13 @@ function mapRoleToDepartment(role: string): string {
     const r = (role || "").toLowerCase();
     if (r.includes("environment")) return "Environment";
     if (r.includes("health") || r.includes("sanitation")) return "Public Health";
-    if (r.includes("infrastructure") || r.includes("pwd") || r.includes("electricity") || r.includes("water") || r.includes("engineer")) return "Infrastructure";
-    if (r.includes("safety") || r.includes("traffic") || r.includes("police")) return "Safety";
-    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector") || r.includes("tahsildar")) return "Administrative";
+    if (r.includes("infrastructure") || r.includes("pwd") || r.includes("electricity") || r.includes("water") || r.includes("transport") || r.includes("rto") || r.includes("bus") || r.includes("engineer")) return "Infrastructure";
+    if (r.includes("safety") || r.includes("traffic") || r.includes("police") || r.includes("fire") || r.includes("rescue")) return "Safety";
+    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector") || r.includes("tahsildar") || r.includes("supply") || r.includes("ration") || r.includes("civil")) return "Administrative";
     return "Administrative";
 }
 
-// Specific metadata for all 11 official roles from the signup dropdown
+// Specific metadata for all official roles from the signup dropdown
 const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; accentColor: string; category: string; defaultOffice: string }> = {
     "Environment Protection Officer": {
         icon: "🌿",
@@ -123,6 +123,27 @@ const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; acc
         accentColor: "#ec4899",
         category: "Administrative",
         defaultOffice: "Chief Educational Office (CEO), Collectorate",
+    },
+    "Transport & Bus Services Officer": {
+        icon: "🚌",
+        avatarGrad: "linear-gradient(135deg, #f97316, #ea580c)",
+        accentColor: "#f97316",
+        category: "Infrastructure",
+        defaultOffice: "Regional Transport Office (RTO) & TNSTC Division",
+    },
+    "Civil Supplies & Ration Officer": {
+        icon: "🌾",
+        avatarGrad: "linear-gradient(135deg, #10b981, #047857)",
+        accentColor: "#10b981",
+        category: "Administrative",
+        defaultOffice: "District Supply Office (DSO), Collectorate Campus",
+    },
+    "Fire & Disaster Rescue Officer": {
+        icon: "🚒",
+        avatarGrad: "linear-gradient(135deg, #ef4444, #b91c1c)",
+        accentColor: "#ef4444",
+        category: "Safety",
+        defaultOffice: "District Fire & Rescue Services Headquarters",
     },
     "District Collector & District Magistrate": {
         icon: "🏛️",

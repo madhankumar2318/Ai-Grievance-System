@@ -152,9 +152,9 @@ export default function AdminDashboard() {
         if (isDistrictHead) return null; // Collector / Magistrate has supervisory access over All Departments
         if (roleStr.includes("environment")) return "Environment";
         if (roleStr.includes("health") || roleStr.includes("sanitation")) return "Public Health";
-        if (roleStr.includes("infrastructure") || roleStr.includes("pwd") || roleStr.includes("electricity") || roleStr.includes("water") || roleStr.includes("engineer")) return "Infrastructure";
-        if (roleStr.includes("safety") || roleStr.includes("traffic") || roleStr.includes("police")) return "Safety";
-        if (roleStr.includes("revenue") || roleStr.includes("education") || roleStr.includes("administrative") || roleStr.includes("municipal") || roleStr.includes("tahsildar")) return "Administrative";
+        if (roleStr.includes("infrastructure") || roleStr.includes("pwd") || roleStr.includes("electricity") || roleStr.includes("water") || roleStr.includes("transport") || roleStr.includes("rto") || roleStr.includes("bus") || roleStr.includes("engineer")) return "Infrastructure";
+        if (roleStr.includes("safety") || roleStr.includes("traffic") || roleStr.includes("police") || roleStr.includes("fire") || roleStr.includes("rescue")) return "Safety";
+        if (roleStr.includes("revenue") || roleStr.includes("education") || roleStr.includes("administrative") || roleStr.includes("municipal") || roleStr.includes("tahsildar") || roleStr.includes("supply") || roleStr.includes("ration") || roleStr.includes("civil")) return "Administrative";
         return null; // Fallback to broad access if unspecified municipal officer
     }, [isDistrictHead, roleStr]);
 

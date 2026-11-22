@@ -174,6 +174,7 @@ export default function LoginPage() {
                 { value: "Infrastructure & PWD Engineer", label: "🏗️ Infrastructure & PWD Engineer" },
                 { value: "Water Supply & Sewerage Officer", label: "💧 Water Supply & Sewerage Officer (TWAD)" },
                 { value: "Electricity Board Officer", label: "⚡ Electricity Board Officer (TANGEDCO)" },
+                { value: "Transport & Bus Services Officer", label: "🚌 Transport & Bus Services Officer (RTO / TNSTC)" },
             ],
         },
         "District Administration": {
@@ -181,6 +182,7 @@ export default function LoginPage() {
             roles: [
                 { value: "District Collector & District Magistrate", label: "🏛️ District Collector & District Magistrate" },
                 { value: "Tahsildar (Revenue Administration)", label: "💼 Tahsildar (Revenue Administration)" },
+                { value: "Civil Supplies & Ration Officer", label: "🌾 Civil Supplies & Ration Officer (DSO)" },
                 { value: "Municipal Corporation Officer", label: "🏙️ Municipal Corporation Officer" },
                 { value: "Education Department Officer", label: "📚 Education Department Officer" },
             ],
@@ -190,6 +192,7 @@ export default function LoginPage() {
             roles: [
                 { value: "Police Administrative Officer", label: "👮 Police Administrative Officer" },
                 { value: "Traffic Management Officer", label: "🚦 Traffic Management Officer" },
+                { value: "Fire & Disaster Rescue Officer", label: "🚒 Fire & Disaster Rescue Officer (DFO)" },
             ],
         },
         "Environment": {
