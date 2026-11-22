@@ -37,8 +37,8 @@ interface DisplayOfficer {
 // Maps any authority role string from signup/login to one of the 5 core grievance departments
 function mapRoleToDepartment(role: string): string {
     const r = (role || "").toLowerCase();
-    if (r.includes("environment")) return "Environment";
-    if (r.includes("health") || r.includes("sanitation")) return "Public Health";
+    if (r.includes("environment") || r.includes("forest") || r.includes("wildlife") || r.includes("waste") || r.includes("pollution") || r.includes("tnpcb")) return "Environment";
+    if (r.includes("health") || r.includes("sanitation") || r.includes("medical") || r.includes("hospital") || r.includes("food") || r.includes("fssai") || r.includes("dmo") || r.includes("dph")) return "Public Health";
     if (r.includes("infrastructure") || r.includes("pwd") || r.includes("electricity") || r.includes("water") || r.includes("transport") || r.includes("rto") || r.includes("bus") || r.includes("engineer")) return "Infrastructure";
     if (r.includes("safety") || r.includes("traffic") || r.includes("police") || r.includes("fire") || r.includes("rescue")) return "Safety";
     if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector") || r.includes("tahsildar") || r.includes("supply") || r.includes("ration") || r.includes("civil")) return "Administrative";
@@ -53,6 +53,20 @@ const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; acc
         accentColor: "#10b981",
         category: "Environment",
         defaultOffice: "Pollution Control Board & City Municipal Corporation",
+    },
+    "District Forest & Wildlife Officer": {
+        icon: "🌳",
+        avatarGrad: "linear-gradient(135deg, #15803d, #166534)",
+        accentColor: "#22c55e",
+        category: "Environment",
+        defaultOffice: "District Forest Office (DFO) & Wildlife Protection HQ",
+    },
+    "Solid Waste Management Officer": {
+        icon: "♻️",
+        avatarGrad: "linear-gradient(135deg, #0d9488, #115e59)",
+        accentColor: "#14b8a6",
+        category: "Environment",
+        defaultOffice: "Municipal SWM & Environmental Sanitation Division",
     },
     "Infrastructure & PWD Engineer": {
         icon: "🏗️",
@@ -81,6 +95,20 @@ const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; acc
         accentColor: "#06b6d4",
         category: "Public Health",
         defaultOffice: "District Health Office, Collectorate Annexe",
+    },
+    "District Medical Officer": {
+        icon: "🩺",
+        avatarGrad: "linear-gradient(135deg, #0284c7, #075985)",
+        accentColor: "#38bdf8",
+        category: "Public Health",
+        defaultOffice: "Joint Director of Health Services (JDHS) & Govt Hospital",
+    },
+    "Food Safety Officer": {
+        icon: "🥗",
+        avatarGrad: "linear-gradient(135deg, #84cc16, #4d7c0f)",
+        accentColor: "#a3e635",
+        category: "Public Health",
+        defaultOffice: "Food Safety & Drug Administration Wing, Collectorate",
     },
     "Police Administrative Officer": {
         icon: "👮",

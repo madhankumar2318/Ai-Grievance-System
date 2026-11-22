@@ -198,13 +198,17 @@ export default function LoginPage() {
         "Environment": {
             label: "Environment",
             roles: [
-                { value: "Environment Protection Officer", label: "🌿 Environment Protection Officer" },
+                { value: "Environment Protection Officer", label: "🌿 Environment Protection Officer (TNPCB)" },
+                { value: "District Forest & Wildlife Officer", label: "🌳 District Forest & Wildlife Officer (DFO)" },
+                { value: "Solid Waste Management Officer", label: "♻️ Solid Waste & Bio-Waste Management Officer" },
             ],
         },
         "Public Health": {
             label: "Public Health",
             roles: [
                 { value: "Health & Sanitation Inspector", label: "🏥 Health & Sanitation Inspector" },
+                { value: "District Medical Officer", label: "🩺 District Medical Officer (DMO / DPH)" },
+                { value: "Food Safety Officer", label: "🥗 Food Safety Officer (FSSAI / DO)" },
             ],
         },
     };
