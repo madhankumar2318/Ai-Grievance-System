@@ -1416,17 +1416,35 @@ export default function LoginPage() {
                                                         style={selectStyle(!!auErrors.authorityRole)}
                                                     >
                                                         <option value="">— Select Your Authority Role —</option>
-                                                        <option value="District Collector & District Magistrate">🏛️ District Collector &amp; District Magistrate</option>
-                                                        <option value="Municipal Corporation Officer">🏙️ Municipal Corporation Officer</option>
-                                                        <option value="Health & Sanitation Inspector">🏥 Health &amp; Sanitation Inspector</option>
-                                                        <option value="Environment Protection Officer">🌿 Environment Protection Officer</option>
-                                                        <option value="Traffic Management Officer">🚦 Traffic Management Officer</option>
-                                                        <option value="Infrastructure & PWD Engineer">🏗️ Infrastructure &amp; PWD Engineer</option>
-                                                        <option value="Revenue Department Officer">💼 Revenue Department Officer</option>
-                                                        <option value="Police Administrative Officer">👮 Police Administrative Officer</option>
-                                                        <option value="Education Department Officer">📚 Education Department Officer</option>
-                                                        <option value="Water Supply & Sewerage Officer">💧 Water Supply &amp; Sewerage Officer</option>
-                                                        <option value="Electricity Board Officer">⚡ Electricity Board Officer</option>
+
+                                                        <optgroup label="🏛️ District Executive Leadership">
+                                                            <option value="District Collector & District Magistrate">🏛️ District Collector &amp; District Magistrate</option>
+                                                        </optgroup>
+
+                                                        <optgroup label="🌿 Environment & Sanitation Division">
+                                                            <option value="Environment Protection Officer">🌿 Environment Protection Officer</option>
+                                                        </optgroup>
+
+                                                        <optgroup label="🏗️ Infrastructure, Public Works & Utilities">
+                                                            <option value="Infrastructure & PWD Engineer">🏗️ Infrastructure &amp; PWD Engineer</option>
+                                                            <option value="Water Supply & Sewerage Officer">💧 Water Supply &amp; Sewerage Officer</option>
+                                                            <option value="Electricity Board Officer">⚡ Electricity Board Officer</option>
+                                                        </optgroup>
+
+                                                        <optgroup label="🏥 Public Health & Medical Services">
+                                                            <option value="Health & Sanitation Inspector">🏥 Health &amp; Sanitation Inspector</option>
+                                                        </optgroup>
+
+                                                        <optgroup label="🛡️ Law Enforcement, Safety & Traffic">
+                                                            <option value="Police Administrative Officer">👮 Police Administrative Officer</option>
+                                                            <option value="Traffic Management Officer">🚦 Traffic Management Officer</option>
+                                                        </optgroup>
+
+                                                        <optgroup label="📁 Revenue & Municipal Administration">
+                                                            <option value="Revenue Department Officer">💼 Revenue Department Officer</option>
+                                                            <option value="Municipal Corporation Officer">🏙️ Municipal Corporation Officer</option>
+                                                            <option value="Education Department Officer">📚 Education Department Officer</option>
+                                                        </optgroup>
                                                     </select>
                                                 </Field>
 

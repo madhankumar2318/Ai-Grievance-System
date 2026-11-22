@@ -34,7 +34,7 @@ interface DisplayOfficer {
     isRealRegistered: boolean;
 }
 
-// Maps any authority role string from the signup/login page to the 5 core grievance departments
+// Maps any authority role string from signup/login to one of the 5 core grievance departments
 function mapRoleToDepartment(role: string): string {
     const r = (role || "").toLowerCase();
     if (r.includes("environment")) return "Environment";
@@ -45,7 +45,88 @@ function mapRoleToDepartment(role: string): string {
     return "Administrative";
 }
 
-const DEPT_METADATA: Record<string, { icon: string; avatarGrad: string; accentColor: string; defaultTitle: string; defaultOffice: string }> = {
+// Specific metadata for all 11 official roles from the signup dropdown
+const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; accentColor: string; category: string; defaultOffice: string }> = {
+    "Environment Protection Officer": {
+        icon: "🌿",
+        avatarGrad: "linear-gradient(135deg, #10b981, #059669)",
+        accentColor: "#10b981",
+        category: "Environment",
+        defaultOffice: "Pollution Control Board & City Municipal Corporation",
+    },
+    "Infrastructure & PWD Engineer": {
+        icon: "🏗️",
+        avatarGrad: "linear-gradient(135deg, #6366f1, #4f46e5)",
+        accentColor: "#6366f1",
+        category: "Infrastructure",
+        defaultOffice: "PWD Divisional Complex, Cantonment",
+    },
+    "Water Supply & Sewerage Officer": {
+        icon: "💧",
+        avatarGrad: "linear-gradient(135deg, #0284c7, #0369a1)",
+        accentColor: "#0284c7",
+        category: "Infrastructure",
+        defaultOffice: "TWAD Board & City Water Supply Division",
+    },
+    "Electricity Board Officer": {
+        icon: "⚡",
+        avatarGrad: "linear-gradient(135deg, #f59e0b, #d97706)",
+        accentColor: "#f59e0b",
+        category: "Infrastructure",
+        defaultOffice: "TANGEDCO Electricity Distribution Division",
+    },
+    "Health & Sanitation Inspector": {
+        icon: "🏥",
+        avatarGrad: "linear-gradient(135deg, #06b6d4, #0891b2)",
+        accentColor: "#06b6d4",
+        category: "Public Health",
+        defaultOffice: "District Health Office, Collectorate Annexe",
+    },
+    "Police Administrative Officer": {
+        icon: "👮",
+        avatarGrad: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+        accentColor: "#3b82f6",
+        category: "Safety",
+        defaultOffice: "District Police Office & Law Enforcement HQ",
+    },
+    "Traffic Management Officer": {
+        icon: "🚦",
+        avatarGrad: "linear-gradient(135deg, #eab308, #ca8a04)",
+        accentColor: "#eab308",
+        category: "Safety",
+        defaultOffice: "District Traffic Control Headquarters",
+    },
+    "Revenue Department Officer": {
+        icon: "💼",
+        avatarGrad: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+        accentColor: "#8b5cf6",
+        category: "Administrative",
+        defaultOffice: "Revenue Divisional Office (RDO), Taluk Campus",
+    },
+    "Municipal Corporation Officer": {
+        icon: "🏙️",
+        avatarGrad: "linear-gradient(135deg, #64748b, #475569)",
+        accentColor: "#94a3b8",
+        category: "Administrative",
+        defaultOffice: "City Municipal Corporation Headquarters",
+    },
+    "Education Department Officer": {
+        icon: "📚",
+        avatarGrad: "linear-gradient(135deg, #ec4899, #be185d)",
+        accentColor: "#ec4899",
+        category: "Administrative",
+        defaultOffice: "Chief Educational Office (CEO), Collectorate",
+    },
+    "District Collector & District Magistrate": {
+        icon: "🏛️",
+        avatarGrad: "linear-gradient(135deg, #f59e0b, #b45309)",
+        accentColor: "#fbbf24",
+        category: "Administrative",
+        defaultOffice: "District Collectorate Main Administrative Complex",
+    },
+};
+
+const DEPT_FALLBACK_META: Record<string, { icon: string; avatarGrad: string; accentColor: string; defaultTitle: string; defaultOffice: string }> = {
     Environment: {
         icon: "🌿",
         avatarGrad: "linear-gradient(135deg, #10b981, #059669)",
@@ -83,6 +164,18 @@ const DEPT_METADATA: Record<string, { icon: string; avatarGrad: string; accentCo
     },
 };
 
+function getRoleMetadata(role: string, dept: string) {
+    if (ROLE_SPECIFIC_META[role]) {
+        return ROLE_SPECIFIC_META[role];
+    }
+    for (const [key, meta] of Object.entries(ROLE_SPECIFIC_META)) {
+        if (role.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(role.toLowerCase())) {
+            return meta;
+        }
+    }
+    return DEPT_FALLBACK_META[dept] || DEPT_FALLBACK_META.Administrative;
+}
+
 const BASELINE_DEPTS = ["Environment", "Infrastructure", "Public Health", "Safety", "Administrative"];
 
 export default function DistrictOfficersPage() {
@@ -93,6 +186,7 @@ export default function DistrictOfficersPage() {
     const [registeredOfficers, setRegisteredOfficers] = useState<RegisteredOfficer[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<"All" | "Available" | "Active" | "Busy">("All");
+    const [departmentFilter, setDepartmentFilter] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
 
     const roleStr = `${user?.authorityRole || ""} ${user?.department || ""} ${user?.username || ""} ${user?.email || ""}`.toLowerCase();
@@ -146,9 +240,9 @@ export default function DistrictOfficersPage() {
         };
     }, [officerDistrict]);
 
-    // Filter grievances strictly to the Collector's district (e.g. Tiruchirappalli, Coimbatore, Madurai, Chennai, etc.)
+    // Filter grievances strictly to the Collector's district (e.g. Tiruchirappalli, Coimbatore, Madurai, etc.)
     const districtComplaints = useMemo(() => {
-        const isAll = officerDistrict.toLowerCase().includes("all");
+        const isAll = officerDistrict.toLowerCase().includes("all") || user?.role === "chief";
         if (isAll) return complaints;
 
         return complaints.filter(c => {
@@ -170,7 +264,7 @@ export default function DistrictOfficersPage() {
                 subjLower.includes(dLower)
             );
         });
-    }, [complaints, officerDistrict]);
+    }, [complaints, officerDistrict, user?.role]);
 
     // Build the dynamic officers list merging REAL registered officers from Supabase
     const displayOfficers = useMemo(() => {
@@ -192,16 +286,18 @@ export default function DistrictOfficersPage() {
 
         // For each of the 5 baseline departments:
         BASELINE_DEPTS.forEach(dept => {
-            const meta = DEPT_METADATA[dept] || DEPT_METADATA.Administrative;
             const regList = registeredByDept[dept];
 
             if (regList && regList.length > 0) {
-                // User's real registered officer exists in Supabase!
+                // User's real registered officer(s) exist in Supabase!
                 regList.forEach(reg => {
+                    const roleTitle = reg.authorityRole || "Department Field Officer";
+                    const meta = getRoleMetadata(roleTitle, dept);
+
                     list.push({
                         id: `reg-${reg.email}`,
                         name: reg.username || "Department Field Officer",
-                        designation: reg.authorityRole || meta.defaultTitle,
+                        designation: roleTitle,
                         category: dept,
                         serviceId: reg.serviceId || "TN-GOV-OFFICER",
                         officeLocation: `${officerDistrict} ${meta.defaultOffice}`,
@@ -215,18 +311,19 @@ export default function DistrictOfficersPage() {
                 });
             } else {
                 // If no real officer has registered for this department yet, keep standard department post
+                const fallback = DEPT_FALLBACK_META[dept] || DEPT_FALLBACK_META.Administrative;
                 list.push({
                     id: `post-${dept}`,
                     name: `${dept} Field Officer`,
-                    designation: meta.defaultTitle,
+                    designation: fallback.defaultTitle,
                     category: dept,
                     serviceId: `TN-${dept.slice(0, 3).toUpperCase()}-POST`,
-                    officeLocation: `${officerDistrict} ${meta.defaultOffice}`,
+                    officeLocation: `${officerDistrict} ${fallback.defaultOffice}`,
                     phone: "+91 94432 00000",
                     email: `${dept.toLowerCase()}@${officerDistrict.toLowerCase()}.tn.gov.in`,
-                    icon: meta.icon,
-                    avatarGrad: meta.avatarGrad,
-                    accentColor: meta.accentColor,
+                    icon: fallback.icon,
+                    avatarGrad: fallback.avatarGrad,
+                    accentColor: fallback.accentColor,
                     isRealRegistered: false,
                 });
             }
@@ -279,10 +376,11 @@ export default function DistrictOfficersPage() {
     const activeCount = officerWorkloads.filter(o => o.dutyStatus === "Active").length;
     const busyCount = officerWorkloads.filter(o => o.dutyStatus === "Busy").length;
 
-    // Filtered by search & duty pill
+    // Filtered by search, duty status, and department
     const filteredOfficers = useMemo(() => {
         return officerWorkloads.filter(o => {
             if (statusFilter !== "All" && o.dutyStatus !== statusFilter) return false;
+            if (departmentFilter !== "All" && o.category !== departmentFilter) return false;
             if (searchTerm.trim()) {
                 const q = searchTerm.toLowerCase();
                 const matchesName = o.name.toLowerCase().includes(q);
@@ -293,7 +391,7 @@ export default function DistrictOfficersPage() {
             }
             return true;
         });
-    }, [officerWorkloads, statusFilter, searchTerm]);
+    }, [officerWorkloads, statusFilter, departmentFilter, searchTerm]);
 
     return (
         <ProtectedRoute allowedRoles={["authority", "chief"]}>
@@ -417,10 +515,10 @@ export default function DistrictOfficersPage() {
                                     <span style={{ fontSize: "1.3rem" }}>👥</span>
                                 </div>
                                 <div style={{ fontSize: "2.2rem", fontWeight: "900", color: "#6366f1", lineHeight: 1 }}>
-                                    {totalOfficers}
+                                    {loading ? "···" : totalOfficers}
                                 </div>
                                 <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
-                                    Covering all 5 vital sectors in {officerDistrict}
+                                    Covering all vital sectors in {officerDistrict}
                                 </div>
                             </div>
 
@@ -485,67 +583,102 @@ export default function DistrictOfficersPage() {
                             </div>
                         </div>
 
-                        {/* ── Control Bar: Filter Pills + Search ── */}
+                        {/* ── Control Bar: Duty Filters + Department Filters + Search ── */}
                         <div style={{
                             display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: "1rem",
+                            flexDirection: "column",
+                            gap: "0.85rem",
                             marginBottom: "1.5rem",
-                            flexWrap: "wrap",
-                            padding: "0.75rem 1.25rem",
+                            padding: "0.85rem 1.25rem",
                             borderRadius: "1rem",
                             background: "rgba(255, 255, 255, 0.02)",
                             border: "1px solid var(--border)",
                         }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                            {/* Row 1: Duty Status + Search */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginRight: "0.25rem" }}>
+                                        Duty Status:
+                                    </span>
+                                    {(["All", "Available", "Active", "Busy"] as const).map(f => {
+                                        const isSel = statusFilter === f;
+                                        return (
+                                            <button
+                                                key={f}
+                                                onClick={() => setStatusFilter(f)}
+                                                style={{
+                                                    padding: "0.3rem 0.85rem",
+                                                    borderRadius: "99px",
+                                                    fontSize: "0.76rem",
+                                                    fontWeight: "700",
+                                                    cursor: "pointer",
+                                                    border: isSel ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                                                    background: isSel ? "var(--grad-primary)" : "rgba(255, 255, 255, 0.04)",
+                                                    color: isSel ? "white" : "var(--text-muted)",
+                                                    transition: "all 0.15s ease",
+                                                }}
+                                            >
+                                                {f === "All" ? `All Officers (${totalOfficers})` :
+                                                    f === "Available" ? `🟢 Free (${availableCount})` :
+                                                        f === "Active" ? `🟡 Active (${activeCount})` :
+                                                            `🔴 Busy (${busyCount})`}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{ position: "relative", minWidth: "260px" }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name, role, email..."
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        style={{
+                                            width: "100%",
+                                            padding: "0.45rem 0.85rem",
+                                            borderRadius: "0.6rem",
+                                            border: "1px solid var(--border)",
+                                            background: "rgba(255, 255, 255, 0.04)",
+                                            color: "var(--text-main)",
+                                            fontSize: "0.8rem",
+                                            outline: "none",
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Row 2: Department Filter Tabs */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap", paddingTop: "0.4rem", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
                                 <span style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginRight: "0.25rem" }}>
-                                    Duty Filter:
+                                    Department:
                                 </span>
-                                {(["All", "Available", "Active", "Busy"] as const).map(f => {
-                                    const isSel = statusFilter === f;
+                                {["All", "Environment", "Infrastructure", "Public Health", "Safety", "Administrative"].map(d => {
+                                    const isSel = departmentFilter === d;
+                                    const icon = d === "All" ? "🏢" : (DEPT_FALLBACK_META[d]?.icon || "📁");
                                     return (
                                         <button
-                                            key={f}
-                                            onClick={() => setStatusFilter(f)}
+                                            key={d}
+                                            onClick={() => setDepartmentFilter(d)}
                                             style={{
-                                                padding: "0.3rem 0.85rem",
+                                                padding: "0.25rem 0.75rem",
                                                 borderRadius: "99px",
-                                                fontSize: "0.76rem",
+                                                fontSize: "0.74rem",
                                                 fontWeight: "700",
                                                 cursor: "pointer",
                                                 border: isSel ? "1.5px solid var(--primary)" : "1px solid var(--border)",
                                                 background: isSel ? "var(--grad-primary)" : "rgba(255, 255, 255, 0.04)",
                                                 color: isSel ? "white" : "var(--text-muted)",
                                                 transition: "all 0.15s ease",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "0.3rem",
                                             }}
                                         >
-                                            {f === "All" ? `All Officers (${totalOfficers})` :
-                                                f === "Available" ? `🟢 Free (${availableCount})` :
-                                                    f === "Active" ? `🟡 Active (${activeCount})` :
-                                                        `🔴 Busy (${busyCount})`}
+                                            <span>{icon}</span>
+                                            <span>{d === "All" ? "All Departments" : d}</span>
                                         </button>
                                     );
                                 })}
-                            </div>
-
-                            <div style={{ position: "relative", minWidth: "240px" }}>
-                                <input
-                                    type="text"
-                                    placeholder="Search by officer name, department, or email..."
-                                    value={searchTerm}
-                                    onChange={e => setSearchTerm(e.target.value)}
-                                    style={{
-                                        width: "100%",
-                                        padding: "0.45rem 0.85rem",
-                                        borderRadius: "0.6rem",
-                                        border: "1px solid var(--border)",
-                                        background: "rgba(255, 255, 255, 0.04)",
-                                        color: "var(--text-main)",
-                                        fontSize: "0.8rem",
-                                        outline: "none",
-                                    }}
-                                />
                             </div>
                         </div>
 
