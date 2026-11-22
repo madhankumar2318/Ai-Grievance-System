@@ -268,13 +268,26 @@ export default function AdminDashboard() {
         return jurisdictionComplaints;
     }, [jurisdictionComplaints, assignedDepartment]);
 
-    const pending = officerDomainComplaints.filter(c => c.status === "Pending").length;
-    const resolved = officerDomainComplaints.filter(c => c.status === "Resolved").length;
-    const inProgress = officerDomainComplaints.filter(c => c.status === "In Progress").length;
-    const rejected = officerDomainComplaints.filter(c => c.status === "Rejected").length;
+    // Active department scope for stat cards:
+    // Field Officer: strictly their assignedDepartment
+    // District Collector: dynamically updates based on selected departmentFilter
+    const activeScopedComplaints = React.useMemo(() => {
+        if (assignedDepartment) {
+            return jurisdictionComplaints.filter(c => c.category === assignedDepartment);
+        }
+        if (departmentFilter && departmentFilter !== "All") {
+            return jurisdictionComplaints.filter(c => c.category === departmentFilter);
+        }
+        return jurisdictionComplaints;
+    }, [jurisdictionComplaints, assignedDepartment, departmentFilter]);
+
+    const pending = activeScopedComplaints.filter(c => c.status === "Pending").length;
+    const resolved = activeScopedComplaints.filter(c => c.status === "Resolved").length;
+    const inProgress = activeScopedComplaints.filter(c => c.status === "In Progress").length;
+    const rejected = activeScopedComplaints.filter(c => c.status === "Rejected").length;
 
     const STATS = [
-        { label: t("admin_total"), value: officerDomainComplaints.length, color: "#6366f1", icon: "📋", grad: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
+        { label: t("admin_total"), value: activeScopedComplaints.length, color: "#6366f1", icon: "📋", grad: "linear-gradient(135deg,#6366f1,#8b5cf6)" },
         { label: t("admin_pending"), value: pending, color: "#f59e0b", icon: "⏳", grad: "linear-gradient(135deg,#f59e0b,#f97316)" },
         { label: t("admin_in_progress"), value: inProgress, color: "#6366f1", icon: "🔄", grad: "linear-gradient(135deg,#06b6d4,#6366f1)" },
         { label: t("admin_resolved"), value: resolved, color: "#10b981", icon: "✅", grad: "linear-gradient(135deg,#10b981,#06b6d4)" },
@@ -378,6 +391,11 @@ export default function AdminDashboard() {
                             </div>
                             <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35 }}>—</span> : value}</div>
                             <div style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-muted)" }}>{label}</div>
+                            {isDistrictHead && (
+                                <div style={{ fontSize: "0.68rem", fontWeight: "700", color: departmentFilter !== "All" ? color : "var(--text-muted)", marginTop: "0.3rem", opacity: departmentFilter !== "All" ? 0.95 : 0.65 }}>
+                                    {departmentFilter !== "All" ? `${CATEGORY_ICONS[departmentFilter] || ""} ${departmentFilter}` : "All Departments"}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
