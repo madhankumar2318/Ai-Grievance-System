@@ -119,6 +119,13 @@ export default function Navbar() {
     const handleLogout = () => { logout(); router.push("/login"); };
     const isActive = (href: string) => pathname === href;
 
+    const roleStr = `${user?.authorityRole || ""} ${user?.department || ""} ${user?.username || ""} ${user?.email || ""}`.toLowerCase();
+    const isDistrictHead =
+        roleStr.includes("collector") ||
+        roleStr.includes("magistrate") ||
+        roleStr.includes("commissioner") ||
+        user?.role === "chief";
+
     return (
         <nav
             className="glass no-print nav-container"
@@ -163,7 +170,12 @@ export default function Navbar() {
                                 <NavLink href="/profile" active={isActive("/profile")}>📋 My Grievances</NavLink>
                             </>)}
                             {user?.role === "authority" && (
-                                <NavLink href="/admin" active={isActive("/admin")}>🛡️ Authority Portal</NavLink>
+                                <>
+                                    <NavLink href="/admin" active={isActive("/admin")}>🛡️ Authority Portal</NavLink>
+                                    {isDistrictHead && (
+                                        <NavLink href="/admin/officers" active={isActive("/admin/officers")}>👥 District Officers</NavLink>
+                                    )}
+                                </>
                             )}
                             {user?.role === "chief" && (
                                 <NavLink href="/chief" active={isActive("/chief")}>⭐ {t("nav_chief")}</NavLink>
@@ -575,13 +587,24 @@ export default function Navbar() {
                         </>
                     )}
                     {user.role === "authority" && (
-                        <Link
-                            href="/admin"
-                            className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            🛡️ Authority Portal
-                        </Link>
+                        <>
+                            <Link
+                                href="/admin"
+                                className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                🛡️ Authority Portal
+                            </Link>
+                            {isDistrictHead && (
+                                <Link
+                                    href="/admin/officers"
+                                    className={`mobile-menu-drawer-item${isActive("/admin/officers") ? " mobile-menu-drawer-item--active" : ""}`}
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                >
+                                    👥 District Officers
+                                </Link>
+                            )}
+                        </>
                     )}
                     {user.role === "chief" && (
                         <Link

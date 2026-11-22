@@ -161,6 +161,14 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (assignedDepartment) {
             setDepartmentFilter(assignedDepartment);
+        } else if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const deptParam = params.get("dept");
+            if (deptParam) {
+                setDepartmentFilter(deptParam);
+            } else {
+                setDepartmentFilter("All");
+            }
         } else {
             setDepartmentFilter("All");
         }
