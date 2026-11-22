@@ -203,40 +203,48 @@ const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; acc
     },
 };
 
+const DEPT_FULL_NAMES: Record<string, string> = {
+    Environment: "Environment",
+    Infrastructure: "Infrastructure & Utilities",
+    "Public Health": "Public Health",
+    Safety: "Police & Public Safety",
+    Administrative: "District Administration",
+};
+
 const DEPT_FALLBACK_META: Record<string, { icon: string; avatarGrad: string; accentColor: string; defaultTitle: string; defaultOffice: string }> = {
     Environment: {
         icon: "🌿",
         avatarGrad: "linear-gradient(135deg, #10b981, #059669)",
         accentColor: "#10b981",
-        defaultTitle: "Environmental Protection Officer",
-        defaultOffice: "City Municipal Corporation, Bharathidasan Salai",
+        defaultTitle: "Environment Protection Officer",
+        defaultOffice: "Pollution Control Board & City Municipal Corporation",
     },
     Infrastructure: {
         icon: "🏗️",
         avatarGrad: "linear-gradient(135deg, #6366f1, #4f46e5)",
         accentColor: "#6366f1",
-        defaultTitle: "Executive Engineer (Infrastructure & PWD)",
+        defaultTitle: "Infrastructure & PWD Engineer",
         defaultOffice: "PWD Divisional Complex, Cantonment",
     },
     "Public Health": {
         icon: "🏥",
         avatarGrad: "linear-gradient(135deg, #06b6d4, #0891b2)",
         accentColor: "#06b6d4",
-        defaultTitle: "Chief District Health & Sanitation Inspector",
+        defaultTitle: "Health & Sanitation Inspector",
         defaultOffice: "District Health Office, Collectorate Annexe",
     },
     Safety: {
         icon: "🛡️",
         avatarGrad: "linear-gradient(135deg, #f59e0b, #d97706)",
         accentColor: "#f59e0b",
-        defaultTitle: "District Traffic & Law Enforcement Officer",
+        defaultTitle: "Traffic Management Officer",
         defaultOffice: "District Traffic Control HQ, Court Complex Road",
     },
     Administrative: {
         icon: "📁",
         avatarGrad: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
         accentColor: "#8b5cf6",
-        defaultTitle: "Special Tahsildar (Revenue & District Administration)",
+        defaultTitle: "Tahsildar (Revenue Administration)",
         defaultOffice: "Taluk Office Compound, Collectorate Campus",
     },
 };
@@ -391,7 +399,7 @@ export default function DistrictOfficersPage() {
                 const fallback = DEPT_FALLBACK_META[dept] || DEPT_FALLBACK_META.Administrative;
                 list.push({
                     id: `post-${dept}`,
-                    name: `${dept} Field Officer`,
+                    name: `${DEPT_FULL_NAMES[dept] || dept} Field Officer`,
                     designation: fallback.defaultTitle,
                     category: dept,
                     serviceId: `TN-${dept.slice(0, 3).toUpperCase()}-POST`,

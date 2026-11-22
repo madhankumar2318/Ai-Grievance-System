@@ -158,6 +158,14 @@ export default function AdminDashboard() {
         return null; // Fallback to broad access if unspecified municipal officer
     }, [isDistrictHead, roleStr]);
 
+    const friendlyDeptName = React.useMemo(() => {
+        if (!assignedDepartment) return null;
+        if (assignedDepartment === "Infrastructure") return "Infrastructure & Utilities";
+        if (assignedDepartment === "Safety") return "Police & Public Safety";
+        if (assignedDepartment === "Administrative") return "District Administration";
+        return assignedDepartment;
+    }, [assignedDepartment]);
+
     useEffect(() => {
         if (assignedDepartment) {
             setDepartmentFilter(assignedDepartment);
@@ -382,7 +390,7 @@ export default function AdminDashboard() {
                                 </>
                             ) : (
                                 <>
-                                    🔒 <strong>Departmental Security Boundary:</strong> Exclusively assigned to <strong>{assignedDepartment || "Assigned"} Department</strong> in <strong>{officerDistrict}</strong>
+                                    🔒 <strong>Departmental Security Boundary:</strong> Exclusively assigned to <strong>{friendlyDeptName || "Assigned"} Department</strong> in <strong>{officerDistrict}</strong>
                                 </>
                             )}
                         </p>

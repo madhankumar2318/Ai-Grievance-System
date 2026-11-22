@@ -30,21 +30,35 @@ function StatCard({ label, value, icon, color }: { label: string; value: string 
     );
 }
 
+function getDepartmentForRole(roleStr: string): string {
+    const r = (roleStr || "").toLowerCase();
+    if (r.includes("environment") || r.includes("forest") || r.includes("wildlife") || r.includes("waste") || r.includes("pollution") || r.includes("tnpcb")) return "Environment";
+    if (r.includes("health") || r.includes("sanitation") || r.includes("medical") || r.includes("hospital") || r.includes("food") || r.includes("fssai") || r.includes("dmo") || r.includes("dph")) return "Public Health";
+    if (r.includes("infrastructure") || r.includes("pwd") || r.includes("electricity") || r.includes("water") || r.includes("transport") || r.includes("rto") || r.includes("bus") || r.includes("engineer")) return "Infrastructure & Utilities";
+    if (r.includes("safety") || r.includes("traffic") || r.includes("police") || r.includes("fire") || r.includes("rescue") || r.includes("cyber") || r.includes("digital") || r.includes("fraud") || r.includes("dccps")) return "Police & Public Safety";
+    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector") || r.includes("tahsildar") || r.includes("supply") || r.includes("ration") || r.includes("civil") || r.includes("agriculture") || r.includes("farmer") || r.includes("crop") || r.includes("jda") || r.includes("welfare") || r.includes("pension") || r.includes("social") || r.includes("dswo") || r.includes("disability")) return "District Administration";
+    return "District Administration";
+}
+
 export default function ProfilePage() {
     const { user, login } = useAuth();
     const { theme, toggleTheme } = useTheme();
 
-    const [profileData, setProfileData] = useState({
-        username: user?.username || "",
-        email: user?.email || "",
-        role: user?.role || "user",
-        state: user?.state || "Tamil Nadu",
-        district: user?.district || (user?.role === "authority" ? "Tiruchirappalli" : "All Districts"),
-        authorityRole: user?.authorityRole || (user?.role === "authority" ? "Public Grievance Redressal Officer" : "Chief Commissioner"),
-        serviceId: user?.serviceId || (user?.role === "authority" ? "TN-AUTH-2024-8841" : "CHIEF-TN-01"),
-        workingPlace: user?.workingPlace || (user?.role === "authority" ? "Tiruchirappalli Municipal Administration Office" : "State Secretariat, Chennai"),
-        phone: user?.phone || "+91 98401 23456",
-        department: user?.department || (user?.role === "authority" ? "Municipal Administration & Grievance Cell" : "Public Grievance Oversight"),
+    const [profileData, setProfileData] = useState(() => {
+        const initRole = user?.authorityRole || (user?.role === "authority" ? "Environment Protection Officer" : "Chief Commissioner");
+        const initDept = user?.department || (user?.role === "authority" ? getDepartmentForRole(initRole) : "Public Grievance Oversight");
+        return {
+            username: user?.username || "",
+            email: user?.email || "",
+            role: user?.role || "user",
+            state: user?.state || "Tamil Nadu",
+            district: user?.district || (user?.role === "authority" ? "Tiruchirappalli" : "All Districts"),
+            authorityRole: initRole,
+            serviceId: user?.serviceId || (user?.role === "authority" ? "GOV-2026" : "CHIEF-TN-01"),
+            workingPlace: user?.workingPlace || (user?.role === "authority" ? "Tiruchirappalli District Collectorate & Divisional Office" : "State Secretariat, Chennai"),
+            phone: user?.phone || "+91 94432 00000",
+            department: initDept,
+        };
     });
 
     const [joinedDate] = useState(() => {
@@ -70,6 +84,9 @@ export default function ProfilePage() {
     useEffect(() => {
         if (!user?.email) return;
 
+        const currentRole = user.authorityRole || (user.role === "authority" ? "Environment Protection Officer" : "Chief Commissioner");
+        const currentDept = user.department || (user.role === "authority" ? getDepartmentForRole(currentRole) : "Public Grievance Oversight");
+
         // Sync initial state from current user context
         setProfileData({
             username: user.username || "",
@@ -77,26 +94,28 @@ export default function ProfilePage() {
             role: user.role,
             state: user.state || "Tamil Nadu",
             district: user.district || (user.role === "authority" ? "Tiruchirappalli" : "All Districts"),
-            authorityRole: user.authorityRole || (user.role === "authority" ? "Public Grievance Redressal Officer" : "Chief Commissioner"),
-            serviceId: user.serviceId || (user.role === "authority" ? "TN-AUTH-2024-8841" : "CHIEF-TN-01"),
-            workingPlace: user.workingPlace || (user.role === "authority" ? "Tiruchirappalli Municipal Administration Office" : "State Secretariat, Chennai"),
-            phone: user.phone || "+91 98401 23456",
-            department: user.department || (user.role === "authority" ? "Municipal Administration & Grievance Cell" : "Public Grievance Oversight"),
+            authorityRole: currentRole,
+            serviceId: user.serviceId || (user.role === "authority" ? "GOV-2026" : "CHIEF-TN-01"),
+            workingPlace: user.workingPlace || (user.role === "authority" ? `${user.district || "Tiruchirappalli"} District Collectorate & Divisional Office` : "State Secretariat, Chennai"),
+            phone: user.phone || "+91 94432 00000",
+            department: currentDept,
         });
 
         // 1. Fetch live full profile from server action
         getFullUserProfileServerAction().then(res => {
             if (res.success && res.user) {
+                const fetchedRole = res.user.authorityRole || currentRole;
+                const fetchedDept = res.user.department || getDepartmentForRole(fetchedRole);
                 setProfileData(prev => ({
                     ...prev,
                     username: res.user.username || prev.username,
                     phone: res.user.phone || prev.phone,
                     state: res.user.state || prev.state,
                     district: res.user.district || prev.district,
-                    authorityRole: res.user.authorityRole || prev.authorityRole,
+                    authorityRole: fetchedRole,
                     serviceId: res.user.serviceId || prev.serviceId,
                     workingPlace: res.user.workingPlace || prev.workingPlace,
-                    department: res.user.department || prev.department,
+                    department: fetchedDept,
                 }));
             }
         });
@@ -557,10 +576,20 @@ export default function ProfilePage() {
                                                 type="text"
                                                 required
                                                 value={editForm.authorityRole}
-                                                onChange={e => setEditForm({ ...editForm, authorityRole: e.target.value })}
-                                                placeholder="e.g. District Collector, Municipal Officer"
+                                                onChange={e => {
+                                                    const newRole = e.target.value;
+                                                    setEditForm({
+                                                        ...editForm,
+                                                        authorityRole: newRole,
+                                                        department: getDepartmentForRole(newRole),
+                                                    });
+                                                }}
+                                                placeholder="e.g. Environment Protection Officer"
                                                 style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
                                             />
+                                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
+                                                🏛️ Automatically linked Department: <strong style={{ color: "#34d399" }}>{getDepartmentForRole(editForm.authorityRole)}</strong>
+                                            </div>
                                         </div>
 
                                         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "0.75rem" }}>

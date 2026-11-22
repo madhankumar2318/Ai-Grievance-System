@@ -733,6 +733,7 @@ export async function updateUserProfileServerAction(data: {
           ...(data.state && { state: data.state }),
           ...(data.district && { district: data.district }),
           ...(data.authorityRole && { authority_role: data.authorityRole }),
+          ...(data.department && { department: data.department }),
           ...(data.serviceId && { service_id: data.serviceId }),
           ...(data.workingPlace && { working_place: data.workingPlace }),
         }),
