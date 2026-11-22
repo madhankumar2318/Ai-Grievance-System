@@ -59,6 +59,50 @@ export interface DbAdminComplaint {
     ai_reasoning: string | null;
 }
 
+// ── Smooth Count-Up Animation Component ──────────────────────────────────────
+function AnimatedCounter({ value, duration = 450 }: { value: number; duration?: number }) {
+    const [displayValue, setDisplayValue] = useState(value);
+    const prevValueRef = React.useRef(value);
+
+    useEffect(() => {
+        let startTime: number | null = null;
+        const startValue = prevValueRef.current;
+        const diff = value - startValue;
+
+        if (diff === 0) {
+            setDisplayValue(value);
+            return;
+        }
+
+        let animationFrameId: number;
+
+        const step = (timestamp: number) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            // Ease-out cubic curve: smooth and natural deceleration
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const current = Math.round(startValue + diff * easeOut);
+            setDisplayValue(current);
+
+            if (progress < 1) {
+                animationFrameId = requestAnimationFrame(step);
+            } else {
+                prevValueRef.current = value;
+                setDisplayValue(value);
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(step);
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+            prevValueRef.current = value;
+        };
+    }, [value, duration]);
+
+    return <span>{displayValue}</span>;
+}
+
 export default function AdminDashboard() {
     const { t, lang } = useLang();
     const { user } = useAuth();
@@ -389,7 +433,7 @@ export default function AdminDashboard() {
                             <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px", borderRadius: "10px", background: grad, fontSize: "1.1rem", marginBottom: "0.75rem", boxShadow: `0 4px 12px ${color}44` }}>
                                 {icon}
                             </div>
-                            <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35 }}>—</span> : value}</div>
+                            <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35 }}>—</span> : <AnimatedCounter value={value} />}</div>
                             <div style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-muted)" }}>{label}</div>
                             {isDistrictHead && (
                                 <div style={{ fontSize: "0.68rem", fontWeight: "700", color: departmentFilter !== "All" ? color : "var(--text-muted)", marginTop: "0.3rem", opacity: departmentFilter !== "All" ? 0.95 : 0.65 }}>
