@@ -294,6 +294,49 @@ export default function AdminDashboard() {
         { label: t("admin_rejected"), value: rejected, color: "#ef4444", icon: "✕", grad: "linear-gradient(135deg,#ef4444,#f97316)" },
     ];
 
+    // District Collector: Live Department Officer Workload & Availability Tracker
+    const departmentWorkloads = React.useMemo(() => {
+        const depts = [
+            { key: "Environment", title: "Environment Protection Officer", icon: "🌿" },
+            { key: "Infrastructure", title: "Infrastructure & PWD Engineer", icon: "🏗️" },
+            { key: "Public Health", title: "Health & Sanitation Inspector", icon: "🏥" },
+            { key: "Safety", title: "Traffic & Safety Officer", icon: "🛡️" },
+            { key: "Administrative", title: "Revenue & Admin Officer", icon: "📁" },
+        ];
+
+        return depts.map(d => {
+            const deptComplaints = jurisdictionComplaints.filter(c => c.category === d.key);
+            const activeCount = deptComplaints.filter(c => c.status === "Pending" || c.status === "In Progress").length;
+
+            let status = "Available";
+            let statusColor = "#10b981";
+            let statusBg = "rgba(16, 185, 129, 0.12)";
+            let statusBorder = "rgba(16, 185, 129, 0.3)";
+
+            if (activeCount >= 3) {
+                status = "Busy";
+                statusColor = "#ef4444";
+                statusBg = "rgba(239, 68, 68, 0.12)";
+                statusBorder = "rgba(239, 68, 68, 0.3)";
+            } else if (activeCount >= 1) {
+                status = "Active";
+                statusColor = "#f59e0b";
+                statusBg = "rgba(245, 158, 11, 0.12)";
+                statusBorder = "rgba(245, 158, 11, 0.3)";
+            }
+
+            return {
+                ...d,
+                activeCount,
+                total: deptComplaints.length,
+                status,
+                statusColor,
+                statusBg,
+                statusBorder,
+            };
+        });
+    }, [jurisdictionComplaints]);
+
     const FILTERS = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
 
     // Dynamic unique department options from jurisdiction complaints
@@ -399,6 +442,102 @@ export default function AdminDashboard() {
                         </div>
                     ))}
                 </div>
+
+                {/* ── Collector Exclusive: Officer Duty & Workload Monitor ── */}
+                {isDistrictHead && (
+                    <div style={{
+                        marginBottom: "1.25rem",
+                        padding: "1rem 1.25rem",
+                        borderRadius: "1rem",
+                        background: "linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(30, 41, 59, 0.5))",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        backdropFilter: "blur(12px)",
+                    }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <span style={{ fontSize: "1.15rem" }}>👮</span>
+                                <div>
+                                    <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#f8fafc", letterSpacing: "0.02em" }}>
+                                        District Field Officers Status &amp; Workload
+                                    </div>
+                                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>
+                                        Live duty roster across <strong>{officerDistrict}</strong> departments · Click an officer to filter grievances
+                                    </div>
+                                </div>
+                            </div>
+                            {departmentFilter !== "All" && (
+                                <button
+                                    onClick={() => setDepartmentFilter("All")}
+                                    style={{
+                                        padding: "0.25rem 0.65rem",
+                                        borderRadius: "0.4rem",
+                                        background: "rgba(255, 255, 255, 0.06)",
+                                        border: "1px solid rgba(255, 255, 255, 0.15)",
+                                        color: "#94a3b8",
+                                        fontSize: "0.72rem",
+                                        fontWeight: "600",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    ✕ Clear Filter (Show All)
+                                </button>
+                            )}
+                        </div>
+
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+                            gap: "0.75rem",
+                        }}>
+                            {departmentWorkloads.map(d => {
+                                const isSelected = departmentFilter === d.key;
+                                return (
+                                    <div
+                                        key={d.key}
+                                        onClick={() => setDepartmentFilter(isSelected ? "All" : d.key)}
+                                        style={{
+                                            padding: "0.75rem 0.9rem",
+                                            borderRadius: "0.75rem",
+                                            background: isSelected ? "rgba(99, 102, 241, 0.15)" : "rgba(255, 255, 255, 0.03)",
+                                            border: isSelected ? "1.5px solid #6366f1" : "1px solid rgba(255, 255, 255, 0.07)",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s ease",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "0.45rem",
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                            <span style={{ fontSize: "0.78rem", fontWeight: "700", color: "#f1f5f9", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                                <span>{d.icon}</span>
+                                                <span>{d.title}</span>
+                                            </span>
+                                            <span style={{
+                                                padding: "0.15rem 0.5rem",
+                                                borderRadius: "99px",
+                                                fontSize: "0.65rem",
+                                                fontWeight: "800",
+                                                background: d.statusBg,
+                                                color: d.statusColor,
+                                                border: `1px solid ${d.statusBorder}`,
+                                                letterSpacing: "0.04em",
+                                                textTransform: "uppercase",
+                                            }}>
+                                                {d.status}
+                                            </span>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                            <span>Active Workload:</span>
+                                            <strong style={{ color: d.activeCount > 0 ? d.statusColor : "#10b981" }}>
+                                                {d.activeCount === 0 ? "Free (0 pending)" : `${d.activeCount} in progress`}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Filter Bar ── */}
                 <div style={{
