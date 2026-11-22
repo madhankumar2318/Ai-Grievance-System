@@ -40,8 +40,8 @@ function mapRoleToDepartment(role: string): string {
     if (r.includes("environment") || r.includes("forest") || r.includes("wildlife") || r.includes("waste") || r.includes("pollution") || r.includes("tnpcb")) return "Environment";
     if (r.includes("health") || r.includes("sanitation") || r.includes("medical") || r.includes("hospital") || r.includes("food") || r.includes("fssai") || r.includes("dmo") || r.includes("dph")) return "Public Health";
     if (r.includes("infrastructure") || r.includes("pwd") || r.includes("electricity") || r.includes("water") || r.includes("transport") || r.includes("rto") || r.includes("bus") || r.includes("engineer")) return "Infrastructure";
-    if (r.includes("safety") || r.includes("traffic") || r.includes("police") || r.includes("fire") || r.includes("rescue")) return "Safety";
-    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector") || r.includes("tahsildar") || r.includes("supply") || r.includes("ration") || r.includes("civil")) return "Administrative";
+    if (r.includes("safety") || r.includes("traffic") || r.includes("police") || r.includes("fire") || r.includes("rescue") || r.includes("cyber") || r.includes("digital") || r.includes("fraud") || r.includes("dccps")) return "Safety";
+    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector") || r.includes("tahsildar") || r.includes("supply") || r.includes("ration") || r.includes("civil") || r.includes("agriculture") || r.includes("farmer") || r.includes("crop") || r.includes("jda") || r.includes("welfare") || r.includes("pension") || r.includes("social") || r.includes("dswo") || r.includes("disability")) return "Administrative";
     return "Administrative";
 }
 
@@ -172,6 +172,27 @@ const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; acc
         accentColor: "#ef4444",
         category: "Safety",
         defaultOffice: "District Fire & Rescue Services Headquarters",
+    },
+    "Agriculture & Farmers Welfare Officer": {
+        icon: "🌾",
+        avatarGrad: "linear-gradient(135deg, #16a34a, #15803d)",
+        accentColor: "#22c55e",
+        category: "Administrative",
+        defaultOffice: "Joint Director of Agriculture (JDA) Complex, Collectorate",
+    },
+    "Social Welfare & Pension Officer": {
+        icon: "🤝",
+        avatarGrad: "linear-gradient(135deg, #a855f7, #7e22ce)",
+        accentColor: "#c084fc",
+        category: "Administrative",
+        defaultOffice: "District Social Welfare Office (DSWO), Collectorate Annexe",
+    },
+    "Cyber Crime Police Officer": {
+        icon: "💻",
+        avatarGrad: "linear-gradient(135deg, #2563eb, #1e40af)",
+        accentColor: "#3b82f6",
+        category: "Safety",
+        defaultOffice: "District Cyber Crime Police Station (DCCPS) & Forensics Wing",
     },
     "District Collector & District Magistrate": {
         icon: "🏛️",

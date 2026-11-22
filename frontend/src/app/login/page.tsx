@@ -182,7 +182,9 @@ export default function LoginPage() {
             roles: [
                 { value: "District Collector & District Magistrate", label: "🏛️ District Collector & District Magistrate" },
                 { value: "Tahsildar (Revenue Administration)", label: "💼 Tahsildar (Revenue Administration)" },
-                { value: "Civil Supplies & Ration Officer", label: "🌾 Civil Supplies & Ration Officer (DSO)" },
+                { value: "Agriculture & Farmers Welfare Officer", label: "🌾 Agriculture & Farmers Welfare Officer (JDA)" },
+                { value: "Civil Supplies & Ration Officer", label: "🏪 Civil Supplies & Ration Officer (DSO)" },
+                { value: "Social Welfare & Pension Officer", label: "🤝 Social Welfare & Pension Officer (DSWO)" },
                 { value: "Municipal Corporation Officer", label: "🏙️ Municipal Corporation Officer" },
                 { value: "Education Department Officer", label: "📚 Education Department Officer" },
             ],
@@ -192,6 +194,7 @@ export default function LoginPage() {
             roles: [
                 { value: "Police Administrative Officer", label: "👮 Police Administrative Officer" },
                 { value: "Traffic Management Officer", label: "🚦 Traffic Management Officer" },
+                { value: "Cyber Crime Police Officer", label: "💻 Cyber Crime Police Officer (DCCPS)" },
                 { value: "Fire & Disaster Rescue Officer", label: "🚒 Fire & Disaster Rescue Officer (DFO)" },
             ],
         },
