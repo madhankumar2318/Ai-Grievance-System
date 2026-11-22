@@ -239,11 +239,14 @@ export default function AdminDashboard() {
     };
 
     // ── Privacy & Data Segregation Boundary ──────────────────────────────────────
-    // Authority officers are strictly confined to their assigned State & District.
+    // Authority officers are strictly confined to their assigned District.
     // Complaints from other jurisdictions are never exposed to prevent cross-district privacy leaks.
     const jurisdictionComplaints = React.useMemo(() => {
+        const isAll = officerDistrict.toLowerCase().includes("all") || user?.role === "chief";
+        if (isAll) return complaints;
+
         return complaints.filter(c => {
-            if (officerDistrict === "Tiruchirappalli") {
+            if (officerDistrict.toLowerCase() === "tiruchirappalli") {
                 return (
                     /trichy|tiruchirappalli|kaikatti|10\.95|78\.44/i.test(c.location || "") ||
                     /trichy|tiruchirappalli|kaikatti/i.test(c.description || "") ||
@@ -251,7 +254,6 @@ export default function AdminDashboard() {
                 );
             }
             const dLower = officerDistrict.toLowerCase();
-            const sLower = officerState.toLowerCase();
             const locLower = (c.location || "").toLowerCase();
             const descLower = (c.description || "").toLowerCase();
             const subjLower = (c.subject || "").toLowerCase();
@@ -259,12 +261,10 @@ export default function AdminDashboard() {
             return (
                 locLower.includes(dLower) ||
                 descLower.includes(dLower) ||
-                subjLower.includes(dLower) ||
-                locLower.includes(sLower) ||
-                descLower.includes(sLower)
+                subjLower.includes(dLower)
             );
         });
-    }, [complaints, officerDistrict, officerState]);
+    }, [complaints, officerDistrict, user?.role]);
 
     // Department-isolated complaints:
     // If officer is assigned to a specific department (e.g. Environment), they only see their domain.
