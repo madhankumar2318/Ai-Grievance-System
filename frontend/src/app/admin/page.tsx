@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, ActionTakenReportData } from "@/app/actions/complaintActions";
+import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
 
 
@@ -99,6 +99,60 @@ export default function AdminDashboard() {
             alert("Network error while transferring department.");
         } finally {
             setTransferringId(null);
+        }
+    };
+
+    // ── Collector Executive Directive State ───────────────────────────────────────
+    const [directingComplaint, setDirectingComplaint] = useState<{ id: string; subject: string; category: string } | null>(null);
+    const [directiveForm, setDirectiveForm] = useState({
+        target: "🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)",
+        note: "",
+    });
+    const [issuingDirective, setIssuingDirective] = useState(false);
+    const [directiveSuccessId, setDirectiveSuccessId] = useState<string | null>(null);
+
+    const handleIssueDirective = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!directingComplaint || !directiveForm.note.trim() || issuingDirective) return;
+        setIssuingDirective(true);
+        try {
+            const directiveData: CollectorDirectiveData = {
+                orderId: `DIR-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+                directiveNote: directiveForm.note.trim(),
+                priorityTarget: directiveForm.target,
+                officerTitle: user?.authorityRole || "District Collector & District Magistrate",
+                officerName: user?.username || "District Magistrate",
+                issuedAt: new Date().toISOString(),
+            };
+
+            const res = await issueCollectorDirectiveServerAction(directingComplaint.id, directiveData);
+            if (res.success) {
+                setComplaints(prev => prev.map(c => {
+                    if (c.id === directingComplaint.id) {
+                        const baseDesc = (c.description || "").replace(/\n\n\[COLLECTOR_DIRECTIVE:[\s\S]*?\]/g, "").trim();
+                        return {
+                            ...c,
+                            priority: "Critical",
+                            description: `${baseDesc}\n\n[COLLECTOR_DIRECTIVE:${JSON.stringify(directiveData)}]`,
+                        };
+                    }
+                    return c;
+                }));
+                setDirectiveSuccessId(directingComplaint.id);
+                setTimeout(() => setDirectiveSuccessId(null), 4000);
+                setDirectingComplaint(null);
+                setDirectiveForm({
+                    target: "🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)",
+                    note: "",
+                });
+            } else {
+                alert(res.error || "Failed to issue executive directive.");
+            }
+        } catch (err) {
+            console.error("Executive directive error:", err);
+            alert("Network error while issuing directive.");
+        } finally {
+            setIssuingDirective(false);
         }
     };
 
@@ -318,6 +372,52 @@ export default function AdminDashboard() {
         return ["All", ...Array.from(set).sort()];
     }, [jurisdictionComplaints]);
 
+    // ── Executive Department Accountability Scorecard Computation ──────────────────
+    const departmentScorecards = React.useMemo(() => {
+        const depts = [
+            { id: "Environment", name: "Environment", icon: "🌿", grad: "linear-gradient(135deg, #10b981, #059669)", accent: "#10b981" },
+            { id: "Infrastructure", name: "Infrastructure & Utilities", icon: "🏗️", grad: "linear-gradient(135deg, #6366f1, #4f46e5)", accent: "#6366f1" },
+            { id: "Public Health", name: "Public Health", icon: "🏥", grad: "linear-gradient(135deg, #06b6d4, #0891b2)", accent: "#06b6d4" },
+            { id: "Safety", name: "Police & Public Safety", icon: "👮", grad: "linear-gradient(135deg, #f59e0b, #d97706)", accent: "#f59e0b" },
+            { id: "Administrative", name: "District Administration", icon: "📁", grad: "linear-gradient(135deg, #8b5cf6, #7c3aed)", accent: "#8b5cf6" },
+        ];
+
+        return depts.map(d => {
+            const cases = jurisdictionComplaints.filter(c => c.category === d.id);
+            const pCount = cases.filter(c => c.status === "Pending" || c.status === "In Progress").length;
+            const rCount = cases.filter(c => c.status === "Resolved").length;
+            const criticalCount = cases.filter(c => c.priority === "Critical" && c.status !== "Resolved").length;
+            const directivesCount = cases.filter(c => (c.description || "").includes("[COLLECTOR_DIRECTIVE:") && c.status !== "Resolved").length;
+
+            let healthStatus = "🟢 On Track";
+            let healthColor = "#10b981";
+            if (directivesCount > 0) {
+                healthStatus = "🏛️ Directive Active";
+                healthColor = "#fbbf24";
+            } else if (criticalCount > 0) {
+                healthStatus = "🚨 Critical Risk";
+                healthColor = "#ef4444";
+            } else if (pCount >= 3) {
+                healthStatus = "🔴 Action Needed";
+                healthColor = "#f97316";
+            } else if (pCount === 0 && rCount > 0) {
+                healthStatus = "✓ 100% Cleared";
+                healthColor = "#34d399";
+            }
+
+            return {
+                ...d,
+                total: cases.length,
+                pending: pCount,
+                resolved: rCount,
+                critical: criticalCount,
+                directives: directivesCount,
+                healthStatus,
+                healthColor,
+            };
+        });
+    }, [jurisdictionComplaints]);
+
     // Combined filtering within the officer's jurisdiction & departmental domain
     const filtered = officerDomainComplaints.filter(c => {
         if (filter !== "All" && c.status !== filter) return false;
@@ -415,6 +515,152 @@ export default function AdminDashboard() {
                         </div>
                     ))}
                 </div>
+
+                {/* ── Executive Department Accountability Scorecard (Collector Exclusive) ── */}
+                {isDistrictHead && (
+                    <div style={{ marginBottom: "1.75rem", animation: "fadeIn 0.3s ease" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <span style={{ fontSize: "1.2rem" }}>📊</span>
+                                <span style={{ fontWeight: "800", fontSize: "1.05rem", color: "#ffffff", letterSpacing: "-0.01em" }}>
+                                    District Department Accountability Scorecard
+                                </span>
+                                <span style={{
+                                    fontSize: "0.7rem",
+                                    padding: "0.2rem 0.55rem",
+                                    borderRadius: "99px",
+                                    background: "rgba(245, 158, 11, 0.15)",
+                                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                                    color: "#fbbf24",
+                                    fontWeight: "700"
+                                }}>
+                                    🏛️ District Magistrate Command
+                                </span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                                    Click any department card to filter complaints:
+                                </span>
+                                <button
+                                    onClick={() => setDepartmentFilter("All")}
+                                    style={{
+                                        padding: "0.25rem 0.65rem",
+                                        borderRadius: "99px",
+                                        fontSize: "0.72rem",
+                                        fontWeight: "700",
+                                        background: departmentFilter === "All" ? "rgba(99, 102, 241, 0.25)" : "rgba(255, 255, 255, 0.05)",
+                                        border: departmentFilter === "All" ? "1px solid #6366f1" : "1px solid var(--border)",
+                                        color: departmentFilter === "All" ? "#a5b4fc" : "var(--text-muted)",
+                                        cursor: "pointer",
+                                        transition: "all 0.2s ease"
+                                    }}
+                                >
+                                    Show All (5 Departments)
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* 5-Card Scorecard Grid */}
+                        <div style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+                            gap: "0.85rem"
+                        }}>
+                            {departmentScorecards.map(sc => {
+                                const isSelected = departmentFilter === sc.id;
+                                return (
+                                    <div
+                                        key={sc.id}
+                                        onClick={() => setDepartmentFilter(prev => prev === sc.id ? "All" : sc.id)}
+                                        style={{
+                                            padding: "1rem",
+                                            borderRadius: "0.85rem",
+                                            background: isSelected 
+                                                ? "linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(168, 85, 247, 0.1))"
+                                                : "var(--bg-card)",
+                                            border: isSelected ? `2px solid ${sc.accent}` : "1px solid var(--border)",
+                                            boxShadow: isSelected ? `0 0 20px ${sc.accent}33` : "var(--shadow-sm)",
+                                            cursor: "pointer",
+                                            transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                                            transform: isSelected ? "translateY(-2px)" : "none",
+                                            position: "relative",
+                                            overflow: "hidden"
+                                        }}
+                                    >
+                                        {/* Selected Indicator Pill */}
+                                        {isSelected && (
+                                            <div style={{
+                                                position: "absolute",
+                                                top: "0.45rem",
+                                                right: "0.55rem",
+                                                fontSize: "0.65rem",
+                                                fontWeight: "800",
+                                                color: sc.accent,
+                                                background: `${sc.accent}18`,
+                                                padding: "0.15rem 0.45rem",
+                                                borderRadius: "99px",
+                                                border: `1px solid ${sc.accent}44`
+                                            }}>
+                                                ✓ Filter Active
+                                            </div>
+                                        )}
+
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
+                                            <div style={{
+                                                width: "32px",
+                                                height: "32px",
+                                                borderRadius: "8px",
+                                                background: sc.grad,
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontSize: "1rem"
+                                            }}>
+                                                {sc.icon}
+                                            </div>
+                                            <div style={{ fontWeight: "800", fontSize: "0.85rem", color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                {sc.name}
+                                            </div>
+                                        </div>
+
+                                        {/* Metrics Row */}
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.45rem" }}>
+                                            <div>
+                                                <span style={{ fontSize: "1.25rem", fontWeight: "900", color: sc.pending > 0 ? "#f59e0b" : "#34d399", lineHeight: 1 }}>
+                                                    {sc.pending}
+                                                </span>
+                                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "0.3rem" }}>
+                                                    pending
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "700" }}>
+                                                {sc.resolved} resolved
+                                            </div>
+                                        </div>
+
+                                        {/* Health Status Pill */}
+                                        <div style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "0.3rem",
+                                            fontSize: "0.68rem",
+                                            fontWeight: "800",
+                                            color: sc.healthColor,
+                                            background: `${sc.healthColor}15`,
+                                            padding: "0.2rem 0.5rem",
+                                            borderRadius: "99px",
+                                            border: `1px solid ${sc.healthColor}30`,
+                                            width: "100%",
+                                            justifyContent: "center"
+                                        }}>
+                                            <span>{sc.healthStatus}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Filter Bar ── */}
                 <div style={{
@@ -682,6 +928,27 @@ export default function AdminDashboard() {
                                                         )}
                                                         {c.priority}
                                                     </span>
+                                                    {c.description && c.description.includes("[COLLECTOR_DIRECTIVE:") && (
+                                                        <div style={{ marginTop: "0.3rem" }}>
+                                                            <span style={{
+                                                                display: "inline-flex",
+                                                                alignItems: "center",
+                                                                gap: "0.25rem",
+                                                                padding: "0.15rem 0.5rem",
+                                                                borderRadius: "99px",
+                                                                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.15))",
+                                                                border: "1px solid rgba(245, 158, 11, 0.5)",
+                                                                color: "#fbbf24",
+                                                                fontSize: "0.68rem",
+                                                                fontWeight: "800",
+                                                                boxShadow: "0 0 10px rgba(245, 158, 11, 0.2)",
+                                                                whiteSpace: "nowrap"
+                                                            }}>
+                                                                <span>🏛️</span>
+                                                                <span>Collector Directive</span>
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 {/* Status */}
                                                 <td style={{ padding: "1.1rem 1.25rem" }}>
@@ -761,11 +1028,21 @@ export default function AdminDashboard() {
                                                         console.error("Failed to parse ATR JSON:", e);
                                                     }
                                                 }
+                                                const directiveMatch = (c.description || "").match(/\[COLLECTOR_DIRECTIVE:([\s\S]*?)\]/);
+                                                let directiveData: CollectorDirectiveData | null = null;
+                                                if (directiveMatch) {
+                                                    try {
+                                                        directiveData = JSON.parse(directiveMatch[1]);
+                                                    } catch (e) {
+                                                        console.error("Failed to parse Directive JSON:", e);
+                                                    }
+                                                }
                                                 const photoMatch = (c.description || "").match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
                                                 const evidencePhoto = photoMatch ? photoMatch[1] : null;
                                                 const cleanDesc = (c.description || "")
                                                     .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
                                                     .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
+                                                    .replace(/\[COLLECTOR_DIRECTIVE:[\s\S]*?\]/g, "")
                                                     .trim();
 
                                                 return (
@@ -777,6 +1054,37 @@ export default function AdminDashboard() {
                                                                 borderTop: `3px solid ${pCfg.color}`,
                                                                 animation: "slideDown 0.25s ease",
                                                             }}>
+                                                                {/* Collector Directive Official Order Card */}
+                                                                {directiveData && (
+                                                                    <div style={{
+                                                                        marginBottom: "1.25rem",
+                                                                        padding: "1rem 1.25rem",
+                                                                        borderRadius: "0.85rem",
+                                                                        background: "linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.08))",
+                                                                        border: "1.5px solid rgba(245, 158, 11, 0.45)",
+                                                                        boxShadow: "0 0 20px rgba(245, 158, 11, 0.15)",
+                                                                    }}>
+                                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                                                <span style={{ fontSize: "1.25rem" }}>🏛️</span>
+                                                                                <span style={{ fontWeight: "800", color: "#fbbf24", fontSize: "0.95rem" }}>
+                                                                                    District Magistrate Official Directive Order (#{directiveData.orderId})
+                                                                                </span>
+                                                                            </div>
+                                                                            <span style={{ padding: "0.2rem 0.65rem", borderRadius: "99px", background: "rgba(245, 158, 11, 0.22)", color: "#fef08a", fontSize: "0.72rem", fontWeight: "800", border: "1px solid rgba(245, 158, 11, 0.5)" }}>
+                                                                                {directiveData.priorityTarget}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p style={{ margin: "0.35rem 0 0.5rem", fontSize: "0.88rem", color: "#fef3c7", lineHeight: "1.55", fontStyle: "italic" }}>
+                                                                            "{directiveData.directiveNote}"
+                                                                        </p>
+                                                                        <div style={{ fontSize: "0.72rem", color: "rgba(253, 230, 138, 0.8)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.4rem" }}>
+                                                                            <span>Issued by: <strong>{directiveData.officerName} ({directiveData.officerTitle})</strong></span>
+                                                                            <span>Issued at: {new Date(directiveData.issuedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
                                                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
 
                                                                     {/* Col 1 — Description & Evidence */}
@@ -897,83 +1205,129 @@ export default function AdminDashboard() {
                                                                             </div>
                                                                         )}
 
-                                                                        {/* Collector Executive Control: Transfer Department */}
+                                                                        {/* Collector Executive Control: Transfer Department & Executive Directive */}
                                                                         {isDistrictHead && c.status !== "Resolved" && c.status !== "Rejected" && (
-                                                                            <div
-                                                                                onClick={e => e.stopPropagation()}
-                                                                                style={{
-                                                                                    marginTop: "0.25rem",
-                                                                                    padding: "0.75rem 0.9rem",
-                                                                                    borderRadius: "0.75rem",
-                                                                                    background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))",
-                                                                                    border: "1px solid rgba(168, 85, 247, 0.25)",
-                                                                                    display: "flex",
-                                                                                    flexDirection: "column",
-                                                                                    gap: "0.45rem",
-                                                                                }}
-                                                                            >
-                                                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                                                                    <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                                                                                        <span>🔄</span>
-                                                                                        <span>Transfer Department</span>
-                                                                                    </span>
-                                                                                    <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
-                                                                                        Current: <strong style={{ color: "#e2e8f0" }}>{c.category}</strong>
-                                                                                    </span>
+                                                                            <>
+                                                                                <div
+                                                                                    onClick={e => e.stopPropagation()}
+                                                                                    style={{
+                                                                                        marginTop: "0.25rem",
+                                                                                        padding: "0.75rem 0.9rem",
+                                                                                        borderRadius: "0.75rem",
+                                                                                        background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))",
+                                                                                        border: "1px solid rgba(168, 85, 247, 0.25)",
+                                                                                        display: "flex",
+                                                                                        flexDirection: "column",
+                                                                                        gap: "0.45rem",
+                                                                                    }}
+                                                                                >
+                                                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                                        <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "#c084fc", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                                                                            <span>🔄</span>
+                                                                                            <span>Transfer Department</span>
+                                                                                        </span>
+                                                                                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                                                                            Current: <strong style={{ color: "#e2e8f0" }}>{c.category}</strong>
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                                                                        <select
+                                                                                            value={transferSelections[c.id] || c.category}
+                                                                                            onChange={e => setTransferSelections(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                                                                            style={{
+                                                                                                flex: 1,
+                                                                                                padding: "0.45rem 0.65rem",
+                                                                                                borderRadius: "0.5rem",
+                                                                                                background: "#0f172a",
+                                                                                                border: "1px solid rgba(255, 255, 255, 0.15)",
+                                                                                                color: "#ffffff",
+                                                                                                fontSize: "0.8rem",
+                                                                                                outline: "none",
+                                                                                                cursor: "pointer",
+                                                                                            }}
+                                                                                        >
+                                                                                            {["Administrative", "Environment", "Infrastructure", "Public Health", "Safety"].map(d => (
+                                                                                                <option key={d} value={d} style={{ background: "#0f172a", color: "#ffffff" }}>
+                                                                                                    {d === "Administrative" ? "📁 Administrative" :
+                                                                                                     d === "Environment" ? "🌿 Environment" :
+                                                                                                     d === "Infrastructure" ? "🏗️ Infrastructure" :
+                                                                                                     d === "Public Health" ? "🏥 Public Health" : "🛡️ Safety"}
+                                                                                                </option>
+                                                                                            ))}
+                                                                                        </select>
+                                                                                        <button
+                                                                                            disabled={transferringId === c.id || ((transferSelections[c.id] || c.category) === c.category)}
+                                                                                            onClick={() => handleTransferDepartment(c.id, transferSelections[c.id] || c.category)}
+                                                                                            style={{
+                                                                                                padding: "0.45rem 0.85rem",
+                                                                                                borderRadius: "0.5rem",
+                                                                                                background: ((transferSelections[c.id] || c.category) !== c.category)
+                                                                                                    ? "linear-gradient(135deg, #a855f7, #6366f1)"
+                                                                                                    : "rgba(255, 255, 255, 0.08)",
+                                                                                                color: ((transferSelections[c.id] || c.category) !== c.category) ? "#ffffff" : "var(--text-muted)",
+                                                                                                border: "none",
+                                                                                                fontSize: "0.78rem",
+                                                                                                fontWeight: "700",
+                                                                                                cursor: ((transferSelections[c.id] || c.category) !== c.category) ? "pointer" : "not-allowed",
+                                                                                                whiteSpace: "nowrap",
+                                                                                                transition: "all 0.2s ease",
+                                                                                            }}
+                                                                                        >
+                                                                                            {transferringId === c.id ? "Transferring..." : "Apply Transfer"}
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    {transferSuccessId === c.id && (
+                                                                                        <div style={{ fontSize: "0.72rem", color: "#10b981", fontWeight: "700", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                                                                                            <span>✓</span>
+                                                                                            <span>Transferred successfully to {c.category}!</span>
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
-                                                                                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                                                                                    <select
-                                                                                        value={transferSelections[c.id] || c.category}
-                                                                                        onChange={e => setTransferSelections(prev => ({ ...prev, [c.id]: e.target.value }))}
-                                                                                        style={{
-                                                                                            flex: 1,
-                                                                                            padding: "0.45rem 0.65rem",
-                                                                                            borderRadius: "0.5rem",
-                                                                                            background: "#0f172a",
-                                                                                            border: "1px solid rgba(255, 255, 255, 0.15)",
-                                                                                            color: "#ffffff",
-                                                                                            fontSize: "0.8rem",
-                                                                                            outline: "none",
-                                                                                            cursor: "pointer",
-                                                                                        }}
-                                                                                    >
-                                                                                        {["Administrative", "Environment", "Infrastructure", "Public Health", "Safety"].map(d => (
-                                                                                            <option key={d} value={d} style={{ background: "#0f172a", color: "#ffffff" }}>
-                                                                                                {d === "Administrative" ? "📁 Administrative" :
-                                                                                                 d === "Environment" ? "🌿 Environment" :
-                                                                                                 d === "Infrastructure" ? "🏗️ Infrastructure" :
-                                                                                                 d === "Public Health" ? "🏥 Public Health" : "🛡️ Safety"}
-                                                                                            </option>
-                                                                                        ))}
-                                                                                    </select>
+
+                                                                                {/* Collector Executive Directive Button */}
+                                                                                <div style={{ marginTop: "0.45rem" }}>
                                                                                     <button
-                                                                                        disabled={transferringId === c.id || ((transferSelections[c.id] || c.category) === c.category)}
-                                                                                        onClick={() => handleTransferDepartment(c.id, transferSelections[c.id] || c.category)}
+                                                                                        onClick={e => {
+                                                                                            e.stopPropagation();
+                                                                                            setDirectingComplaint({ id: c.id, subject: c.subject, category: c.category });
+                                                                                            if (directiveData) {
+                                                                                                setDirectiveForm({
+                                                                                                    target: directiveData.priorityTarget,
+                                                                                                    note: directiveData.directiveNote,
+                                                                                                });
+                                                                                            }
+                                                                                        }}
                                                                                         style={{
-                                                                                            padding: "0.45rem 0.85rem",
-                                                                                            borderRadius: "0.5rem",
-                                                                                            background: ((transferSelections[c.id] || c.category) !== c.category)
-                                                                                                ? "linear-gradient(135deg, #a855f7, #6366f1)"
-                                                                                                : "rgba(255, 255, 255, 0.08)",
-                                                                                            color: ((transferSelections[c.id] || c.category) !== c.category) ? "#ffffff" : "var(--text-muted)",
-                                                                                            border: "none",
+                                                                                            width: "100%",
+                                                                                            padding: "0.5rem 0.85rem",
+                                                                                            borderRadius: "0.625rem",
+                                                                                            background: directiveData 
+                                                                                                ? "linear-gradient(135deg, #d97706, #b45309)"
+                                                                                                : "linear-gradient(135deg, #f59e0b, #d97706)",
+                                                                                            border: "1px solid rgba(245, 158, 11, 0.5)",
+                                                                                            color: "#ffffff",
                                                                                             fontSize: "0.78rem",
-                                                                                            fontWeight: "700",
-                                                                                            cursor: ((transferSelections[c.id] || c.category) !== c.category) ? "pointer" : "not-allowed",
-                                                                                            whiteSpace: "nowrap",
+                                                                                            fontWeight: "800",
+                                                                                            cursor: "pointer",
+                                                                                            display: "inline-flex",
+                                                                                            alignItems: "center",
+                                                                                            justifyContent: "center",
+                                                                                            gap: "0.45rem",
+                                                                                            boxShadow: "0 2px 8px rgba(245, 158, 11, 0.25)",
                                                                                             transition: "all 0.2s ease",
                                                                                         }}
                                                                                     >
-                                                                                        {transferringId === c.id ? "Transferring..." : "Apply Transfer"}
+                                                                                        <span>🏛️</span>
+                                                                                        <span>{directiveData ? "Update Executive Directive" : "Issue Executive Directive (24h Expedite)"}</span>
                                                                                     </button>
+                                                                                    {directiveSuccessId === c.id && (
+                                                                                        <div style={{ fontSize: "0.72rem", color: "#fbbf24", fontWeight: "700", display: "flex", alignItems: "center", gap: "0.3rem", marginTop: "0.3rem", justifyContent: "center" }}>
+                                                                                            <span>✓</span>
+                                                                                            <span>Official Directive Order issued successfully!</span>
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
-                                                                                {transferSuccessId === c.id && (
-                                                                                    <div style={{ fontSize: "0.72rem", color: "#10b981", fontWeight: "700", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                                                                                        <span>✓</span>
-                                                                                        <span>Transferred successfully to {c.category}!</span>
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
+                                                                            </>
                                                                         )}
                                                                         {(c.status === "Resolved" || c.status === "Rejected") && (
                                                                             <div style={{ fontSize: "0.82rem", fontWeight: "700", color: sCfg.color, display: "flex", alignItems: "center", gap: "0.4rem" }}>
@@ -1487,6 +1841,153 @@ export default function AdminDashboard() {
                 officerDistrict={officerDistrict}
                 onResolveSuccess={handleResolveSuccess}
             />
+
+            {/* ── Collector Executive Directive Modal ── */}
+            {directingComplaint && (
+                <div
+                    style={{
+                        position: "fixed", inset: 0, zIndex: 1000,
+                        background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        padding: "1.25rem",
+                    }}
+                    onClick={() => setDirectingComplaint(null)}
+                >
+                    <div
+                        style={{
+                            maxWidth: "560px", width: "100%", background: "var(--bg-card, #1e293b)",
+                            borderRadius: "1.25rem", border: "1.5px solid rgba(245, 158, 11, 0.45)",
+                            boxShadow: "0 25px 60px -15px rgba(245, 158, 11, 0.3)",
+                            overflow: "hidden", animation: "slideDown 0.25s ease",
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div style={{
+                            padding: "1.25rem 1.5rem",
+                            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.08))",
+                            borderBottom: "1px solid rgba(245, 158, 11, 0.3)",
+                            display: "flex", alignItems: "center", justifyContent: "space-between"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                                <span style={{ fontSize: "1.4rem" }}>🏛️</span>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: "800", color: "#fbbf24" }}>
+                                        District Magistrate Executive Directive
+                                    </h3>
+                                    <p style={{ margin: "0.2rem 0 0", fontSize: "0.74rem", color: "rgba(253, 230, 138, 0.85)" }}>
+                                        Issue priority mandate to {directingComplaint.category} Department ({directingComplaint.id})
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setDirectingComplaint(null)}
+                                style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "1.25rem", cursor: "pointer" }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Form Body */}
+                        <form onSubmit={handleIssueDirective} style={{ padding: "1.5rem" }}>
+                            <div style={{ marginBottom: "1.1rem" }}>
+                                <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                                    📋 Grievance Subject:
+                                </div>
+                                <div style={{ padding: "0.65rem 0.85rem", borderRadius: "0.5rem", background: "rgba(255, 255, 255, 0.03)", border: "1px solid var(--border)", fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)" }}>
+                                    {directingComplaint.subject}
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: "1.1rem" }}>
+                                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                                    ⚡ Target Resolution Window & Urgency:
+                                </label>
+                                <select
+                                    value={directiveForm.target}
+                                    onChange={e => setDirectiveForm(prev => ({ ...prev, target: e.target.value }))}
+                                    style={{
+                                        width: "100%", padding: "0.65rem 0.85rem", borderRadius: "0.5rem",
+                                        background: "#0f172a", border: "1.5px solid rgba(245, 158, 11, 0.4)",
+                                        color: "#ffffff", fontSize: "0.85rem", outline: "none", cursor: "pointer"
+                                    }}
+                                >
+                                    <option value="🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)">🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)</option>
+                                    <option value="⏱️ 48-Hour Priority Directive (Standard Collectorate Order)">⏱️ 48-Hour Priority Directive (Standard Collectorate Order)</option>
+                                    <option value="⚡ Immediate Field Action (Emergency Hazard)">⚡ Immediate Field Action (Emergency Hazard)</option>
+                                </select>
+                            </div>
+
+                            <div style={{ marginBottom: "1.1rem" }}>
+                                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
+                                    ✍️ Collector's Executive Order & Instructions:
+                                </label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    value={directiveForm.note}
+                                    onChange={e => setDirectiveForm(prev => ({ ...prev, note: e.target.value }))}
+                                    placeholder="Type direct instructions to the field officer (e.g. Inspect site immediately, fix pipeline, and file ATR by tomorrow evening)..."
+                                    style={{
+                                        width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem",
+                                        background: "var(--bg-main)", border: "1px solid var(--border)",
+                                        color: "var(--text-main)", fontSize: "0.85rem", resize: "vertical", outline: "none"
+                                    }}
+                                />
+                                {/* Quick Preset Buttons */}
+                                <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginTop: "0.45rem" }}>
+                                    {[
+                                        "Critical public health risk — expedite resolution immediately.",
+                                        "Severe safety hazard detected — deploy emergency repair crew.",
+                                        "Direct inspection required — submit ATR and photo proof within 24 hours.",
+                                    ].map((preset, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setDirectiveForm(prev => ({ ...prev, note: preset }))}
+                                            style={{
+                                                fontSize: "0.68rem", padding: "0.2rem 0.55rem", borderRadius: "99px",
+                                                background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.25)",
+                                                color: "#fef08a", cursor: "pointer"
+                                            }}
+                                        >
+                                            + "{preset.slice(0, 32)}..."
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Footer Buttons */}
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.5rem" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setDirectingComplaint(null)}
+                                    style={{
+                                        padding: "0.6rem 1.1rem", borderRadius: "0.5rem",
+                                        background: "transparent", border: "1px solid var(--border)",
+                                        color: "var(--text-muted)", fontSize: "0.82rem", fontWeight: "600", cursor: "pointer"
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={issuingDirective}
+                                    style={{
+                                        padding: "0.6rem 1.3rem", borderRadius: "0.5rem",
+                                        background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none",
+                                        color: "#ffffff", fontSize: "0.85rem", fontWeight: "800", cursor: "pointer",
+                                        boxShadow: "0 2px 10px rgba(245, 158, 11, 0.35)", display: "flex", alignItems: "center", gap: "0.4rem"
+                                    }}
+                                >
+                                    <span>🏛️</span>
+                                    <span>{issuingDirective ? "Issuing Mandate..." : "Issue Official Directive Order"}</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
         </ProtectedRoute>
     );

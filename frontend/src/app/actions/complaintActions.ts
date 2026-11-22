@@ -181,6 +181,15 @@ export interface ActionTakenReportData {
   resolutionPhoto?: string | null;
 }
 
+export interface CollectorDirectiveData {
+  orderId: string;
+  directiveNote: string;
+  priorityTarget: string;
+  officerTitle: string;
+  officerName: string;
+  issuedAt: string;
+}
+
 export async function updateComplaintStatusServerAction(
   id: string,
   newStatus: "Pending" | "In Progress" | "Under Review" | "Resolved" | "Escalated" | "Rejected",
@@ -456,6 +465,113 @@ export async function transferComplaintDepartmentServerAction(
   } catch (err) {
     console.error("Supabase category update network error:", err);
     return { success: false, error: "Network error transferring department." };
+  }
+}
+
+/**
+ * Issues an executive priority directive or 24h expedite order from the District Collector / Magistrate.
+ *
+ * Security guarantees:
+ *  1. Only users with Collector/Magistrate/Chief authorization can issue orders.
+ *  2. Rate limiting prevents spam.
+ *  3. Elevates complaint priority to Critical automatically and records directive in description.
+ */
+export async function issueCollectorDirectiveServerAction(
+  id: string,
+  directive: CollectorDirectiveData
+): Promise<{ success: boolean; error?: string }> {
+  const ip = await getClientIp();
+
+  // 1. Rate limiting
+  const rateResult = checkRateLimit(ip, "issue_directive", 20, 60000);
+  if (!rateResult.success) {
+    return { success: false, error: "Too many directive requests. Please wait a moment." };
+  }
+
+  if (!id || !directive || !directive.directiveNote) {
+    return { success: false, error: "Complaint ID and directive instructions are required." };
+  }
+
+  // 2. Authorization check: only Collectors or Chiefs
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Authentication required to issue an executive directive." };
+  }
+
+  const roleStr = (session.user.authorityRole || "").toLowerCase();
+  const isDistrictHead =
+    roleStr.includes("collector") ||
+    roleStr.includes("magistrate") ||
+    roleStr.includes("commissioner") ||
+    session.user.role === "chief";
+
+  if (!isDistrictHead) {
+    return {
+      success: false,
+      error: "Access Denied: Only District Collectors and Chief Administrators have the statutory power to issue executive directives.",
+    };
+  }
+
+  // 3. Fetch current description to append directive
+  let updatedDescription = "";
+  try {
+    const fetchRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}&select=description`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (fetchRes.ok) {
+      const rows = await fetchRes.json();
+      if (rows && rows.length > 0) {
+        const rawDesc = rows[0].description || "";
+        // Clean any existing directive block
+        const baseDesc = rawDesc.replace(/\n\n\[COLLECTOR_DIRECTIVE:[\s\S]*?\]/g, "").trim();
+        updatedDescription = `${baseDesc}\n\n[COLLECTOR_DIRECTIVE:${JSON.stringify(directive)}]`;
+      }
+    }
+  } catch (err) {
+    console.error("Error reading description for directive attachment:", err);
+  }
+
+  if (!updatedDescription) {
+    updatedDescription = `Citizen grievance registered.\n\n[COLLECTOR_DIRECTIVE:${JSON.stringify(directive)}]`;
+  }
+
+  const now = new Date().toISOString();
+  const patchPayload: Record<string, unknown> = {
+    description: updatedDescription,
+    priority: "Critical",
+    updated_at: now,
+  };
+
+  // 4. Update Supabase
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(patchPayload),
+      }
+    );
+
+    if (res.ok) {
+      return { success: true };
+    } else {
+      const errText = await res.text();
+      return { success: false, error: errText };
+    }
+  } catch (err) {
+    return { success: false, error: "Network error issuing directive." };
   }
 }
 
