@@ -41,7 +41,7 @@ function mapRoleToDepartment(role: string): string {
     if (r.includes("health") || r.includes("sanitation")) return "Public Health";
     if (r.includes("infrastructure") || r.includes("pwd") || r.includes("electricity") || r.includes("water") || r.includes("engineer")) return "Infrastructure";
     if (r.includes("safety") || r.includes("traffic") || r.includes("police")) return "Safety";
-    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector")) return "Administrative";
+    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector") || r.includes("tahsildar")) return "Administrative";
     return "Administrative";
 }
 
@@ -95,6 +95,13 @@ const ROLE_SPECIFIC_META: Record<string, { icon: string; avatarGrad: string; acc
         accentColor: "#eab308",
         category: "Safety",
         defaultOffice: "District Traffic Control Headquarters",
+    },
+    "Tahsildar (Revenue Administration)": {
+        icon: "💼",
+        avatarGrad: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+        accentColor: "#8b5cf6",
+        category: "Administrative",
+        defaultOffice: "Taluk Office Compound & Revenue Division",
     },
     "Revenue Department Officer": {
         icon: "💼",

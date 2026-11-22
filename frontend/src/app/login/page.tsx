@@ -165,6 +165,46 @@ export default function LoginPage() {
 
     /* ── Authority sign-up state ── */
     const [auStep, setAuStep] = useState(1);
+    const [auDepartment, setAuDepartment] = useState("");
+
+    const DEPARTMENT_ROLES: Record<string, { label: string; roles: { value: string; label: string }[] }> = {
+        "Infrastructure & Utilities": {
+            label: "Infrastructure & Utilities",
+            roles: [
+                { value: "Infrastructure & PWD Engineer", label: "🏗️ Infrastructure & PWD Engineer" },
+                { value: "Water Supply & Sewerage Officer", label: "💧 Water Supply & Sewerage Officer (TWAD)" },
+                { value: "Electricity Board Officer", label: "⚡ Electricity Board Officer (TANGEDCO)" },
+            ],
+        },
+        "District Administration": {
+            label: "District Administration",
+            roles: [
+                { value: "District Collector & District Magistrate", label: "🏛️ District Collector & District Magistrate" },
+                { value: "Tahsildar (Revenue Administration)", label: "💼 Tahsildar (Revenue Administration)" },
+                { value: "Municipal Corporation Officer", label: "🏙️ Municipal Corporation Officer" },
+                { value: "Education Department Officer", label: "📚 Education Department Officer" },
+            ],
+        },
+        "Police & Public Safety": {
+            label: "Police & Public Safety",
+            roles: [
+                { value: "Police Administrative Officer", label: "👮 Police Administrative Officer" },
+                { value: "Traffic Management Officer", label: "🚦 Traffic Management Officer" },
+            ],
+        },
+        "Environment": {
+            label: "Environment",
+            roles: [
+                { value: "Environment Protection Officer", label: "🌿 Environment Protection Officer" },
+            ],
+        },
+        "Public Health": {
+            label: "Public Health",
+            roles: [
+                { value: "Health & Sanitation Inspector", label: "🏥 Health & Sanitation Inspector" },
+            ],
+        },
+    };
     const [au, setAu] = useState({
         name: "", email: "", phone: "",
         authorityRole: "", serviceId: "",
@@ -524,6 +564,7 @@ export default function LoginPage() {
             return false;
         }
 
+        if (!auDepartment) errs.department = "Please select your department.";
         if (!au.authorityRole) errs.authorityRole = "Please select your authority role.";
         if (!au.serviceId.trim()) errs.serviceId = "Service Card ID is required.";
         else if (au.serviceId.trim().length < 5) errs.serviceId = "Service Card ID must be at least 5 characters.";
@@ -830,7 +871,8 @@ export default function LoginPage() {
             if (!/^\d{10}$/.test(au.phone)) errs.phone = "Enter a valid 10-digit phone number.";
             // OTP verification removed
         } else if (step === 2) {
-            if (!au.authorityRole) errs.authorityRole = "Please select your authority role.";
+            if (!auDepartment) errs.department = "Please select your department.";
+        if (!au.authorityRole) errs.authorityRole = "Please select your authority role.";
             if (!au.serviceId.trim()) errs.serviceId = "Service Card ID is required.";
             else if (au.serviceId.trim().length < 5) errs.serviceId = "Service Card ID must be at least 5 characters.";
             if (!au.workingPlace.trim()) errs.workingPlace = "Working place / office name is required.";
@@ -1408,43 +1450,51 @@ export default function LoginPage() {
                                             <div style={{ fontSize: "0.7rem", fontWeight: "800", color: "#6366f1", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>🏛️ Authority Details</div>
                                             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
 
-                                                {/* Authority Role */}
-                                                <Field label="Authority Role" icon="🎖️" error={auErrors.authorityRole}>
+                                                {/* Step 1: Department Selector */}
+                                                <Field label="Government Department" icon="🏢" error={auErrors.department}>
+                                                    <select
+                                                        value={auDepartment}
+                                                        onChange={e => {
+                                                            const dept = e.target.value;
+                                                            setAuDepartment(dept);
+                                                            const roles = DEPARTMENT_ROLES[dept]?.roles || [];
+                                                            if (roles.length === 1) {
+                                                                setAuField("authorityRole", roles[0].value);
+                                                            } else {
+                                                                setAuField("authorityRole", "");
+                                                            }
+                                                        }}
+                                                        style={selectStyle(!!auErrors.department)}
+                                                    >
+                                                        <option value="">— Select Department —</option>
+                                                        <option value="Infrastructure & Utilities">🏗️ Infrastructure & Utilities</option>
+                                                        <option value="District Administration">🏛️ District Administration</option>
+                                                        <option value="Police & Public Safety">🛡️ Police & Public Safety</option>
+                                                        <option value="Environment">🌿 Environment</option>
+                                                        <option value="Public Health">🏥 Public Health</option>
+                                                    </select>
+                                                </Field>
+
+                                                {/* Step 2: Specific Official Role */}
+                                                <Field label="Official Designation / Role" icon="🎖️" error={auErrors.authorityRole}>
                                                     <select
                                                         value={au.authorityRole}
                                                         onChange={e => setAuField("authorityRole", e.target.value)}
-                                                        style={selectStyle(!!auErrors.authorityRole)}
+                                                        disabled={!auDepartment}
+                                                        style={{
+                                                            ...selectStyle(!!auErrors.authorityRole),
+                                                            opacity: !auDepartment ? 0.6 : 1,
+                                                            cursor: !auDepartment ? "not-allowed" : "pointer",
+                                                        }}
                                                     >
-                                                        <option value="">— Select Your Authority Role —</option>
-
-                                                        <optgroup label="🏛️ District Executive Leadership">
-                                                            <option value="District Collector & District Magistrate">🏛️ District Collector &amp; District Magistrate</option>
-                                                        </optgroup>
-
-                                                        <optgroup label="🌿 Environment & Sanitation Division">
-                                                            <option value="Environment Protection Officer">🌿 Environment Protection Officer</option>
-                                                        </optgroup>
-
-                                                        <optgroup label="🏗️ Infrastructure, Public Works & Utilities">
-                                                            <option value="Infrastructure & PWD Engineer">🏗️ Infrastructure &amp; PWD Engineer</option>
-                                                            <option value="Water Supply & Sewerage Officer">💧 Water Supply &amp; Sewerage Officer</option>
-                                                            <option value="Electricity Board Officer">⚡ Electricity Board Officer</option>
-                                                        </optgroup>
-
-                                                        <optgroup label="🏥 Public Health & Medical Services">
-                                                            <option value="Health & Sanitation Inspector">🏥 Health &amp; Sanitation Inspector</option>
-                                                        </optgroup>
-
-                                                        <optgroup label="🛡️ Law Enforcement, Safety & Traffic">
-                                                            <option value="Police Administrative Officer">👮 Police Administrative Officer</option>
-                                                            <option value="Traffic Management Officer">🚦 Traffic Management Officer</option>
-                                                        </optgroup>
-
-                                                        <optgroup label="📁 Revenue & Municipal Administration">
-                                                            <option value="Revenue Department Officer">💼 Revenue Department Officer</option>
-                                                            <option value="Municipal Corporation Officer">🏙️ Municipal Corporation Officer</option>
-                                                            <option value="Education Department Officer">📚 Education Department Officer</option>
-                                                        </optgroup>
+                                                        <option value="">
+                                                            {!auDepartment ? "— Select Department First —" : "— Select Specific Role —"}
+                                                        </option>
+                                                        {auDepartment && DEPARTMENT_ROLES[auDepartment]?.roles.map(r => (
+                                                            <option key={r.value} value={r.value}>
+                                                                {r.label}
+                                                            </option>
+                                                        ))}
                                                     </select>
                                                 </Field>
 
