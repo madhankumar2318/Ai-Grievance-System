@@ -217,7 +217,7 @@ export default function DistrictOfficersPage() {
                 // If no real officer has registered for this department yet, keep standard department post
                 list.push({
                     id: `post-${dept}`,
-                    name: `${dept} Field Liaison Officer`,
+                    name: `${dept} Field Officer`,
                     designation: meta.defaultTitle,
                     category: dept,
                     serviceId: `TN-${dept.slice(0, 3).toUpperCase()}-POST`,
@@ -549,269 +549,314 @@ export default function DistrictOfficersPage() {
                             </div>
                         </div>
 
-                        {/* ── Officers Grid ── */}
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-                            gap: "1.25rem",
-                        }}>
-                            {filteredOfficers.map(officer => {
-                                return (
+                        {/* ── Officers Grid / Loading Skeleton ── */}
+                        {loading ? (
+                            <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+                                gap: "1.25rem",
+                            }}>
+                                {[1, 2, 3, 4, 5].map(i => (
                                     <div
-                                        key={officer.id}
-                                        className="glass card-hover"
+                                        key={i}
+                                        className="glass"
                                         style={{
                                             borderRadius: "1.15rem",
                                             padding: "1.4rem",
-                                            border: `1px solid rgba(255, 255, 255, 0.08)`,
-                                            borderTop: `3px solid ${officer.accentColor}`,
+                                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                                            minHeight: "320px",
                                             display: "flex",
                                             flexDirection: "column",
                                             justifyContent: "space-between",
-                                            gap: "1.1rem",
-                                            position: "relative",
+                                            opacity: 0.65,
                                         }}
                                     >
-                                        {/* Top Card Section: Officer Info & Status */}
                                         <div>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", marginBottom: "0.9rem" }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                                            <div style={{ display: "flex", gap: "0.85rem", alignItems: "center", marginBottom: "1rem" }}>
+                                                <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "rgba(255,255,255,0.08)" }} />
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ width: "65%", height: "18px", borderRadius: "4px", background: "rgba(255,255,255,0.1)", marginBottom: "0.4rem" }} />
+                                                    <div style={{ width: "45%", height: "12px", borderRadius: "4px", background: "rgba(255,255,255,0.06)" }} />
+                                                </div>
+                                            </div>
+                                            <div style={{ width: "100%", height: "55px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", marginBottom: "1rem" }} />
+                                            <div style={{ width: "100%", height: "60px", borderRadius: "10px", background: "rgba(255,255,255,0.03)" }} />
+                                        </div>
+                                        <div style={{ width: "100%", height: "36px", borderRadius: "8px", background: "rgba(255,255,255,0.06)" }} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+                                gap: "1.25rem",
+                            }}>
+                                {filteredOfficers.map(officer => {
+                                    return (
+                                        <div
+                                            key={officer.id}
+                                            className="glass card-hover"
+                                            style={{
+                                                borderRadius: "1.15rem",
+                                                padding: "1.4rem",
+                                                border: `1px solid rgba(255, 255, 255, 0.08)`,
+                                                borderTop: `3px solid ${officer.accentColor}`,
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                justifyContent: "space-between",
+                                                gap: "1.1rem",
+                                                position: "relative",
+                                            }}
+                                        >
+                                            {/* Top Card Section: Officer Info & Status */}
+                                            <div>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", marginBottom: "0.9rem" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                                                        <div style={{
+                                                            width: "48px",
+                                                            height: "48px",
+                                                            borderRadius: "14px",
+                                                            background: officer.avatarGrad,
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            fontSize: "1.5rem",
+                                                            boxShadow: `0 4px 14px ${officer.accentColor}33`,
+                                                            flexShrink: 0,
+                                                        }}>
+                                                            {officer.icon}
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+                                                                <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "#f8fafc", margin: 0 }}>
+                                                                    {officer.name}
+                                                                </h3>
+                                                                {officer.isRealRegistered && (
+                                                                    <span style={{
+                                                                        display: "inline-flex",
+                                                                        alignItems: "center",
+                                                                        gap: "0.25rem",
+                                                                        fontSize: "0.68rem",
+                                                                        fontWeight: "800",
+                                                                        lineHeight: 1,
+                                                                        padding: "0.22rem 0.55rem",
+                                                                        borderRadius: "99px",
+                                                                        background: "rgba(16, 185, 129, 0.15)",
+                                                                        color: "#10b981",
+                                                                        border: "1px solid rgba(16, 185, 129, 0.35)",
+                                                                        whiteSpace: "nowrap",
+                                                                        flexShrink: 0,
+                                                                    }} title="Verified Registered Official Account">
+                                                                        <span>✓</span>
+                                                                        <span>Registered</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ fontSize: "0.76rem", color: officer.accentColor, fontWeight: "700", marginTop: "0.15rem" }}>
+                                                                {officer.designation}
+                                                            </div>
+                                                            <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.15rem", fontFamily: "monospace" }}>
+                                                                ID: {officer.serviceId}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Status Badge */}
+                                                    <span style={{
+                                                        padding: "0.25rem 0.65rem",
+                                                        borderRadius: "99px",
+                                                        fontSize: "0.7rem",
+                                                        fontWeight: "800",
+                                                        background: officer.statusBg,
+                                                        color: officer.statusColor,
+                                                        border: `1px solid ${officer.statusBorder}`,
+                                                        letterSpacing: "0.03em",
+                                                        textTransform: "uppercase",
+                                                        whiteSpace: "nowrap",
+                                                    }}>
+                                                        {officer.dutyStatus === "Available" ? "🟢 Free" :
+                                                            officer.dutyStatus === "Active" ? "🟡 In Action" :
+                                                                "🔴 Busy"}
+                                                    </span>
+                                                </div>
+
+                                                {/* Contact & Office Location */}
+                                                <div style={{
+                                                    padding: "0.75rem 0.85rem",
+                                                    borderRadius: "0.75rem",
+                                                    background: "rgba(255, 255, 255, 0.02)",
+                                                    border: "1px solid rgba(255, 255, 255, 0.05)",
+                                                    fontSize: "0.76rem",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    gap: "0.35rem",
+                                                    marginBottom: "0.9rem",
+                                                }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)" }}>
+                                                        <span>📍</span>
+                                                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                            {officer.officeLocation}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                                            <span>📞</span>
+                                                            <a href={`tel:${officer.phone}`} style={{ color: "#93c5fd", textDecoration: "none", fontWeight: "600" }}>
+                                                                {officer.phone}
+                                                            </a>
+                                                        </div>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.72rem" }}>
+                                                            <span>✉️</span>
+                                                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "160px" }}>{officer.email}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Workload Meter & Metrics */}
+                                                <div style={{ marginBottom: "0.85rem" }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", marginBottom: "0.35rem" }}>
+                                                        <span style={{ color: "var(--text-muted)", fontWeight: "600" }}>Live Active Workload:</span>
+                                                        <strong style={{ color: officer.statusColor }}>
+                                                            {officer.activeCount === 0 ? "0 pending (Free to assign)" : `${officer.activeCount} active complaint${officer.activeCount > 1 ? "s" : ""}`}
+                                                        </strong>
+                                                    </div>
+                                                    {/* Mini Bar */}
                                                     <div style={{
-                                                        width: "48px",
-                                                        height: "48px",
-                                                        borderRadius: "14px",
-                                                        background: officer.avatarGrad,
+                                                        width: "100%",
+                                                        height: "6px",
+                                                        borderRadius: "99px",
+                                                        background: "rgba(255, 255, 255, 0.08)",
+                                                        overflow: "hidden",
+                                                    }}>
+                                                        <div style={{
+                                                            width: `${Math.min(100, Math.max(8, officer.activeCount * 33))}%`,
+                                                            height: "100%",
+                                                            borderRadius: "99px",
+                                                            background: officer.statusColor,
+                                                            transition: "width 0.4s ease",
+                                                        }} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Current Tasks Preview */}
+                                                <div style={{
+                                                    padding: "0.65rem 0.85rem",
+                                                    borderRadius: "0.65rem",
+                                                    background: officer.activeCount > 0 ? "rgba(255, 255, 255, 0.03)" : "rgba(16, 185, 129, 0.04)",
+                                                    border: `1px dashed ${officer.activeCount > 0 ? "rgba(255, 255, 255, 0.12)" : "rgba(16, 185, 129, 0.25)"}`,
+                                                    fontSize: "0.74rem",
+                                                }}>
+                                                    {officer.activeCount === 0 ? (
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#10b981" }}>
+                                                            <span>✅</span>
+                                                            <span>Ready for new assignments. No unresolved complaints pending in this sector.</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div>
+                                                            <div style={{ fontWeight: "700", color: "#f1f5f9", marginBottom: "0.3rem", display: "flex", justifyContent: "space-between" }}>
+                                                                <span>Active Case List:</span>
+                                                                <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{officer.resolvedCount} resolved</span>
+                                                            </div>
+                                                            <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                                                                {officer.activeGrievances.slice(0, 2).map(g => (
+                                                                    <div key={g.id} style={{
+                                                                        display: "flex",
+                                                                        justifyContent: "space-between",
+                                                                        alignItems: "center",
+                                                                        gap: "0.5rem",
+                                                                        padding: "0.2rem 0",
+                                                                    }}>
+                                                                        <span style={{
+                                                                            color: "#93c5fd",
+                                                                            fontWeight: "700",
+                                                                            fontFamily: "monospace",
+                                                                            fontSize: "0.7rem",
+                                                                            flexShrink: 0,
+                                                                        }}>
+                                                                            {g.id}
+                                                                        </span>
+                                                                        <span style={{
+                                                                            overflow: "hidden",
+                                                                            textOverflow: "ellipsis",
+                                                                            whiteSpace: "nowrap",
+                                                                            color: "var(--text-muted)",
+                                                                            flex: 1,
+                                                                        }}>
+                                                                            {g.subject}
+                                                                        </span>
+                                                                        <span style={{
+                                                                            fontSize: "0.65rem",
+                                                                            padding: "0.1rem 0.35rem",
+                                                                            borderRadius: "4px",
+                                                                            background: g.status === "Pending" ? "rgba(245, 158, 11, 0.15)" : "rgba(99, 102, 241, 0.15)",
+                                                                            color: g.status === "Pending" ? "#fbbf24" : "#a5b4fc",
+                                                                            fontWeight: "700",
+                                                                            flexShrink: 0,
+                                                                        }}>
+                                                                            {g.status}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                                {officer.activeGrievances.length > 2 && (
+                                                                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "right" }}>
+                                                                        +{officer.activeGrievances.length - 2} more active cases...
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Bottom Action Footer */}
+                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto", paddingTop: "0.5rem" }}>
+                                                <Link
+                                                    href={`/admin?dept=${encodeURIComponent(officer.category)}`}
+                                                    className="btn btn-primary"
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: "0.55rem 0.75rem",
+                                                        fontSize: "0.78rem",
+                                                        fontWeight: "700",
+                                                        textAlign: "center",
+                                                        textDecoration: "none",
+                                                        borderRadius: "0.65rem",
                                                         display: "flex",
                                                         alignItems: "center",
                                                         justifyContent: "center",
-                                                        fontSize: "1.5rem",
-                                                        boxShadow: `0 4px 14px ${officer.accentColor}33`,
-                                                        flexShrink: 0,
-                                                    }}>
-                                                        {officer.icon}
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                                                            <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "#f8fafc", margin: 0 }}>
-                                                                {officer.name}
-                                                            </h3>
-                                                            {officer.isRealRegistered && (
-                                                                <span style={{
-                                                                    fontSize: "0.6rem",
-                                                                    padding: "0.1rem 0.35rem",
-                                                                    borderRadius: "99px",
-                                                                    background: "rgba(16, 185, 129, 0.15)",
-                                                                    color: "#10b981",
-                                                                    border: "1px solid rgba(16, 185, 129, 0.3)",
-                                                                    fontWeight: "800",
-                                                                }} title="Verified Registered Official Account">
-                                                                    ✓ Registered
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div style={{ fontSize: "0.76rem", color: officer.accentColor, fontWeight: "700", marginTop: "0.15rem" }}>
-                                                            {officer.designation}
-                                                        </div>
-                                                        <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", marginTop: "0.15rem", fontFamily: "monospace" }}>
-                                                            ID: {officer.serviceId}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Status Badge */}
-                                                <span style={{
-                                                    padding: "0.25rem 0.65rem",
-                                                    borderRadius: "99px",
-                                                    fontSize: "0.7rem",
-                                                    fontWeight: "800",
-                                                    background: officer.statusBg,
-                                                    color: officer.statusColor,
-                                                    border: `1px solid ${officer.statusBorder}`,
-                                                    letterSpacing: "0.03em",
-                                                    textTransform: "uppercase",
-                                                    whiteSpace: "nowrap",
-                                                }}>
-                                                    {officer.dutyStatus === "Available" ? "🟢 Free" :
-                                                        officer.dutyStatus === "Active" ? "🟡 In Action" :
-                                                            "🔴 Busy"}
-                                                </span>
-                                            </div>
-
-                                            {/* Contact & Office Location */}
-                                            <div style={{
-                                                padding: "0.75rem 0.85rem",
-                                                borderRadius: "0.75rem",
-                                                background: "rgba(255, 255, 255, 0.02)",
-                                                border: "1px solid rgba(255, 255, 255, 0.05)",
-                                                fontSize: "0.76rem",
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                gap: "0.35rem",
-                                                marginBottom: "0.9rem",
-                                            }}>
-                                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)" }}>
-                                                    <span>📍</span>
-                                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                        {officer.officeLocation}
-                                                    </span>
-                                                </div>
-                                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-                                                        <span>📞</span>
-                                                        <a href={`tel:${officer.phone}`} style={{ color: "#93c5fd", textDecoration: "none", fontWeight: "600" }}>
-                                                            {officer.phone}
-                                                        </a>
-                                                    </div>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.72rem" }}>
-                                                        <span>✉️</span>
-                                                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "160px" }}>{officer.email}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Workload Meter & Metrics */}
-                                            <div style={{ marginBottom: "0.85rem" }}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.75rem", marginBottom: "0.35rem" }}>
-                                                    <span style={{ color: "var(--text-muted)", fontWeight: "600" }}>Live Active Workload:</span>
-                                                    <strong style={{ color: officer.statusColor }}>
-                                                        {officer.activeCount === 0 ? "0 pending (Free to assign)" : `${officer.activeCount} active complaint${officer.activeCount > 1 ? "s" : ""}`}
-                                                    </strong>
-                                                </div>
-                                                {/* Mini Bar */}
-                                                <div style={{
-                                                    width: "100%",
-                                                    height: "6px",
-                                                    borderRadius: "99px",
-                                                    background: "rgba(255, 255, 255, 0.08)",
-                                                    overflow: "hidden",
-                                                }}>
-                                                    <div style={{
-                                                        width: `${Math.min(100, Math.max(8, officer.activeCount * 33))}%`,
-                                                        height: "100%",
-                                                        borderRadius: "99px",
-                                                        background: officer.statusColor,
-                                                        transition: "width 0.4s ease",
-                                                    }} />
-                                                </div>
-                                            </div>
-
-                                            {/* Current Tasks Preview */}
-                                            <div style={{
-                                                padding: "0.65rem 0.85rem",
-                                                borderRadius: "0.65rem",
-                                                background: officer.activeCount > 0 ? "rgba(255, 255, 255, 0.03)" : "rgba(16, 185, 129, 0.04)",
-                                                border: `1px dashed ${officer.activeCount > 0 ? "rgba(255, 255, 255, 0.12)" : "rgba(16, 185, 129, 0.25)"}`,
-                                                fontSize: "0.74rem",
-                                            }}>
-                                                {officer.activeCount === 0 ? (
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#10b981" }}>
-                                                        <span>✅</span>
-                                                        <span>Ready for new assignments. No unresolved complaints pending in this sector.</span>
-                                                    </div>
-                                                ) : (
-                                                    <div>
-                                                        <div style={{ fontWeight: "700", color: "#f1f5f9", marginBottom: "0.3rem", display: "flex", justifyContent: "space-between" }}>
-                                                            <span>Active Case List:</span>
-                                                            <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>{officer.resolvedCount} resolved</span>
-                                                        </div>
-                                                        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                                                            {officer.activeGrievances.slice(0, 2).map(g => (
-                                                                <div key={g.id} style={{
-                                                                    display: "flex",
-                                                                    justifyContent: "space-between",
-                                                                    alignItems: "center",
-                                                                    gap: "0.5rem",
-                                                                    padding: "0.2rem 0",
-                                                                }}>
-                                                                    <span style={{
-                                                                        color: "#93c5fd",
-                                                                        fontWeight: "700",
-                                                                        fontFamily: "monospace",
-                                                                        fontSize: "0.7rem",
-                                                                        flexShrink: 0,
-                                                                    }}>
-                                                                        {g.id}
-                                                                    </span>
-                                                                    <span style={{
-                                                                        overflow: "hidden",
-                                                                        textOverflow: "ellipsis",
-                                                                        whiteSpace: "nowrap",
-                                                                        color: "var(--text-muted)",
-                                                                        flex: 1,
-                                                                    }}>
-                                                                        {g.subject}
-                                                                    </span>
-                                                                    <span style={{
-                                                                        fontSize: "0.65rem",
-                                                                        padding: "0.1rem 0.35rem",
-                                                                        borderRadius: "4px",
-                                                                        background: g.status === "Pending" ? "rgba(245, 158, 11, 0.15)" : "rgba(99, 102, 241, 0.15)",
-                                                                        color: g.status === "Pending" ? "#fbbf24" : "#a5b4fc",
-                                                                        fontWeight: "700",
-                                                                        flexShrink: 0,
-                                                                    }}>
-                                                                        {g.status}
-                                                                    </span>
-                                                                </div>
-                                                            ))}
-                                                            {officer.activeGrievances.length > 2 && (
-                                                                <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontStyle: "italic", textAlign: "right" }}>
-                                                                    +{officer.activeGrievances.length - 2} more active cases...
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                        gap: "0.4rem",
+                                                    }}
+                                                >
+                                                    <span>🔍</span>
+                                                    <span>Inspect Grievances ({officer.totalAssigned})</span>
+                                                </Link>
+                                                <a
+                                                    href={`tel:${officer.phone}`}
+                                                    style={{
+                                                        padding: "0.55rem 0.85rem",
+                                                        borderRadius: "0.65rem",
+                                                        background: "rgba(255, 255, 255, 0.05)",
+                                                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                                                        color: "#f8fafc",
+                                                        textDecoration: "none",
+                                                        fontSize: "0.78rem",
+                                                        fontWeight: "700",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        gap: "0.3rem",
+                                                    }}
+                                                    title={`Call ${officer.name}`}
+                                                >
+                                                    📞 Call
+                                                </a>
                                             </div>
                                         </div>
-
-                                        {/* Bottom Action Footer */}
-                                        <div style={{ display: "flex", gap: "0.5rem", marginTop: "auto", paddingTop: "0.5rem" }}>
-                                            <Link
-                                                href={`/admin?dept=${encodeURIComponent(officer.category)}`}
-                                                className="btn btn-primary"
-                                                style={{
-                                                    flex: 1,
-                                                    padding: "0.55rem 0.75rem",
-                                                    fontSize: "0.78rem",
-                                                    fontWeight: "700",
-                                                    textAlign: "center",
-                                                    textDecoration: "none",
-                                                    borderRadius: "0.65rem",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    gap: "0.4rem",
-                                                }}
-                                            >
-                                                <span>🔍</span>
-                                                <span>Inspect Grievances ({officer.totalAssigned})</span>
-                                            </Link>
-                                            <a
-                                                href={`tel:${officer.phone}`}
-                                                style={{
-                                                    padding: "0.55rem 0.85rem",
-                                                    borderRadius: "0.65rem",
-                                                    background: "rgba(255, 255, 255, 0.05)",
-                                                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                                                    color: "#f8fafc",
-                                                    textDecoration: "none",
-                                                    fontSize: "0.78rem",
-                                                    fontWeight: "700",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    gap: "0.3rem",
-                                                }}
-                                                title={`Call ${officer.name}`}
-                                            >
-                                                📞 Call
-                                            </a>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </>
                 )}
             </div>
