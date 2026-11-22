@@ -587,40 +587,53 @@ export default function AdminDashboard() {
                                             overflow: "hidden"
                                         }}
                                     >
-                                        {/* Selected Indicator Pill */}
-                                        {isSelected && (
+                                        {/* Top Icon & Filter Active Pill Header */}
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.55rem" }}>
                                             <div style={{
-                                                position: "absolute",
-                                                top: "0.45rem",
-                                                right: "0.55rem",
-                                                fontSize: "0.65rem",
-                                                fontWeight: "800",
-                                                color: sc.accent,
-                                                background: `${sc.accent}18`,
-                                                padding: "0.15rem 0.45rem",
-                                                borderRadius: "99px",
-                                                border: `1px solid ${sc.accent}44`
-                                            }}>
-                                                ✓ Filter Active
-                                            </div>
-                                        )}
-
-                                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
-                                            <div style={{
-                                                width: "32px",
-                                                height: "32px",
-                                                borderRadius: "8px",
+                                                width: "36px",
+                                                height: "36px",
+                                                minWidth: "36px",
+                                                borderRadius: "10px",
                                                 background: sc.grad,
                                                 display: "flex",
                                                 alignItems: "center",
                                                 justifyContent: "center",
-                                                fontSize: "1rem"
+                                                fontSize: "1.15rem",
+                                                boxShadow: "0 2px 8px rgba(0,0,0,0.25)"
                                             }}>
                                                 {sc.icon}
                                             </div>
-                                            <div style={{ fontWeight: "800", fontSize: "0.85rem", color: "#ffffff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                {sc.name}
-                                            </div>
+
+                                            {isSelected && (
+                                                <div style={{
+                                                    fontSize: "0.68rem",
+                                                    fontWeight: "800",
+                                                    color: sc.accent,
+                                                    background: `${sc.accent}22`,
+                                                    padding: "0.2rem 0.55rem",
+                                                    borderRadius: "99px",
+                                                    border: `1px solid ${sc.accent}66`,
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "0.25rem",
+                                                    whiteSpace: "nowrap"
+                                                }}>
+                                                    <span>✓</span>
+                                                    <span>Filter Active</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Department Title (Full Width - No Collision) */}
+                                        <div style={{
+                                            fontWeight: "800",
+                                            fontSize: "0.92rem",
+                                            color: "#ffffff",
+                                            marginBottom: "0.65rem",
+                                            lineHeight: 1.25,
+                                            letterSpacing: "-0.01em"
+                                        }}>
+                                            {sc.name}
                                         </div>
 
                                         {/* Metrics Row */}
