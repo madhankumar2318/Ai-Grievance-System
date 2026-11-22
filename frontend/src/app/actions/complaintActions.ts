@@ -355,7 +355,7 @@ export async function transferComplaintDepartmentServerAction(
 
   // 1. Rate limiting
   const rateResult = checkRateLimit(ip, "transfer_department", 30, 60000);
-  if (!rateResult.allowed) {
+  if (!rateResult.success) {
     return { success: false, error: "Too many transfer requests. Please slow down." };
   }
 
@@ -376,8 +376,8 @@ export async function transferComplaintDepartmentServerAction(
   }
 
   // 3. Enforce server-side authorization check: only Collectors and Chiefs can re-route
-  const session = await getSession();
-  if (!session || !session.user) {
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
     return { success: false, error: "Authentication required to transfer department." };
   }
 
