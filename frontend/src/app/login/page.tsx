@@ -709,6 +709,7 @@ export default function LoginPage() {
                 username: au.name.trim(),
                 role: "authority",
                 phone: au.phone,
+                department: auDepartment,
                 authorityRole: au.authorityRole,
                 serviceId: au.serviceId.trim(),
                 workingPlace: au.workingPlace.trim(),

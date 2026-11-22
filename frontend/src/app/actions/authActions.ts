@@ -109,6 +109,7 @@ export interface RegisterUserParams {
   idType?: string;
   idNumber?: string;
   dob?: string;
+  department?: string;
   authorityRole?: string;
   serviceId?: string;
   workingPlace?: string;
@@ -276,7 +277,26 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
     const salt = bcrypt.genSaltSync(10);
     const passwordHash = bcrypt.hashSync(password, salt);
 
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+    const userPayload: Record<string, any> = {
+      email,
+      username: username || "Citizen User",
+      password_hash: passwordHash,
+      role,
+      phone: phone || "",
+      state: state || "Tamil Nadu",
+      district: district || (role === "chief" ? "All 38 Districts" : "Tiruchirappalli"),
+      pincode: pincode || "",
+      id_type: idType || "aadhaar",
+      dob: dob || "",
+      authority_role: params.authorityRole || null,
+      service_id: params.serviceId || null,
+      created_at: new Date().toISOString(),
+    };
+    if (params.department) {
+      userPayload.department = params.department;
+    }
+
+    let insertRes = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
       method: "POST",
       headers: {
         "apikey": SUPABASE_ANON_KEY,
@@ -284,22 +304,26 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
         "Content-Type": "application/json",
         "Prefer": "return=minimal",
       },
-      body: JSON.stringify({
-        email,
-        username: username || "Citizen User",
-        password_hash: passwordHash,
-        role,
-        phone: phone || "",
-        state: state || "Tamil Nadu",
-        district: district || (role === "chief" ? "All 38 Districts" : "Tiruchirappalli"),
-        pincode: pincode || "",
-        id_type: idType || "aadhaar",
-        dob: dob || "",
-        authority_role: params.authorityRole || null,
-        service_id: params.serviceId || null,
-        created_at: new Date().toISOString(),
-      }),
+      body: JSON.stringify(userPayload),
     });
+
+    // If Supabase returns 42703 (department column not created yet), gracefully retry without department
+    if (!insertRes.ok && userPayload.department) {
+      const errCheck = await insertRes.clone().text();
+      if (errCheck.includes("department") || errCheck.includes("42703")) {
+        delete userPayload.department;
+        insertRes = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+          },
+          body: JSON.stringify(userPayload),
+        });
+      }
+    }
 
     if (!insertRes.ok) {
       const errText = await insertRes.text();
@@ -659,6 +683,7 @@ export async function getFullUserProfileServerAction(): Promise<{
             phone: u.phone || session.user.phone,
             state: u.state || session.user.state,
             district: u.district || session.user.district,
+            department: u.department || session.user.department,
             authorityRole: u.authority_role || session.user.authorityRole,
             serviceId: u.service_id || session.user.serviceId,
             workingPlace: u.working_place || session.user.workingPlace,
