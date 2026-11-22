@@ -724,3 +724,76 @@ export async function updateUserProfileServerAction(data: {
   await setAuthCookie(updatedUser);
   return { success: true, user: updatedUser };
 }
+
+export interface RegisteredOfficer {
+  email: string;
+  username: string;
+  role: string;
+  state?: string;
+  district?: string;
+  authorityRole?: string;
+  serviceId?: string;
+  workingPlace?: string;
+  phone?: string;
+  createdAt?: string;
+}
+
+export async function getDistrictOfficersServerAction(targetDistrict?: string): Promise<{
+  success: boolean;
+  officers?: RegisteredOfficer[];
+  error?: string;
+}> {
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const roleStr = `${session.user.authorityRole || ""} ${session.user.role || ""}`.toLowerCase();
+  const isDistrictHead =
+    roleStr.includes("collector") ||
+    roleStr.includes("magistrate") ||
+    roleStr.includes("commissioner") ||
+    session.user.role === "chief";
+
+  if (!isDistrictHead) {
+    return { success: false, error: "Unauthorized: Access restricted to District Collector." };
+  }
+
+  const district = targetDistrict || session.user.district || "Tiruchirappalli";
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?role=eq.authority&district=eq.${encodeURIComponent(district)}&select=email,username,role,state,district,authority_role,service_id,phone,created_at`,
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const officers: RegisteredOfficer[] = data.map((u: any) => ({
+          email: u.email,
+          username: u.username,
+          role: u.role,
+          state: u.state || "Tamil Nadu",
+          district: u.district || district,
+          authorityRole: u.authority_role || "Department Officer",
+          serviceId: u.service_id || "TN-GOV-OFFICER",
+          phone: u.phone || "+91 94432 00000",
+          createdAt: u.created_at,
+        }));
+        return { success: true, officers };
+      }
+    }
+    return { success: true, officers: [] };
+  } catch (err) {
+    console.error("Failed to fetch district officers from Supabase:", err);
+    return { success: false, error: "Database error while fetching officers." };
+  }
+}
+

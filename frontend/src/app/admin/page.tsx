@@ -154,7 +154,7 @@ export default function AdminDashboard() {
         if (roleStr.includes("health") || roleStr.includes("sanitation")) return "Public Health";
         if (roleStr.includes("infrastructure") || roleStr.includes("pwd") || roleStr.includes("electricity") || roleStr.includes("water") || roleStr.includes("engineer")) return "Infrastructure";
         if (roleStr.includes("safety") || roleStr.includes("traffic") || roleStr.includes("police")) return "Safety";
-        if (roleStr.includes("revenue") || roleStr.includes("education") || roleStr.includes("administrative")) return "Administrative";
+        if (roleStr.includes("revenue") || roleStr.includes("education") || roleStr.includes("administrative") || roleStr.includes("municipal")) return "Administrative";
         return null; // Fallback to broad access if unspecified municipal officer
     }, [isDistrictHead, roleStr]);
 

@@ -6,6 +6,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
 import { getComplaintsServerAction } from "@/app/actions/complaintActions";
+import { getDistrictOfficersServerAction, RegisteredOfficer } from "@/app/actions/authActions";
 
 interface GrievanceItem {
     id: string;
@@ -17,7 +18,7 @@ interface GrievanceItem {
     date: string;
 }
 
-interface OfficerProfile {
+interface DisplayOfficer {
     id: string;
     name: string;
     designation: string;
@@ -29,81 +30,66 @@ interface OfficerProfile {
     icon: string;
     avatarGrad: string;
     accentColor: string;
+    isRealRegistered: boolean;
 }
 
-const DISTRICT_OFFICERS: OfficerProfile[] = [
-    {
-        id: "officer-env",
-        name: "Officer Priya S.",
-        designation: "Senior Environmental Protection Officer",
-        category: "Environment",
-        serviceId: "TN-ENV-2024-8841",
-        officeLocation: "Tiruchirappalli City Municipal Corporation, Bharathidasan Salai",
-        phone: "+91 98401 23456",
-        email: "priya.env@trichy.tn.gov.in",
+// Maps any authority role string from the signup/login page to the 5 core grievance departments
+function mapRoleToDepartment(role: string): string {
+    const r = (role || "").toLowerCase();
+    if (r.includes("environment")) return "Environment";
+    if (r.includes("health") || r.includes("sanitation")) return "Public Health";
+    if (r.includes("infrastructure") || r.includes("pwd") || r.includes("electricity") || r.includes("water") || r.includes("engineer")) return "Infrastructure";
+    if (r.includes("safety") || r.includes("traffic") || r.includes("police")) return "Safety";
+    if (r.includes("revenue") || r.includes("education") || r.includes("administrative") || r.includes("municipal") || r.includes("collector")) return "Administrative";
+    return "Administrative";
+}
+
+const DEPT_METADATA: Record<string, { icon: string; avatarGrad: string; accentColor: string; defaultTitle: string; defaultOffice: string }> = {
+    Environment: {
         icon: "🌿",
         avatarGrad: "linear-gradient(135deg, #10b981, #059669)",
         accentColor: "#10b981",
+        defaultTitle: "Environmental Protection Officer",
+        defaultOffice: "City Municipal Corporation, Bharathidasan Salai",
     },
-    {
-        id: "officer-pwd",
-        name: "Er. R. Ramesh B.E.",
-        designation: "Executive Engineer (Infrastructure & PWD)",
-        category: "Infrastructure",
-        serviceId: "TN-PWD-2023-4109",
-        officeLocation: "PWD Divisional Complex, Cantonment, Tiruchirappalli",
-        phone: "+91 94432 87654",
-        email: "ramesh.pwd@trichy.tn.gov.in",
+    Infrastructure: {
         icon: "🏗️",
         avatarGrad: "linear-gradient(135deg, #6366f1, #4f46e5)",
         accentColor: "#6366f1",
+        defaultTitle: "Executive Engineer (Infrastructure & PWD)",
+        defaultOffice: "PWD Divisional Complex, Cantonment",
     },
-    {
-        id: "officer-health",
-        name: "Dr. K. Anitha M.B.B.S., D.P.H.",
-        designation: "Chief District Health & Sanitation Inspector",
-        category: "Public Health",
-        serviceId: "TN-DPH-2022-7612",
-        officeLocation: "District Health Office, Collectorate Annexe, Tiruchirappalli",
-        phone: "+91 94421 11223",
-        email: "anitha.health@trichy.tn.gov.in",
+    "Public Health": {
         icon: "🏥",
         avatarGrad: "linear-gradient(135deg, #06b6d4, #0891b2)",
         accentColor: "#06b6d4",
+        defaultTitle: "Chief District Health & Sanitation Inspector",
+        defaultOffice: "District Health Office, Collectorate Annexe",
     },
-    {
-        id: "officer-safety",
-        name: "Inspector M. Selvam",
-        designation: "District Traffic & Law Enforcement Officer",
-        category: "Safety",
-        serviceId: "TN-POL-2021-9983",
-        officeLocation: "District Traffic Control HQ, Court Complex Road, Tiruchirappalli",
-        phone: "+91 94981 44556",
-        email: "selvam.police@trichy.tn.gov.in",
+    Safety: {
         icon: "🛡️",
         avatarGrad: "linear-gradient(135deg, #f59e0b, #d97706)",
         accentColor: "#f59e0b",
+        defaultTitle: "District Traffic & Law Enforcement Officer",
+        defaultOffice: "District Traffic Control HQ, Court Complex Road",
     },
-    {
-        id: "officer-revenue",
-        name: "Tmt. N. Revathi M.A.",
-        designation: "Special Tahsildar (Revenue & District Administration)",
-        category: "Administrative",
-        serviceId: "TN-REV-2020-5521",
-        officeLocation: "Taluk Office Compound, Collectorate Campus, Tiruchirappalli",
-        phone: "+91 98422 66778",
-        email: "revathi.rev@trichy.tn.gov.in",
+    Administrative: {
         icon: "📁",
         avatarGrad: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
         accentColor: "#8b5cf6",
+        defaultTitle: "Special Tahsildar (Revenue & District Administration)",
+        defaultOffice: "Taluk Office Compound, Collectorate Campus",
     },
-];
+};
+
+const BASELINE_DEPTS = ["Environment", "Infrastructure", "Public Health", "Safety", "Administrative"];
 
 export default function DistrictOfficersPage() {
     const { user } = useAuth();
     const { t } = useLang();
 
     const [complaints, setComplaints] = useState<GrievanceItem[]>([]);
+    const [registeredOfficers, setRegisteredOfficers] = useState<RegisteredOfficer[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<"All" | "Available" | "Active" | "Busy">("All");
     const [searchTerm, setSearchTerm] = useState("");
@@ -120,12 +106,17 @@ export default function DistrictOfficersPage() {
 
     useEffect(() => {
         let mounted = true;
-        const fetchDistrictComplaints = async () => {
+        const loadAllData = async () => {
             setLoading(true);
             try {
-                const res = await getComplaintsServerAction();
-                if (res.success && res.complaints && mounted) {
-                    const mapped: GrievanceItem[] = res.complaints.map(c => ({
+                // Parallel fetch: grievances and real registered officers from Supabase
+                const [complaintsRes, officersRes] = await Promise.all([
+                    getComplaintsServerAction(),
+                    getDistrictOfficersServerAction(officerDistrict),
+                ]);
+
+                if (complaintsRes.success && complaintsRes.complaints && mounted) {
+                    const mapped: GrievanceItem[] = complaintsRes.complaints.map(c => ({
                         id: c.id,
                         subject: c.subject || "Grievance",
                         category: c.category || "General",
@@ -136,18 +127,22 @@ export default function DistrictOfficersPage() {
                     }));
                     setComplaints(mapped);
                 }
+
+                if (officersRes.success && officersRes.officers && mounted) {
+                    setRegisteredOfficers(officersRes.officers);
+                }
             } catch (err) {
-                console.error("Failed to load complaints for officers roster:", err);
+                console.error("Failed to load officers data:", err);
             } finally {
                 if (mounted) setLoading(false);
             }
         };
 
-        fetchDistrictComplaints();
+        loadAllData();
         return () => {
             mounted = false;
         };
-    }, []);
+    }, [officerDistrict]);
 
     // Filter grievances strictly to the Collector's district (e.g. Tiruchirappalli)
     const districtComplaints = useMemo(() => {
@@ -163,9 +158,72 @@ export default function DistrictOfficersPage() {
         });
     }, [complaints, officerDistrict]);
 
-    // Calculate real-time live duty status for each officer
+    // Build the dynamic officers list merging REAL registered officers from Supabase
+    const displayOfficers = useMemo(() => {
+        // Exclude the collector themselves from the field officers list so they don't appear as their own subordinate
+        const fieldOfficers = registeredOfficers.filter(o => {
+            const r = (o.authorityRole || "").toLowerCase();
+            return !r.includes("collector") && !r.includes("magistrate") && o.email !== user?.email;
+        });
+
+        // Group registered officers by department
+        const registeredByDept: Record<string, RegisteredOfficer[]> = {};
+        fieldOfficers.forEach(o => {
+            const dept = mapRoleToDepartment(o.authorityRole || "");
+            if (!registeredByDept[dept]) registeredByDept[dept] = [];
+            registeredByDept[dept].push(o);
+        });
+
+        const list: DisplayOfficer[] = [];
+
+        // For each of the 5 baseline departments:
+        BASELINE_DEPTS.forEach(dept => {
+            const meta = DEPT_METADATA[dept] || DEPT_METADATA.Administrative;
+            const regList = registeredByDept[dept];
+
+            if (regList && regList.length > 0) {
+                // User's real registered officer exists in Supabase!
+                regList.forEach(reg => {
+                    list.push({
+                        id: `reg-${reg.email}`,
+                        name: reg.username || "Department Field Officer",
+                        designation: reg.authorityRole || meta.defaultTitle,
+                        category: dept,
+                        serviceId: reg.serviceId || "TN-GOV-OFFICER",
+                        officeLocation: `${officerDistrict} ${meta.defaultOffice}`,
+                        phone: reg.phone || "+91 94432 00000",
+                        email: reg.email,
+                        icon: meta.icon,
+                        avatarGrad: meta.avatarGrad,
+                        accentColor: meta.accentColor,
+                        isRealRegistered: true,
+                    });
+                });
+            } else {
+                // If no real officer has registered for this department yet, keep standard department post
+                list.push({
+                    id: `post-${dept}`,
+                    name: `${dept} Field Liaison Officer`,
+                    designation: meta.defaultTitle,
+                    category: dept,
+                    serviceId: `TN-${dept.slice(0, 3).toUpperCase()}-POST`,
+                    officeLocation: `${officerDistrict} ${meta.defaultOffice}`,
+                    phone: "+91 94432 00000",
+                    email: `${dept.toLowerCase()}@${officerDistrict.toLowerCase()}.tn.gov.in`,
+                    icon: meta.icon,
+                    avatarGrad: meta.avatarGrad,
+                    accentColor: meta.accentColor,
+                    isRealRegistered: false,
+                });
+            }
+        });
+
+        return list;
+    }, [registeredOfficers, user?.email, officerDistrict]);
+
+    // Calculate real-time live duty status for each officer based on actual active complaints
     const officerWorkloads = useMemo(() => {
-        return DISTRICT_OFFICERS.map(officer => {
+        return displayOfficers.map(officer => {
             const deptGrievances = districtComplaints.filter(c => c.category === officer.category);
             const activeGrievances = deptGrievances.filter(c => c.status === "Pending" || c.status === "In Progress");
             const resolvedCount = deptGrievances.filter(c => c.status === "Resolved").length;
@@ -174,20 +232,17 @@ export default function DistrictOfficersPage() {
             let statusColor = "#10b981";
             let statusBg = "rgba(16, 185, 129, 0.12)";
             let statusBorder = "rgba(16, 185, 129, 0.3)";
-            let statusText = "Free & Available";
 
             if (activeGrievances.length >= 3) {
                 dutyStatus = "Busy";
                 statusColor = "#ef4444";
                 statusBg = "rgba(239, 68, 68, 0.12)";
                 statusBorder = "rgba(239, 68, 68, 0.3)";
-                statusText = "High Workload (Busy)";
             } else if (activeGrievances.length >= 1) {
                 dutyStatus = "Active";
                 statusColor = "#f59e0b";
                 statusBg = "rgba(245, 158, 11, 0.12)";
                 statusBorder = "rgba(245, 158, 11, 0.3)";
-                statusText = "Active on Duty";
             }
 
             return {
@@ -200,10 +255,9 @@ export default function DistrictOfficersPage() {
                 statusColor,
                 statusBg,
                 statusBorder,
-                statusText,
             };
         });
-    }, [districtComplaints]);
+    }, [displayOfficers, districtComplaints]);
 
     // KPI Totals
     const totalOfficers = officerWorkloads.length;
@@ -211,7 +265,7 @@ export default function DistrictOfficersPage() {
     const activeCount = officerWorkloads.filter(o => o.dutyStatus === "Active").length;
     const busyCount = officerWorkloads.filter(o => o.dutyStatus === "Busy").length;
 
-    // Filtered by search & pill
+    // Filtered by search & duty pill
     const filteredOfficers = useMemo(() => {
         return officerWorkloads.filter(o => {
             if (statusFilter !== "All" && o.dutyStatus !== statusFilter) return false;
@@ -220,7 +274,8 @@ export default function DistrictOfficersPage() {
                 const matchesName = o.name.toLowerCase().includes(q);
                 const matchesDept = o.category.toLowerCase().includes(q);
                 const matchesRole = o.designation.toLowerCase().includes(q);
-                return matchesName || matchesDept || matchesRole;
+                const matchesEmail = o.email.toLowerCase().includes(q);
+                return matchesName || matchesDept || matchesRole || matchesEmail;
             }
             return true;
         });
@@ -304,7 +359,7 @@ export default function DistrictOfficersPage() {
                                         </span>
                                     </div>
                                     <p style={{ marginTop: "0.4rem", color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                                        Live duty roster, active ticket allocation, and real-time workload for all departmental field officers across <strong>{officerDistrict} ({officerState})</strong>.
+                                        Supervised by <strong>{user?.username || "District Collector"}</strong> ({user?.email}) · Live duty roster &amp; real-time grievance allocation.
                                     </p>
                                 </div>
 
@@ -463,7 +518,7 @@ export default function DistrictOfficersPage() {
                             <div style={{ position: "relative", minWidth: "240px" }}>
                                 <input
                                     type="text"
-                                    placeholder="Search by officer name or department..."
+                                    placeholder="Search by officer name, department, or email..."
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
                                     style={{
@@ -522,9 +577,24 @@ export default function DistrictOfficersPage() {
                                                         {officer.icon}
                                                     </div>
                                                     <div>
-                                                        <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "#f8fafc", margin: 0 }}>
-                                                            {officer.name}
-                                                        </h3>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                            <h3 style={{ fontSize: "1.05rem", fontWeight: "800", color: "#f8fafc", margin: 0 }}>
+                                                                {officer.name}
+                                                            </h3>
+                                                            {officer.isRealRegistered && (
+                                                                <span style={{
+                                                                    fontSize: "0.6rem",
+                                                                    padding: "0.1rem 0.35rem",
+                                                                    borderRadius: "99px",
+                                                                    background: "rgba(16, 185, 129, 0.15)",
+                                                                    color: "#10b981",
+                                                                    border: "1px solid rgba(16, 185, 129, 0.3)",
+                                                                    fontWeight: "800",
+                                                                }} title="Verified Registered Official Account">
+                                                                    ✓ Registered
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <div style={{ fontSize: "0.76rem", color: officer.accentColor, fontWeight: "700", marginTop: "0.15rem" }}>
                                                             {officer.designation}
                                                         </div>
@@ -580,7 +650,7 @@ export default function DistrictOfficersPage() {
                                                     </div>
                                                     <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "var(--text-muted)", fontSize: "0.72rem" }}>
                                                         <span>✉️</span>
-                                                        <span>{officer.email}</span>
+                                                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "160px" }}>{officer.email}</span>
                                                     </div>
                                                 </div>
                                             </div>
