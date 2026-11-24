@@ -405,6 +405,9 @@ export default function AdminDashboard() {
                 healthColor = "#34d399";
             }
 
+            const totalActiveOrResolved = pCount + rCount;
+            const resolutionPct = totalActiveOrResolved > 0 ? Math.round((rCount / totalActiveOrResolved) * 100) : 100;
+
             return {
                 ...d,
                 total: cases.length,
@@ -412,11 +415,18 @@ export default function AdminDashboard() {
                 resolved: rCount,
                 critical: criticalCount,
                 directives: directivesCount,
+                resolutionPct,
                 healthStatus,
                 healthColor,
             };
         });
     }, [jurisdictionComplaints]);
+
+    const districtClearancePct = React.useMemo(() => {
+        const totalCases = departmentScorecards.reduce((acc, sc) => acc + sc.pending + sc.resolved, 0);
+        const totalResolved = departmentScorecards.reduce((acc, sc) => acc + sc.resolved, 0);
+        return totalCases > 0 ? Math.round((totalResolved / totalCases) * 100) : 100;
+    }, [departmentScorecards]);
 
     // Combined filtering within the officer's jurisdiction & departmental domain
     const filtered = officerDomainComplaints.filter(c => {
@@ -516,157 +526,255 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* ── Executive Department Accountability Scorecard (Collector Exclusive) ── */}
+                {/* ── Executive Department Accountability Index (Vertical Column Metric List with Animated Loading Strips) ── */}
                 {isDistrictHead && (
-                    <div style={{ marginBottom: "1.75rem", animation: "fadeIn 0.3s ease" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.85rem", flexWrap: "wrap", gap: "0.5rem" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                <span style={{ fontSize: "1.2rem" }}>📊</span>
-                                <span style={{ fontWeight: "800", fontSize: "1.05rem", color: "#ffffff", letterSpacing: "-0.01em" }}>
-                                    District Department Accountability Scorecard
-                                </span>
-                                <span style={{
-                                    fontSize: "0.7rem",
-                                    padding: "0.2rem 0.55rem",
-                                    borderRadius: "99px",
-                                    background: "rgba(245, 158, 11, 0.15)",
-                                    border: "1px solid rgba(245, 158, 11, 0.35)",
-                                    color: "#fbbf24",
-                                    fontWeight: "700"
-                                }}>
-                                    🏛️ District Magistrate Command
-                                </span>
+                    <div style={{
+                        marginBottom: "2rem",
+                        background: "rgba(15, 23, 42, 0.78)",
+                        backdropFilter: "blur(16px)",
+                        WebkitBackdropFilter: "blur(16px)",
+                        borderRadius: "1.1rem",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        padding: "1.25rem 1.4rem",
+                        boxShadow: "0 12px 36px rgba(0, 0, 0, 0.35)",
+                        animation: "fadeIn 0.3s ease",
+                    }}>
+                        {/* Header Bar */}
+                        <div style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "0.85rem",
+                            marginBottom: "1rem",
+                            paddingBottom: "0.9rem",
+                            borderBottom: "1px solid rgba(255, 255, 255, 0.07)",
+                        }}>
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: "1.2rem" }}>🏛️</span>
+                                    <h2 style={{ fontSize: "1.1rem", fontWeight: "900", color: "#f8fafc", margin: 0, letterSpacing: "-0.01em" }}>
+                                        District Department Accountability Index
+                                    </h2>
+                                    <span style={{
+                                        padding: "0.2rem 0.55rem",
+                                        borderRadius: "99px",
+                                        background: "rgba(245, 158, 11, 0.15)",
+                                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                                        color: "#fbbf24",
+                                        fontSize: "0.68rem",
+                                        fontWeight: "800",
+                                        letterSpacing: "0.04em",
+                                        textTransform: "uppercase",
+                                    }}>
+                                        District Magistrate Command
+                                    </span>
+                                </div>
+                                <p style={{ margin: "0.25rem 0 0", fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                                    Live resolution velocity &amp; executive compliance tracking across all 5 municipal wings. Click any row to filter complaints.
+                                </p>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                <span style={{ fontSize: "0.74rem", color: "var(--text-muted)" }}>
-                                    Click any department card to filter complaints:
-                                </span>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                                {/* District Overall Clearance Metric */}
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.45rem",
+                                    padding: "0.35rem 0.8rem",
+                                    borderRadius: "99px",
+                                    background: districtClearancePct >= 70 ? "rgba(16, 185, 129, 0.12)" : "rgba(245, 158, 11, 0.12)",
+                                    border: districtClearancePct >= 70 ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)",
+                                    fontSize: "0.78rem",
+                                    fontWeight: "800",
+                                    color: districtClearancePct >= 70 ? "#34d399" : "#fbbf24",
+                                }}>
+                                    <span style={{
+                                        width: "7px",
+                                        height: "7px",
+                                        borderRadius: "50%",
+                                        background: districtClearancePct >= 70 ? "#34d399" : "#fbbf24",
+                                        boxShadow: "0 0 6px currentColor",
+                                        display: "inline-block"
+                                    }} />
+                                    <span>District Clearance: <strong>{districtClearancePct}%</strong></span>
+                                </div>
+
+                                {/* Reset Filter Button */}
                                 <button
                                     onClick={() => setDepartmentFilter("All")}
                                     style={{
-                                        padding: "0.25rem 0.65rem",
+                                        padding: "0.35rem 0.85rem",
                                         borderRadius: "99px",
-                                        fontSize: "0.72rem",
+                                        fontSize: "0.75rem",
                                         fontWeight: "700",
-                                        background: departmentFilter === "All" ? "rgba(99, 102, 241, 0.25)" : "rgba(255, 255, 255, 0.05)",
-                                        border: departmentFilter === "All" ? "1px solid #6366f1" : "1px solid var(--border)",
-                                        color: departmentFilter === "All" ? "#a5b4fc" : "var(--text-muted)",
+                                        background: departmentFilter === "All" ? "rgba(99, 102, 241, 0.22)" : "rgba(255, 255, 255, 0.05)",
+                                        border: departmentFilter === "All" ? "1px solid #818cf8" : "1px solid var(--border)",
+                                        color: departmentFilter === "All" ? "#c7d2fe" : "var(--text-muted)",
                                         cursor: "pointer",
-                                        transition: "all 0.2s ease"
+                                        transition: "all 0.2s ease",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.35rem",
                                     }}
                                 >
-                                    Show All (5 Departments)
+                                    {departmentFilter === "All" ? "✓ All (5 Departments)" : "Reset to All Departments"}
                                 </button>
                             </div>
                         </div>
 
-                        {/* 5-Card Scorecard Grid */}
-                        <div style={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-                            gap: "0.85rem"
-                        }}>
+                        {/* 5 Department Vertical Rows */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
                             {departmentScorecards.map(sc => {
                                 const isSelected = departmentFilter === sc.id;
+                                const barColor = sc.resolutionPct >= 75 ? "#10b981" : sc.resolutionPct >= 35 ? "#f59e0b" : "#ef4444";
+                                const gradBg = sc.resolutionPct >= 75
+                                    ? "linear-gradient(90deg, #059669, #10b981, #34d399)"
+                                    : sc.resolutionPct >= 35
+                                    ? "linear-gradient(90deg, #d97706, #f59e0b, #fbbf24)"
+                                    : "linear-gradient(90deg, #b91c1c, #ef4444, #f87171)";
+
                                 return (
                                     <div
                                         key={sc.id}
                                         onClick={() => setDepartmentFilter(prev => prev === sc.id ? "All" : sc.id)}
                                         style={{
-                                            padding: "1rem",
-                                            borderRadius: "0.85rem",
-                                            background: isSelected 
-                                                ? "linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(168, 85, 247, 0.1))"
-                                                : "var(--bg-card)",
-                                            border: isSelected ? `2px solid ${sc.accent}` : "1px solid var(--border)",
-                                            boxShadow: isSelected ? `0 0 20px ${sc.accent}33` : "var(--shadow-sm)",
+                                            padding: "0.75rem 1.1rem",
+                                            borderRadius: "0.75rem",
+                                            background: isSelected
+                                                ? `linear-gradient(90deg, ${sc.accent}24, rgba(15, 23, 42, 0.88))`
+                                                : "rgba(255, 255, 255, 0.025)",
+                                            border: isSelected ? `1.5px solid ${sc.accent}` : "1px solid rgba(255, 255, 255, 0.06)",
+                                            boxShadow: isSelected ? `0 0 20px ${sc.accent}30` : "none",
                                             cursor: "pointer",
                                             transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                                            transform: isSelected ? "translateY(-2px)" : "none",
-                                            position: "relative",
-                                            overflow: "hidden"
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "1.25rem",
+                                            flexWrap: "wrap",
+                                        }}
+                                        onMouseEnter={e => {
+                                            if (!isSelected) {
+                                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                                                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
+                                            }
+                                        }}
+                                        onMouseLeave={e => {
+                                            if (!isSelected) {
+                                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.025)";
+                                                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
+                                            }
                                         }}
                                     >
-                                        {/* Top Icon & Filter Active Pill Header */}
-                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.55rem" }}>
+                                        {/* 1. Department Identity Column */}
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", width: "230px", minWidth: "210px" }}>
                                             <div style={{
-                                                width: "36px",
-                                                height: "36px",
-                                                minWidth: "36px",
-                                                borderRadius: "10px",
+                                                width: "34px",
+                                                height: "34px",
+                                                minWidth: "34px",
+                                                borderRadius: "8px",
                                                 background: sc.grad,
                                                 display: "flex",
                                                 alignItems: "center",
                                                 justifyContent: "center",
-                                                fontSize: "1.15rem",
-                                                boxShadow: "0 2px 8px rgba(0,0,0,0.25)"
+                                                fontSize: "1.1rem",
+                                                boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
                                             }}>
                                                 {sc.icon}
                                             </div>
-
-                                            {isSelected && (
+                                            <div style={{ minWidth: 0, flex: 1 }}>
                                                 <div style={{
-                                                    fontSize: "0.68rem",
                                                     fontWeight: "800",
-                                                    color: sc.accent,
-                                                    background: `${sc.accent}22`,
-                                                    padding: "0.2rem 0.55rem",
-                                                    borderRadius: "99px",
-                                                    border: `1px solid ${sc.accent}66`,
-                                                    display: "inline-flex",
-                                                    alignItems: "center",
-                                                    gap: "0.25rem",
-                                                    whiteSpace: "nowrap"
+                                                    fontSize: "0.88rem",
+                                                    color: "#ffffff",
+                                                    lineHeight: 1.25,
+                                                    whiteSpace: "nowrap",
                                                 }}>
-                                                    <span>✓</span>
-                                                    <span>Filter Active</span>
+                                                    {sc.name}
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        {/* Department Title (Full Width - No Collision) */}
-                                        <div style={{
-                                            fontWeight: "800",
-                                            fontSize: "0.92rem",
-                                            color: "#ffffff",
-                                            marginBottom: "0.65rem",
-                                            lineHeight: 1.25,
-                                            letterSpacing: "-0.01em"
-                                        }}>
-                                            {sc.name}
-                                        </div>
-
-                                        {/* Metrics Row */}
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.45rem" }}>
-                                            <div>
-                                                <span style={{ fontSize: "1.25rem", fontWeight: "900", color: sc.pending > 0 ? "#f59e0b" : "#34d399", lineHeight: 1 }}>
-                                                    {sc.pending}
-                                                </span>
-                                                <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginLeft: "0.3rem" }}>
-                                                    pending
-                                                </span>
-                                            </div>
-                                            <div style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: "700" }}>
-                                                {sc.resolved} resolved
+                                                {isSelected && (
+                                                    <div style={{ fontSize: "0.65rem", color: sc.accent, fontWeight: "800", marginTop: "0.15rem" }}>
+                                                        ● Active Filter
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Health Status Pill */}
-                                        <div style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "0.3rem",
-                                            fontSize: "0.68rem",
-                                            fontWeight: "800",
-                                            color: sc.healthColor,
-                                            background: `${sc.healthColor}15`,
-                                            padding: "0.2rem 0.5rem",
-                                            borderRadius: "99px",
-                                            border: `1px solid ${sc.healthColor}30`,
-                                            width: "100%",
-                                            justifyContent: "center"
-                                        }}>
-                                            <span>{sc.healthStatus}</span>
+                                        {/* 2. Animated Percentage Loading Bar Strip */}
+                                        <div style={{ flex: 1, minWidth: "220px", display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                                            <div style={{
+                                                flex: 1,
+                                                height: "9px",
+                                                borderRadius: "99px",
+                                                background: "rgba(255, 255, 255, 0.08)",
+                                                overflow: "hidden",
+                                                position: "relative",
+                                                border: "1px solid rgba(255, 255, 255, 0.05)",
+                                            }}>
+                                                <div style={{
+                                                    height: "100%",
+                                                    width: `${sc.resolutionPct}%`,
+                                                    background: gradBg,
+                                                    borderRadius: "99px",
+                                                    boxShadow: `0 0 10px ${barColor}88`,
+                                                    transition: "width 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                                                    position: "relative",
+                                                    overflow: "hidden",
+                                                }}>
+                                                    {/* Animated Scanning Light Beam */}
+                                                    <div style={{
+                                                        position: "absolute",
+                                                        top: 0,
+                                                        left: 0,
+                                                        width: "60px",
+                                                        height: "100%",
+                                                        background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)",
+                                                        animation: "progressScan 2.4s ease-in-out infinite",
+                                                    }} />
+                                                </div>
+                                            </div>
+
+                                            {/* Percentage Display */}
+                                            <div style={{
+                                                fontFamily: "monospace",
+                                                fontSize: "0.88rem",
+                                                fontWeight: "900",
+                                                color: barColor,
+                                                width: "44px",
+                                                textAlign: "right",
+                                            }}>
+                                                {sc.resolutionPct}%
+                                            </div>
+                                        </div>
+
+                                        {/* 3. Workload & Status Badges */}
+                                        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginLeft: "auto", flexShrink: 0 }}>
+                                            <div style={{ fontSize: "0.8rem", textAlign: "right" }}>
+                                                <span style={{ fontWeight: "800", color: sc.pending > 0 ? "#f59e0b" : "#34d399" }}>
+                                                    {sc.pending} pending
+                                                </span>
+                                                <span style={{ color: "var(--text-muted)", margin: "0 0.35rem" }}>·</span>
+                                                <span style={{ color: "#34d399", fontWeight: "700" }}>
+                                                    {sc.resolved} resolved
+                                                </span>
+                                            </div>
+
+                                            <div style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "0.3rem",
+                                                fontSize: "0.72rem",
+                                                fontWeight: "800",
+                                                color: sc.healthColor,
+                                                background: `${sc.healthColor}16`,
+                                                padding: "0.22rem 0.65rem",
+                                                borderRadius: "99px",
+                                                border: `1px solid ${sc.healthColor}35`,
+                                                minWidth: "115px",
+                                                justifyContent: "center",
+                                            }}>
+                                                <span>{sc.healthStatus}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 );
