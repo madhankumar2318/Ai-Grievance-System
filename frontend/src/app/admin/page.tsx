@@ -456,11 +456,7 @@ export default function AdminDashboard() {
     const filtered = officerDomainComplaints.filter(c => {
         if (filter !== "All" && c.status !== filter) return false;
         if (!assignedDepartment && departmentFilter !== "All" && c.category !== departmentFilter) return false;
-        if (priorityFilter === "Directives") {
-            if (!(c.description || "").includes("[COLLECTOR_DIRECTIVE:")) return false;
-        } else if (priorityFilter !== "All" && c.priority !== priorityFilter) {
-            return false;
-        }
+        if (priorityFilter !== "All" && c.priority !== priorityFilter) return false;
 
         // Search Query
         if (searchQuery.trim()) {
@@ -919,7 +915,7 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* Priority / Directive Filter */}
+                        {/* Priority Filter */}
                         <select
                             value={priorityFilter}
                             onChange={e => setPriorityFilter(e.target.value)}
@@ -937,7 +933,6 @@ export default function AdminDashboard() {
                             }}
                         >
                             <option value="All" style={{ background: "#0f172a", color: "#f8fafc" }}>All Priorities</option>
-                            <option value="Directives" style={{ background: "#0f172a", color: "#fbbf24" }}>🏛️ Directives Only</option>
                             <option value="Critical" style={{ background: "#0f172a", color: "#fca5a5" }}>🚨 Critical</option>
                             <option value="High" style={{ background: "#0f172a", color: "#fdba74" }}>⚠️ High</option>
                             <option value="Medium" style={{ background: "#0f172a", color: "#fde68a" }}>📍 Medium</option>
