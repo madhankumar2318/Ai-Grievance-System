@@ -195,7 +195,7 @@ export async function updateComplaintStatusServerAction(
   id: string,
   newStatus: "Pending" | "In Progress" | "Under Review" | "Resolved" | "Escalated" | "Rejected",
   atr?: ActionTakenReportData | null
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; conflict?: boolean; error?: string }> {
   const ip = await getClientIp();
 
   // 1. Rate limit: 30 status updates per minute per IP
@@ -248,33 +248,83 @@ export async function updateComplaintStatusServerAction(
 
   const now = new Date().toISOString();
 
+  // 4b. Optimistic concurrency & claim lock check against live Supabase row
+  let existingRawDesc = "";
+  try {
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}&select=status,description`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (checkRes.ok) {
+      const rows = await checkRes.json();
+      if (rows && rows.length > 0) {
+        const currentStatus = rows[0].status as string;
+        existingRawDesc = (rows[0].description as string) || "";
+
+        if (currentStatus === "Resolved" || currentStatus === "Rejected") {
+          const atrMatch = existingRawDesc.match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
+          const claimMatch = existingRawDesc.match(/\[CLAIMED_BY:([\s\S]*?)\]/);
+          let byOfficer = "another officer";
+          if (atrMatch) {
+            try {
+              const parsed = JSON.parse(atrMatch[1]);
+              if (parsed?.officerName) byOfficer = parsed.officerName;
+            } catch {}
+          } else if (claimMatch) {
+            try {
+              const parsed = JSON.parse(claimMatch[1]);
+              if (parsed?.officerName) byOfficer = parsed.officerName;
+            } catch {}
+          }
+          return {
+            success: false,
+            conflict: true,
+            error: `⚠️ This grievance was already ${currentStatus} by ${byOfficer}. Refreshing your dashboard.`,
+          };
+        }
+
+        const roleStr = (session.user.authorityRole || "").toLowerCase();
+        const isHead =
+          roleStr.includes("collector") ||
+          roleStr.includes("magistrate") ||
+          roleStr.includes("commissioner") ||
+          session.user.role === "chief";
+
+        const claimMatch = existingRawDesc.match(/\[CLAIMED_BY:([\s\S]*?)\]/);
+        if (claimMatch && !isHead) {
+          try {
+            const claim = JSON.parse(claimMatch[1]);
+            if (
+              claim?.officerEmail &&
+              claim.officerEmail.toLowerCase() !== session.user.email.toLowerCase()
+            ) {
+              return {
+                success: false,
+                conflict: true,
+                error: `⚠️ This grievance is already claimed by ${claim.officerName || "another officer"}. Only the assigned officer can update or resolve it.`,
+              };
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Concurrency check error:", err);
+  }
+
   // If Action Taken Report (ATR) is attached for resolution, prepare updated description
   let updatedDescription: string | undefined = undefined;
   if (atr && newStatus === "Resolved") {
-    try {
-      const fetchRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}&select=description`,
-        {
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        }
-      );
-      if (fetchRes.ok) {
-        const rows = await fetchRes.json();
-        if (rows && rows.length > 0) {
-          const rawDesc = rows[0].description || "";
-          // Clean out any prior ATR block
-          const baseDesc = rawDesc.replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "").trim();
-          updatedDescription = `${baseDesc}\n\n[ACTION_TAKEN_REPORT:${JSON.stringify(atr)}]`;
-        }
-      }
-    } catch (err) {
-      console.error("Error reading description for ATR attachment:", err);
-    }
-
-    if (!updatedDescription) {
+    if (existingRawDesc) {
+      const baseDesc = existingRawDesc.replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "").trim();
+      updatedDescription = `${baseDesc}\n\n[ACTION_TAKEN_REPORT:${JSON.stringify(atr)}]`;
+    } else {
       updatedDescription = `Official resolution recorded.\n\n[ACTION_TAKEN_REPORT:${JSON.stringify(atr)}]`;
     }
   }
@@ -477,6 +527,125 @@ export async function transferComplaintDepartmentServerAction(
  *  2. Rate limiting prevents spam.
  *  3. Elevates complaint priority to Critical automatically and records directive in description.
  */
+export interface ClaimGrievanceResult {
+  success: boolean;
+  conflict?: boolean;
+  claim?: {
+    officerName: string;
+    officerEmail: string;
+    officerRole?: string;
+    claimedAt: string;
+  };
+  error?: string;
+}
+
+/**
+ * Allows an authenticated field officer to claim ownership of a Pending grievance
+ * and move it to "In Progress", preventing duplicate work or silent overwrites.
+ */
+export async function claimComplaintServerAction(id: string): Promise<ClaimGrievanceResult> {
+  const ip = await getClientIp();
+  const rateResult = checkRateLimit(ip, "claim_complaint", 30, 60000);
+  if (!rateResult.success) {
+    return {
+      success: false,
+      error: `Rate limit exceeded. Please wait ${rateResult.retryAfterSeconds}s.`,
+    };
+  }
+
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Unauthorized: Please log in." };
+  }
+  if (session.user.role !== "authority" && session.user.role !== "chief") {
+    return { success: false, error: "Access Denied: Only officers can claim grievances." };
+  }
+
+  let existingDesc = "";
+  try {
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}&select=status,description`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (checkRes.ok) {
+      const rows = await checkRes.json();
+      if (rows && rows.length > 0) {
+        const currentStatus = rows[0].status as string;
+        existingDesc = (rows[0].description as string) || "";
+
+        if (currentStatus === "Resolved" || currentStatus === "Rejected") {
+          return {
+            success: false,
+            conflict: true,
+            error: `⚠️ This grievance was already ${currentStatus} by another officer.`,
+          };
+        }
+
+        const claimMatch = existingDesc.match(/\[CLAIMED_BY:([\s\S]*?)\]/);
+        if (claimMatch) {
+          try {
+            const existingClaim = JSON.parse(claimMatch[1]);
+            if (
+              existingClaim?.officerEmail &&
+              existingClaim.officerEmail.toLowerCase() !== session.user.email.toLowerCase()
+            ) {
+              return {
+                success: false,
+                conflict: true,
+                error: `⚠️ This grievance was already claimed by ${existingClaim.officerName || "another officer"}.`,
+              };
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Claim check error:", err);
+  }
+
+  const now = new Date().toISOString();
+  const claimPayload = {
+    officerName: session.user.username || session.user.email,
+    officerEmail: session.user.email,
+    officerRole: session.user.authorityRole || "Department Officer",
+    claimedAt: now,
+  };
+
+  const baseDesc = existingDesc.replace(/\n\n\[CLAIMED_BY:[\s\S]*?\]/g, "").trim();
+  const updatedDescription = `${baseDesc}\n\n[CLAIMED_BY:${JSON.stringify(claimPayload)}]`;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        status: "In Progress",
+        description: updatedDescription,
+        updated_at: now,
+      }),
+    });
+
+    if (res.ok) {
+      return { success: true, claim: claimPayload };
+    }
+  } catch (err) {
+    console.error("Error claiming complaint:", err);
+  }
+
+  return { success: false, error: "Could not claim grievance. Please try again." };
+}
+
 export async function issueCollectorDirectiveServerAction(
   id: string,
   directive: CollectorDirectiveData

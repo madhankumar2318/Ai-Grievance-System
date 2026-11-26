@@ -4,9 +4,9 @@ import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
+import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, claimComplaintServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
-import { parseEmbeddedTag, computeDirectiveSlaStatus, EmbeddedDirective } from "@/lib/grievanceUtils";
+import { parseEmbeddedTag, computeDirectiveSlaStatus, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
 
 const DIRECTIVE_TIME_CHIPS = [
     { id: "6h", chipLabel: "⚡ 6h", hours: 6, targetText: "⚡ 6 Hours — Immediate Emergency" },
@@ -309,18 +309,80 @@ export default function AdminDashboard() {
         fetchComplaints();
     }, []);
 
+    const [claimingId, setClaimingId] = useState<string | null>(null);
+
+    const refreshComplaintsFromServer = async () => {
+        try {
+            const res = await getComplaintsServerAction();
+            if (res.success && res.complaints) {
+                const dbMapped: AdminComplaint[] = (res.complaints as DbAdminComplaint[]).map((c: DbAdminComplaint) => ({
+                    id: c.id,
+                    subject: c.subject,
+                    category: c.category || "Administrative",
+                    priority: c.priority || "Medium",
+                    status: c.status || "Pending",
+                    user: c.user_email ? c.user_email.split("@")[0] : "Citizen",
+                    attachments: c.attachment_count || 0,
+                    userEmail: c.user_email || "citizen@example.com",
+                    description: c.description,
+                    location: c.location || "District Center",
+                    date: new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                    aiNote: c.ai_reasoning || "AI auto-triaged and routed.",
+                }));
+                setComplaints(dbMapped);
+            }
+        } catch (err) {
+            console.error("Failed to refresh complaints:", err);
+        }
+    };
+
+    const handleClaimComplaint = async (id: string) => {
+        if (claimingId) return;
+        setClaimingId(id);
+        try {
+            const res = await claimComplaintServerAction(id);
+            if (res.success && res.claim) {
+                setComplaints(prev => prev.map(c => {
+                    if (c.id === id) {
+                        const baseDesc = (c.description || "").replace(/\n\n\[CLAIMED_BY:[\s\S]*?\]/g, "").trim();
+                        return {
+                            ...c,
+                            status: "In Progress",
+                            description: `${baseDesc}\n\n[CLAIMED_BY:${JSON.stringify(res.claim)}]`,
+                        };
+                    }
+                    return c;
+                }));
+            } else {
+                alert(res.error || "Could not claim this grievance.");
+                await refreshComplaintsFromServer();
+            }
+        } catch (err) {
+            console.error("Claim error:", err);
+            alert("Network error while claiming grievance.");
+        } finally {
+            setClaimingId(null);
+        }
+    };
+
     const updateStatus = async (id: string, newStatus: "Resolved" | "Rejected") => {
         const target = complaints.find(c => c.id === id);
         if (target && assignedDepartment && target.category !== assignedDepartment && !isDistrictHead) {
             alert(`Security Restriction: Action not permitted outside your assigned ${assignedDepartment} department.`);
             return;
         }
-        setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
-        setExpandedId(null);
         try {
-            await updateComplaintStatusServerAction(id, newStatus);
+            const res = await updateComplaintStatusServerAction(id, newStatus);
+            if (res.success) {
+                setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+                setExpandedId(null);
+            } else {
+                alert(res.error || "Failed to update complaint status.");
+                await refreshComplaintsFromServer();
+            }
         } catch (err) {
             console.error("Error updating status:", err);
+            alert("Network error while updating status.");
         }
     };
 
@@ -1147,6 +1209,22 @@ export default function AdminDashboard() {
                                                         <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: sCfg.dot, flexShrink: 0 }} />
                                                         <span style={{ fontSize: "0.875rem", fontWeight: "600" }}>{c.status}</span>
                                                     </div>
+                                                    {c.status === "In Progress" && (() => {
+                                                        const claim = parseEmbeddedTag<EmbeddedClaim>(c.description || "", "CLAIMED_BY");
+                                                        if (!claim) return null;
+                                                        const isMine = claim.officerEmail?.toLowerCase() === (user?.email || "").toLowerCase();
+                                                        return (
+                                                            <div style={{
+                                                                marginTop: "0.25rem",
+                                                                fontSize: "0.68rem",
+                                                                fontWeight: "700",
+                                                                color: isMine ? "#a5b4fc" : "#fbbf24",
+                                                                whiteSpace: "nowrap",
+                                                            }}>
+                                                                {isMine ? "✓ Claimed by You" : `🔒 ${claim.officerName}`}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 {/* Attachments */}
                                                 <td style={{ padding: "1.1rem 1.25rem" }}>
@@ -1395,21 +1473,69 @@ export default function AdminDashboard() {
                                                                             {c.aiNote}
                                                                         </div>
                                                                         {/* Detail actions (Field Officers only) */}
-                                                                        {c.status !== "Resolved" && c.status !== "Rejected" && !isDistrictHead && (
-                                                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                                                                <button
-                                                                                    className="btn btn-primary"
-                                                                                    style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
-                                                                                    onClick={() => handleOpenResolveModal(c)}
-                                                                                >✓ Mark Resolved</button>
-                                                                                <button
-                                                                                    style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
-                                                                                    onClick={() => updateStatus(c.id, "Rejected")}
-                                                                                    onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
-                                                                                    onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
-                                                                                >✕ Reject</button>
-                                                                            </div>
-                                                                        )}
+                                                                        {c.status !== "Resolved" && c.status !== "Rejected" && !isDistrictHead && (() => {
+                                                                            const claimData = parseEmbeddedTag<EmbeddedClaim>(c.description || "", "CLAIMED_BY");
+                                                                            const claimedByOther = Boolean(
+                                                                                claimData?.officerEmail &&
+                                                                                claimData.officerEmail.toLowerCase() !== (user?.email || "").toLowerCase()
+                                                                            );
+
+                                                                            if (claimedByOther && claimData) {
+                                                                                return (
+                                                                                    <div style={{
+                                                                                        marginTop: "0.25rem",
+                                                                                        padding: "0.75rem 0.9rem",
+                                                                                        borderRadius: "0.75rem",
+                                                                                        background: "rgba(245, 158, 11, 0.1)",
+                                                                                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                                                                                        color: "#fde68a",
+                                                                                        fontSize: "0.78rem",
+                                                                                        fontWeight: "700",
+                                                                                        lineHeight: 1.45,
+                                                                                    }}>
+                                                                                        🔒 Claimed by <strong>{claimData.officerName}</strong>. Only the assigned officer can resolve or reject this grievance.
+                                                                                    </div>
+                                                                                );
+                                                                            }
+
+                                                                            return (
+                                                                                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
+                                                                                    {c.status === "Pending" && !claimData && (
+                                                                                        <button
+                                                                                            disabled={claimingId === c.id}
+                                                                                            onClick={() => handleClaimComplaint(c.id)}
+                                                                                            style={{
+                                                                                                width: "100%",
+                                                                                                padding: "0.55rem 0",
+                                                                                                fontSize: "0.82rem",
+                                                                                                borderRadius: "0.625rem",
+                                                                                                background: "rgba(99, 102, 241, 0.16)",
+                                                                                                color: "#c7d2fe",
+                                                                                                border: "1px solid rgba(99, 102, 241, 0.45)",
+                                                                                                cursor: claimingId === c.id ? "wait" : "pointer",
+                                                                                                fontWeight: "800",
+                                                                                                transition: "var(--transition)",
+                                                                                            }}
+                                                                                        >
+                                                                                            {claimingId === c.id ? "Claiming..." : "🙋 Claim & Start Work"}
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                                                                                        <button
+                                                                                            className="btn btn-primary"
+                                                                                            style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
+                                                                                            onClick={() => handleOpenResolveModal(c)}
+                                                                                        >✓ Mark Resolved</button>
+                                                                                        <button
+                                                                                            style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
+                                                                                            onClick={() => updateStatus(c.id, "Rejected")}
+                                                                                            onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
+                                                                                            onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
+                                                                                        >✕ Reject</button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })()}
 
                                                                         {/* Collector Executive Control: Transfer Department & Executive Directive */}
                                                                         {isDistrictHead && c.status !== "Resolved" && c.status !== "Rejected" && (

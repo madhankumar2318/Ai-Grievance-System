@@ -46,7 +46,7 @@ describe("parseEmbeddedTag & stripEmbeddedTags", () => {
 
   it("strips all internal metadata tags from citizen-visible descriptions", () => {
     const desc =
-      'Streetlight broken [EVIDENCE_PHOTO:https://example.com/a.jpg] [COLLECTOR_DIRECTIVE:{"directiveId":"DIR-1"}] [ACTION_TAKEN_REPORT:{"officerName":"Ravi"}]';
+      'Streetlight broken [EVIDENCE_PHOTO:https://example.com/a.jpg] [COLLECTOR_DIRECTIVE:{"directiveId":"DIR-1"}] [CLAIMED_BY:{"officerName":"Madhan"}] [ACTION_TAKEN_REPORT:{"officerName":"Ravi"}]';
     assert.equal(stripEmbeddedTags(desc), "Streetlight broken");
   });
 });

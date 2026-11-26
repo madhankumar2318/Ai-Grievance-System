@@ -33,6 +33,13 @@ export interface EmbeddedActionTakenReport {
   resolvedAt?: string;
 }
 
+export interface EmbeddedClaim {
+  officerName: string;
+  officerEmail: string;
+  officerRole?: string;
+  claimedAt: string;
+}
+
 /**
  * Masks a citizen's email address for public-facing tracking pages to prevent PII exposure.
  * Example: "rajan.kumar@gmail.com" -> "r***r@gmail.com"
@@ -75,6 +82,7 @@ export function stripEmbeddedTags(description: string): string {
     .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
     .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
     .replace(/\[COLLECTOR_DIRECTIVE:[\s\S]*?\]/g, "")
+    .replace(/\[CLAIMED_BY:[\s\S]*?\]/g, "")
     .trim();
 }
 
