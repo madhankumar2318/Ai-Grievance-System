@@ -6,6 +6,8 @@ import {
   stripEmbeddedTags,
   mapRoleToDepartment,
   computeDepartmentClearancePct,
+  parseDeadlineHours,
+  computeDirectiveSlaStatus,
 } from "./grievanceUtils.ts";
 
 describe("maskEmail (PII Protection)", () => {
@@ -69,5 +71,34 @@ describe("computeDepartmentClearancePct", () => {
 
   it("defaults to 100% when a department has 0 cases", () => {
     assert.equal(computeDepartmentClearancePct(0, 0), 100);
+  });
+});
+
+describe("parseDeadlineHours & computeDirectiveSlaStatus", () => {
+  it("parses preset and custom hour/day targets and clamps to 7 days (168h)", () => {
+    assert.equal(parseDeadlineHours("⚡ 6 Hours — Immediate Emergency"), 6);
+    assert.equal(parseDeadlineHours("🚨 24-Hour Expedite"), 24);
+    assert.equal(parseDeadlineHours("⏱️ 48-Hour Priority Directive"), 48);
+    assert.equal(parseDeadlineHours("📅 3 Days — Standard Repair"), 72);
+    assert.equal(parseDeadlineHours("📆 7 Days — Major Engineering"), 168);
+    assert.equal(parseDeadlineHours("Custom", 999), 168);
+  });
+
+  it("reports remaining time when within SLA and overdue when past deadline", () => {
+    const issued = "2026-11-26T10:00:00.000Z";
+    const sixHoursLater = new Date("2026-11-26T16:00:00.000Z").getTime();
+    const thirtyHoursLater = new Date("2026-11-27T16:00:00.000Z").getTime();
+
+    const active = computeDirectiveSlaStatus(issued, "24-Hour Expedite", "Pending", 24, sixHoursLater);
+    assert.equal(active.isOverdue, false);
+    assert.equal(active.label, "⏳ 18h left");
+
+    const overdue = computeDirectiveSlaStatus(issued, "24-Hour Expedite", "In Progress", 24, thirtyHoursLater);
+    assert.equal(overdue.isOverdue, true);
+    assert.equal(overdue.label, "🚨 OVERDUE by 6h");
+
+    const resolved = computeDirectiveSlaStatus(issued, "24-Hour Expedite", "Resolved", 24, thirtyHoursLater);
+    assert.equal(resolved.isResolved, true);
+    assert.equal(resolved.isOverdue, false);
   });
 });

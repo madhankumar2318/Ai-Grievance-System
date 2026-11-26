@@ -6,6 +6,7 @@ import { useLang } from "@/context/LanguageContext";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import AIAdvocateCard from "@/components/AIAdvocateCard";
 import { getComplaintByIdServerAction } from "@/app/actions/complaintActions";
+import { parseEmbeddedTag, stripEmbeddedTags, computeDirectiveSlaStatus, EmbeddedDirective } from "@/lib/grievanceUtils";
 
 export interface TimelineStep {
     stage: string;
@@ -61,18 +62,17 @@ function buildTimeline(c: Record<string, string>) {
     const createdAt = fmt(c.created_at);
     const updatedAt = fmt(c.updated_at || c.created_at);
 
-    const directiveMatch = (c.description || "").match(/\[COLLECTOR_DIRECTIVE:([\s\S]*?)\]/);
+    const dir = parseEmbeddedTag<EmbeddedDirective>(c.description || "", "COLLECTOR_DIRECTIVE");
     let directiveEvent: { stage: string; time: string; done: boolean; note: string } | null = null;
-    if (directiveMatch) {
-        try {
-            const dir = JSON.parse(directiveMatch[1]);
-            directiveEvent = {
-                stage: "🏛️ Executive Directive",
-                time: dir.issuedAt ? fmt(dir.issuedAt) : updatedAt,
-                done: true,
-                note: `District Collector (${dir.issuedBy || "Collectorate"}) issued official priority mandate #${dir.directiveId}: "${dir.directiveNote}" (${dir.priorityTarget})`,
-            };
-        } catch {}
+    if (dir) {
+        const orderId = dir.orderId || dir.directiveId || "DIR-2026";
+        const issuedBy = dir.officerName || dir.issuedBy || "District Collectorate";
+        directiveEvent = {
+            stage: "🏛️ Executive Directive",
+            time: dir.issuedAt ? fmt(dir.issuedAt) : updatedAt,
+            done: true,
+            note: `District Collector (${issuedBy}) issued official priority mandate #${orderId}: "${dir.directiveNote}" (${dir.priorityTarget})`,
+        };
     }
 
     const base = [
@@ -385,21 +385,18 @@ export default function TrackPage() {
                                 {(() => {
                                     const photoMatch = complaint.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
                                     const evidencePhoto = photoMatch ? photoMatch[1] : null;
-                                    const atrMatch = complaint.description.match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
-                                    let atrData = null;
-                                    if (atrMatch) {
-                                        try { atrData = JSON.parse(atrMatch[1]); } catch {}
-                                    }
-                                    const directiveMatch = complaint.description.match(/\[COLLECTOR_DIRECTIVE:([\s\S]*?)\]/);
-                                    let directiveData = null;
-                                    if (directiveMatch) {
-                                        try { directiveData = JSON.parse(directiveMatch[1]); } catch {}
-                                    }
-                                    const cleanDesc = complaint.description
-                                        .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
-                                        .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
-                                        .replace(/\[COLLECTOR_DIRECTIVE:[\s\S]*?\]/g, "")
-                                        .trim();
+                                    const directiveData = parseEmbeddedTag<EmbeddedDirective>(complaint.description, "COLLECTOR_DIRECTIVE");
+                                    const cleanDesc = stripEmbeddedTags(complaint.description);
+                                    const sla = directiveData
+                                        ? computeDirectiveSlaStatus(
+                                              directiveData.issuedAt,
+                                              directiveData.priorityTarget,
+                                              complaint.status,
+                                              directiveData.deadlineHours
+                                          )
+                                        : null;
+                                    const orderId = directiveData?.orderId || directiveData?.directiveId || "DIR-2026";
+                                    const issuer = directiveData?.officerName || directiveData?.issuedBy || "District Collectorate";
                                     return (
                                         <>
                                             <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{cleanDesc}</p>
@@ -416,32 +413,39 @@ export default function TrackPage() {
                                                     />
                                                 </div>
                                             )}
-                                            {directiveData && (
+                                            {directiveData && sla && (
                                                 <div style={{
                                                     marginTop: "1rem",
                                                     padding: "0.85rem 1rem",
                                                     borderRadius: "0.75rem",
-                                                    background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08))",
-                                                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                                                    background: sla.isOverdue
+                                                        ? "linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(185, 28, 28, 0.08))"
+                                                        : "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08))",
+                                                    border: `1px solid ${sla.isOverdue ? "rgba(239, 68, 68, 0.45)" : "rgba(245, 158, 11, 0.4)"}`,
                                                     display: "flex",
                                                     flexDirection: "column",
-                                                    gap: "0.35rem",
+                                                    gap: "0.4rem",
                                                 }}>
                                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
                                                         <span style={{ fontSize: "0.78rem", fontWeight: "900", color: "#fbbf24", display: "flex", alignItems: "center", gap: "0.4rem", letterSpacing: "0.03em" }}>
                                                             <span>🏛️</span>
                                                             <span>COLLECTOR EXECUTIVE DIRECTIVE ISSUED</span>
                                                         </span>
-                                                        <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#fef08a", background: "rgba(245, 158, 11, 0.2)", padding: "0.15rem 0.5rem", borderRadius: "99px", fontWeight: "700" }}>
-                                                            #{directiveData.directiveId}
-                                                        </span>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                                            <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#fef08a", background: "rgba(245, 158, 11, 0.2)", padding: "0.15rem 0.5rem", borderRadius: "99px", fontWeight: "700" }}>
+                                                                #{orderId}
+                                                            </span>
+                                                            <span style={{ fontSize: "0.72rem", color: sla.color, background: sla.bg, border: `1px solid ${sla.border}`, padding: "0.15rem 0.55rem", borderRadius: "99px", fontWeight: "800" }}>
+                                                                {sla.label}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <div style={{ fontSize: "0.85rem", color: "#fef3c7", fontWeight: "600" }}>
                                                         &ldquo;{directiveData.directiveNote}&rdquo;
                                                     </div>
                                                     <div style={{ fontSize: "0.72rem", color: "#fde68a", display: "flex", gap: "1rem", marginTop: "0.1rem", flexWrap: "wrap" }}>
-                                                        <span>⏱️ Priority Window: <strong>{directiveData.priorityTarget}</strong></span>
-                                                        <span>🏛️ Authority: <strong>{directiveData.issuedBy}</strong></span>
+                                                        <span>⏱️ Target Window: <strong>{directiveData.priorityTarget}</strong></span>
+                                                        <span>🏛️ Authority: <strong>{issuer}</strong></span>
                                                     </div>
                                                 </div>
                                             )}

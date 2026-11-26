@@ -6,6 +6,15 @@ import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
+import { parseEmbeddedTag, computeDirectiveSlaStatus, EmbeddedDirective } from "@/lib/grievanceUtils";
+
+const DIRECTIVE_TIME_CHIPS = [
+    { id: "6h", chipLabel: "⚡ 6h", hours: 6, targetText: "⚡ 6 Hours — Immediate Emergency" },
+    { id: "24h", chipLabel: "🚨 24h", hours: 24, targetText: "🚨 24 Hours — Urgent Expedite" },
+    { id: "48h", chipLabel: "⏱️ 48h", hours: 48, targetText: "⏱️ 48 Hours — Priority Order" },
+    { id: "3d", chipLabel: "📅 3 Days", hours: 72, targetText: "📅 3 Days — Standard Field Repair" },
+    { id: "7d", chipLabel: "📆 7 Days", hours: 168, targetText: "📆 7 Days — Major Engineering Work" },
+] as const;
 
 
 const PRIORITY_CONFIG: Record<string, { color: string; icon: string }> = {
@@ -66,6 +75,7 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState("All");
     const [departmentFilter, setDepartmentFilter] = useState("All");
+    const [priorityFilter, setPriorityFilter] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [viewingPhoto, setViewingPhoto] = useState<{ url: string | null; title: string; location: string; category?: string } | null>(null);
@@ -105,7 +115,10 @@ export default function AdminDashboard() {
     // ── Collector Executive Directive State ───────────────────────────────────────
     const [directingComplaint, setDirectingComplaint] = useState<{ id: string; subject: string; category: string } | null>(null);
     const [directiveForm, setDirectiveForm] = useState({
-        target: "🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)",
+        target: "🚨 24 Hours — Urgent Expedite",
+        deadlineHours: 24,
+        isCustom: false,
+        customDays: 3,
         note: "",
     });
     const [issuingDirective, setIssuingDirective] = useState(false);
@@ -116,13 +129,21 @@ export default function AdminDashboard() {
         if (!directingComplaint || !directiveForm.note.trim() || issuingDirective) return;
         setIssuingDirective(true);
         try {
+            const finalHours = directiveForm.isCustom
+                ? Math.min(168, Math.max(24, directiveForm.customDays * 24))
+                : directiveForm.deadlineHours;
+            const finalTarget = directiveForm.isCustom
+                ? `🗓️ ${directiveForm.customDays} Days — Custom Collectorate Deadline`
+                : directiveForm.target;
+
             const directiveData: CollectorDirectiveData = {
                 orderId: `DIR-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
                 directiveNote: directiveForm.note.trim(),
-                priorityTarget: directiveForm.target,
+                priorityTarget: finalTarget,
                 officerTitle: user?.authorityRole || "District Collector & District Magistrate",
                 officerName: user?.username || "District Magistrate",
                 issuedAt: new Date().toISOString(),
+                deadlineHours: finalHours,
             };
 
             const res = await issueCollectorDirectiveServerAction(directingComplaint.id, directiveData);
@@ -142,7 +163,10 @@ export default function AdminDashboard() {
                 setTimeout(() => setDirectiveSuccessId(null), 4000);
                 setDirectingComplaint(null);
                 setDirectiveForm({
-                    target: "🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)",
+                    target: "🚨 24 Hours — Urgent Expedite",
+                    deadlineHours: 24,
+                    isCustom: false,
+                    customDays: 3,
                     note: "",
                 });
             } else {
@@ -432,6 +456,11 @@ export default function AdminDashboard() {
     const filtered = officerDomainComplaints.filter(c => {
         if (filter !== "All" && c.status !== filter) return false;
         if (!assignedDepartment && departmentFilter !== "All" && c.category !== departmentFilter) return false;
+        if (priorityFilter === "Directives") {
+            if (!(c.description || "").includes("[COLLECTOR_DIRECTIVE:")) return false;
+        } else if (priorityFilter !== "All" && c.priority !== priorityFilter) {
+            return false;
+        }
 
         // Search Query
         if (searchQuery.trim()) {
@@ -890,6 +919,31 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
+                        {/* Priority / Directive Filter */}
+                        <select
+                            value={priorityFilter}
+                            onChange={e => setPriorityFilter(e.target.value)}
+                            aria-label="Filter by Priority"
+                            style={{
+                                padding: "0.35rem 0.65rem",
+                                borderRadius: "0.5rem",
+                                border: priorityFilter !== "All" ? "1.5px solid #ef4444" : "1.5px solid var(--border)",
+                                background: "var(--bg-card)",
+                                color: priorityFilter !== "All" ? "#fca5a5" : "var(--text-main)",
+                                fontSize: "0.76rem",
+                                fontWeight: "600",
+                                cursor: "pointer",
+                                outline: "none",
+                            }}
+                        >
+                            <option value="All" style={{ background: "#0f172a", color: "#f8fafc" }}>All Priorities</option>
+                            <option value="Directives" style={{ background: "#0f172a", color: "#fbbf24" }}>🏛️ Directives Only</option>
+                            <option value="Critical" style={{ background: "#0f172a", color: "#fca5a5" }}>🚨 Critical</option>
+                            <option value="High" style={{ background: "#0f172a", color: "#fdba74" }}>⚠️ High</option>
+                            <option value="Medium" style={{ background: "#0f172a", color: "#fde68a" }}>📍 Medium</option>
+                            <option value="Low" style={{ background: "#0f172a", color: "#6ee7b7" }}>✅ Low</option>
+                        </select>
+
                         {/* Search Input */}
                         <div style={{ position: "relative" }}>
                             <input
@@ -922,11 +976,12 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Reset Button */}
-                        {(filter !== "All" || departmentFilter !== "All" || searchQuery) && (
+                        {(filter !== "All" || departmentFilter !== "All" || priorityFilter !== "All" || searchQuery) && (
                             <button
                                 onClick={() => {
                                     setFilter("All");
                                     setDepartmentFilter("All");
+                                    setPriorityFilter("All");
                                     setSearchQuery("");
                                 }}
                                 style={{
@@ -1049,27 +1104,47 @@ export default function AdminDashboard() {
                                                         )}
                                                         {c.priority}
                                                     </span>
-                                                    {c.description && c.description.includes("[COLLECTOR_DIRECTIVE:") && (
-                                                        <div style={{ marginTop: "0.3rem" }}>
-                                                            <span style={{
-                                                                display: "inline-flex",
-                                                                alignItems: "center",
-                                                                gap: "0.25rem",
-                                                                padding: "0.15rem 0.5rem",
-                                                                borderRadius: "99px",
-                                                                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.15))",
-                                                                border: "1px solid rgba(245, 158, 11, 0.5)",
-                                                                color: "#fbbf24",
-                                                                fontSize: "0.68rem",
-                                                                fontWeight: "800",
-                                                                boxShadow: "0 0 10px rgba(245, 158, 11, 0.2)",
-                                                                whiteSpace: "nowrap"
-                                                            }}>
-                                                                <span>🏛️</span>
-                                                                <span>Collector Directive</span>
-                                                            </span>
-                                                        </div>
-                                                    )}
+                                                    {c.description && c.description.includes("[COLLECTOR_DIRECTIVE:") && (() => {
+                                                        const dir = parseEmbeddedTag<EmbeddedDirective>(c.description, "COLLECTOR_DIRECTIVE");
+                                                        const sla = dir ? computeDirectiveSlaStatus(dir.issuedAt, dir.priorityTarget, c.status, dir.deadlineHours) : null;
+                                                        return (
+                                                            <div style={{ marginTop: "0.3rem", display: "flex", flexDirection: "column", gap: "0.22rem", alignItems: "flex-start" }}>
+                                                                <span style={{
+                                                                    display: "inline-flex",
+                                                                    alignItems: "center",
+                                                                    gap: "0.25rem",
+                                                                    padding: "0.15rem 0.5rem",
+                                                                    borderRadius: "99px",
+                                                                    background: "linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.15))",
+                                                                    border: "1px solid rgba(245, 158, 11, 0.5)",
+                                                                    color: "#fbbf24",
+                                                                    fontSize: "0.68rem",
+                                                                    fontWeight: "800",
+                                                                    boxShadow: "0 0 10px rgba(245, 158, 11, 0.2)",
+                                                                    whiteSpace: "nowrap"
+                                                                }}>
+                                                                    <span>🏛️</span>
+                                                                    <span>Collector Directive</span>
+                                                                </span>
+                                                                {sla && (
+                                                                    <span style={{
+                                                                        display: "inline-flex",
+                                                                        alignItems: "center",
+                                                                        padding: "0.1rem 0.45rem",
+                                                                        borderRadius: "99px",
+                                                                        background: sla.bg,
+                                                                        border: `1px solid ${sla.border}`,
+                                                                        color: sla.color,
+                                                                        fontSize: "0.65rem",
+                                                                        fontWeight: "800",
+                                                                        whiteSpace: "nowrap"
+                                                                    }}>
+                                                                        {sla.label}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 {/* Status */}
                                                 <td style={{ padding: "1.1rem 1.25rem" }}>
@@ -1176,35 +1251,50 @@ export default function AdminDashboard() {
                                                                 animation: "slideDown 0.25s ease",
                                                             }}>
                                                                 {/* Collector Directive Official Order Card */}
-                                                                {directiveData && (
-                                                                    <div style={{
-                                                                        marginBottom: "1.25rem",
-                                                                        padding: "1rem 1.25rem",
-                                                                        borderRadius: "0.85rem",
-                                                                        background: "linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.08))",
-                                                                        border: "1.5px solid rgba(245, 158, 11, 0.45)",
-                                                                        boxShadow: "0 0 20px rgba(245, 158, 11, 0.15)",
-                                                                    }}>
-                                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem", flexWrap: "wrap", gap: "0.5rem" }}>
-                                                                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                                                                <span style={{ fontSize: "1.25rem" }}>🏛️</span>
-                                                                                <span style={{ fontWeight: "800", color: "#fbbf24", fontSize: "0.95rem" }}>
-                                                                                    District Magistrate Official Directive Order (#{directiveData.orderId})
-                                                                                </span>
+                                                                {directiveData && (() => {
+                                                                    const sla = computeDirectiveSlaStatus(
+                                                                        directiveData.issuedAt,
+                                                                        directiveData.priorityTarget,
+                                                                        c.status,
+                                                                        directiveData.deadlineHours
+                                                                    );
+                                                                    return (
+                                                                        <div style={{
+                                                                            marginBottom: "1.25rem",
+                                                                            padding: "1rem 1.25rem",
+                                                                            borderRadius: "0.85rem",
+                                                                            background: sla.isOverdue
+                                                                                ? "linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(185, 28, 28, 0.08))"
+                                                                                : "linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.08))",
+                                                                            border: `1.5px solid ${sla.isOverdue ? "rgba(239, 68, 68, 0.5)" : "rgba(245, 158, 11, 0.45)"}`,
+                                                                            boxShadow: `0 0 20px ${sla.isOverdue ? "rgba(239, 68, 68, 0.18)" : "rgba(245, 158, 11, 0.15)"}`,
+                                                                        }}>
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                                                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                                                                    <span style={{ fontSize: "1.25rem" }}>🏛️</span>
+                                                                                    <span style={{ fontWeight: "800", color: "#fbbf24", fontSize: "0.95rem" }}>
+                                                                                        District Magistrate Official Directive Order (#{directiveData.orderId})
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+                                                                                    <span style={{ padding: "0.2rem 0.65rem", borderRadius: "99px", background: "rgba(245, 158, 11, 0.22)", color: "#fef08a", fontSize: "0.72rem", fontWeight: "800", border: "1px solid rgba(245, 158, 11, 0.5)" }}>
+                                                                                        {directiveData.priorityTarget}
+                                                                                    </span>
+                                                                                    <span style={{ padding: "0.2rem 0.65rem", borderRadius: "99px", background: sla.bg, color: sla.color, fontSize: "0.72rem", fontWeight: "800", border: `1px solid ${sla.border}` }}>
+                                                                                        {sla.label}
+                                                                                    </span>
+                                                                                </div>
                                                                             </div>
-                                                                            <span style={{ padding: "0.2rem 0.65rem", borderRadius: "99px", background: "rgba(245, 158, 11, 0.22)", color: "#fef08a", fontSize: "0.72rem", fontWeight: "800", border: "1px solid rgba(245, 158, 11, 0.5)" }}>
-                                                                                {directiveData.priorityTarget}
-                                                                            </span>
+                                                                            <p style={{ margin: "0.35rem 0 0.5rem", fontSize: "0.88rem", color: "#fef3c7", lineHeight: "1.55", fontStyle: "italic" }}>
+                                                                                "{directiveData.directiveNote}"
+                                                                            </p>
+                                                                            <div style={{ fontSize: "0.72rem", color: "rgba(253, 230, 138, 0.8)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.4rem" }}>
+                                                                                <span>Issued by: <strong>{directiveData.officerName} ({directiveData.officerTitle})</strong></span>
+                                                                                <span>Issued at: {new Date(directiveData.issuedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
+                                                                            </div>
                                                                         </div>
-                                                                        <p style={{ margin: "0.35rem 0 0.5rem", fontSize: "0.88rem", color: "#fef3c7", lineHeight: "1.55", fontStyle: "italic" }}>
-                                                                            "{directiveData.directiveNote}"
-                                                                        </p>
-                                                                        <div style={{ fontSize: "0.72rem", color: "rgba(253, 230, 138, 0.8)", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.4rem" }}>
-                                                                            <span>Issued by: <strong>{directiveData.officerName} ({directiveData.officerTitle})</strong></span>
-                                                                            <span>Issued at: {new Date(directiveData.issuedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
+                                                                    );
+                                                                })()}
 
                                                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
 
@@ -1412,9 +1502,22 @@ export default function AdminDashboard() {
                                                                                             e.stopPropagation();
                                                                                             setDirectingComplaint({ id: c.id, subject: c.subject, category: c.category });
                                                                                             if (directiveData) {
+                                                                                                const hrs = directiveData.deadlineHours || 24;
+                                                                                                const matchingPreset = DIRECTIVE_TIME_CHIPS.find(ch => ch.hours === hrs);
                                                                                                 setDirectiveForm({
                                                                                                     target: directiveData.priorityTarget,
+                                                                                                    deadlineHours: hrs,
+                                                                                                    isCustom: !matchingPreset,
+                                                                                                    customDays: Math.min(7, Math.max(1, Math.round(hrs / 24))),
                                                                                                     note: directiveData.directiveNote,
+                                                                                                });
+                                                                                            } else {
+                                                                                                setDirectiveForm({
+                                                                                                    target: "🚨 24 Hours — Urgent Expedite",
+                                                                                                    deadlineHours: 24,
+                                                                                                    isCustom: false,
+                                                                                                    customDays: 3,
+                                                                                                    note: "",
                                                                                                 });
                                                                                             }
                                                                                         }}
@@ -2021,22 +2124,107 @@ export default function AdminDashboard() {
                             </div>
 
                             <div style={{ marginBottom: "1.1rem" }}>
-                                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
-                                    ⚡ Target Resolution Window & Urgency:
+                                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.45rem" }}>
+                                    ⚡ Target Resolution Window (Up to 7 Days Max):
                                 </label>
-                                <select
-                                    value={directiveForm.target}
-                                    onChange={e => setDirectiveForm(prev => ({ ...prev, target: e.target.value }))}
-                                    style={{
-                                        width: "100%", padding: "0.65rem 0.85rem", borderRadius: "0.5rem",
-                                        background: "#0f172a", border: "1.5px solid rgba(245, 158, 11, 0.4)",
-                                        color: "#ffffff", fontSize: "0.85rem", outline: "none", cursor: "pointer"
-                                    }}
-                                >
-                                    <option value="🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)">🚨 Urgent 24-Hour Expedite (High Risk / Public Outcry)</option>
-                                    <option value="⏱️ 48-Hour Priority Directive (Standard Collectorate Order)">⏱️ 48-Hour Priority Directive (Standard Collectorate Order)</option>
-                                    <option value="⚡ Immediate Field Action (Emergency Hazard)">⚡ Immediate Field Action (Emergency Hazard)</option>
-                                </select>
+                                {/* 1-Click Time Chips */}
+                                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                                    {DIRECTIVE_TIME_CHIPS.map(chip => {
+                                        const active = !directiveForm.isCustom && directiveForm.deadlineHours === chip.hours;
+                                        return (
+                                            <button
+                                                key={chip.id}
+                                                type="button"
+                                                onClick={() => setDirectiveForm(prev => ({
+                                                    ...prev,
+                                                    isCustom: false,
+                                                    deadlineHours: chip.hours,
+                                                    target: chip.targetText,
+                                                }))}
+                                                style={{
+                                                    padding: "0.42rem 0.78rem",
+                                                    borderRadius: "99px",
+                                                    fontSize: "0.76rem",
+                                                    fontWeight: "800",
+                                                    cursor: "pointer",
+                                                    transition: "all 0.15s ease",
+                                                    background: active ? "linear-gradient(135deg, #f59e0b, #d97706)" : "rgba(255, 255, 255, 0.05)",
+                                                    border: active ? "1.5px solid #fbbf24" : "1px solid var(--border)",
+                                                    color: active ? "#ffffff" : "var(--text-muted)",
+                                                    boxShadow: active ? "0 0 12px rgba(245, 158, 11, 0.3)" : "none",
+                                                }}
+                                            >
+                                                {chip.chipLabel}
+                                            </button>
+                                        );
+                                    })}
+                                    <button
+                                        type="button"
+                                        onClick={() => setDirectiveForm(prev => ({ ...prev, isCustom: true }))}
+                                        style={{
+                                            padding: "0.42rem 0.78rem",
+                                            borderRadius: "99px",
+                                            fontSize: "0.76rem",
+                                            fontWeight: "800",
+                                            cursor: "pointer",
+                                            transition: "all 0.15s ease",
+                                            background: directiveForm.isCustom ? "linear-gradient(135deg, #6366f1, #4f46e5)" : "rgba(255, 255, 255, 0.05)",
+                                            border: directiveForm.isCustom ? "1.5px solid #818cf8" : "1px solid var(--border)",
+                                            color: directiveForm.isCustom ? "#ffffff" : "var(--text-muted)",
+                                        }}
+                                    >
+                                        ✏️ Custom
+                                    </button>
+                                </div>
+
+                                {directiveForm.isCustom && (
+                                    <div style={{
+                                        marginTop: "0.65rem",
+                                        padding: "0.6rem 0.85rem",
+                                        borderRadius: "0.6rem",
+                                        background: "rgba(99, 102, 241, 0.08)",
+                                        border: "1px solid rgba(99, 102, 241, 0.3)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        gap: "0.75rem",
+                                        flexWrap: "wrap",
+                                    }}>
+                                        <span style={{ fontSize: "0.78rem", fontWeight: "700", color: "#c7d2fe" }}>
+                                            Custom Deadline (1 – 7 Days):
+                                        </span>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={7}
+                                                value={directiveForm.customDays}
+                                                onChange={e => {
+                                                    const val = Math.min(7, Math.max(1, Number(e.target.value) || 1));
+                                                    setDirectiveForm(prev => ({
+                                                        ...prev,
+                                                        customDays: val,
+                                                        deadlineHours: val * 24,
+                                                    }));
+                                                }}
+                                                style={{
+                                                    width: "64px",
+                                                    padding: "0.35rem 0.5rem",
+                                                    borderRadius: "0.4rem",
+                                                    background: "#0f172a",
+                                                    border: "1px solid rgba(129, 140, 248, 0.5)",
+                                                    color: "#ffffff",
+                                                    fontSize: "0.85rem",
+                                                    fontWeight: "800",
+                                                    textAlign: "center",
+                                                }}
+                                            />
+                                            <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: "600" }}>
+                                                Days ({directiveForm.customDays * 24}h)
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div style={{ marginBottom: "1.1rem" }}>

@@ -188,6 +188,7 @@ export interface CollectorDirectiveData {
   officerTitle: string;
   officerName: string;
   issuedAt: string;
+  deadlineHours?: number;
 }
 
 export async function updateComplaintStatusServerAction(
@@ -512,6 +513,22 @@ export async function issueCollectorDirectiveServerAction(
     };
   }
 
+  // Clamp deadlineHours to 1..168h (max 7 days) server-side
+  const safeDeadlineHours =
+    typeof directive.deadlineHours === "number" && Number.isFinite(directive.deadlineHours)
+      ? Math.min(168, Math.max(1, Math.round(directive.deadlineHours)))
+      : 24;
+
+  const sanitizedDirective: CollectorDirectiveData = {
+    orderId: String(directive.orderId || `DIR-${new Date().getFullYear()}-000`).slice(0, 40),
+    directiveNote: String(directive.directiveNote || "").trim().slice(0, 800),
+    priorityTarget: String(directive.priorityTarget || "24 Hours").slice(0, 120),
+    officerTitle: String(session.user.authorityRole || directive.officerTitle || "District Collector").slice(0, 100),
+    officerName: String(session.user.username || directive.officerName || "District Magistrate").slice(0, 100),
+    issuedAt: directive.issuedAt || new Date().toISOString(),
+    deadlineHours: safeDeadlineHours,
+  };
+
   // 3. Fetch current description to append directive
   let updatedDescription = "";
   try {
@@ -530,7 +547,7 @@ export async function issueCollectorDirectiveServerAction(
         const rawDesc = rows[0].description || "";
         // Clean any existing directive block
         const baseDesc = rawDesc.replace(/\n\n\[COLLECTOR_DIRECTIVE:[\s\S]*?\]/g, "").trim();
-        updatedDescription = `${baseDesc}\n\n[COLLECTOR_DIRECTIVE:${JSON.stringify(directive)}]`;
+        updatedDescription = `${baseDesc}\n\n[COLLECTOR_DIRECTIVE:${JSON.stringify(sanitizedDirective)}]`;
       }
     }
   } catch (err) {
@@ -538,7 +555,7 @@ export async function issueCollectorDirectiveServerAction(
   }
 
   if (!updatedDescription) {
-    updatedDescription = `Citizen grievance registered.\n\n[COLLECTOR_DIRECTIVE:${JSON.stringify(directive)}]`;
+    updatedDescription = `Citizen grievance registered.\n\n[COLLECTOR_DIRECTIVE:${JSON.stringify(sanitizedDirective)}]`;
   }
 
   const now = new Date().toISOString();

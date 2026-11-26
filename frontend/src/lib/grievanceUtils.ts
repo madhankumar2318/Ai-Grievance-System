@@ -4,11 +4,25 @@
  */
 
 export interface EmbeddedDirective {
-  directiveId: string;
+  orderId?: string;
+  directiveId?: string;
   directiveNote: string;
   priorityTarget: string;
-  issuedBy: string;
+  officerTitle?: string;
+  officerName?: string;
+  issuedBy?: string;
   issuedAt?: string;
+  deadlineHours?: number;
+}
+
+export interface DirectiveSlaStatus {
+  isResolved: boolean;
+  isOverdue: boolean;
+  label: string;
+  color: string;
+  bg: string;
+  border: string;
+  deadlineHours: number;
 }
 
 export interface EmbeddedActionTakenReport {
@@ -128,4 +142,100 @@ export function computeDepartmentClearancePct(pending: number, resolved: number)
   const r = Math.max(0, resolved);
   const total = p + r;
   return total > 0 ? Math.round((r / total) * 100) : 100;
+}
+
+/**
+ * Resolves the target SLA window in hours (clamped between 1 hour and 168 hours / 7 days).
+ */
+export function parseDeadlineHours(priorityTarget: string, deadlineHours?: number): number {
+  if (typeof deadlineHours === "number" && Number.isFinite(deadlineHours) && deadlineHours > 0) {
+    return Math.min(168, Math.max(1, Math.round(deadlineHours)));
+  }
+  const t = (priorityTarget || "").toLowerCase();
+  const hourMatch = t.match(/(\d+)[\s-]*(?:hours?|hrs?|h)\b/);
+  if (hourMatch) {
+    return Math.min(168, Math.max(1, parseInt(hourMatch[1], 10)));
+  }
+  const dayMatch = t.match(/(\d+)[\s-]*(?:days?|d)\b/);
+  if (dayMatch) {
+    return Math.min(168, Math.max(1, parseInt(dayMatch[1], 10) * 24));
+  }
+  if (t.includes("immediate")) return 6;
+  return 24;
+}
+
+function formatDurationCompact(totalMinutes: number): string {
+  const mins = Math.max(1, Math.round(totalMinutes));
+  if (mins < 60) return `${mins}m`;
+  const totalHours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (totalHours < 24) {
+    return remMins > 0 ? `${totalHours}h ${remMins}m` : `${totalHours}h`;
+  }
+  const days = Math.floor(totalHours / 24);
+  const remHours = totalHours % 24;
+  return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+}
+
+/**
+ * Computes live SLA countdown or overdue breach status for a Collector Executive Directive.
+ */
+export function computeDirectiveSlaStatus(
+  issuedAt: string | undefined,
+  priorityTarget: string,
+  status: string,
+  deadlineHours?: number,
+  nowMs: number = Date.now()
+): DirectiveSlaStatus {
+  const targetHours = parseDeadlineHours(priorityTarget, deadlineHours);
+
+  if (status === "Resolved") {
+    return {
+      isResolved: true,
+      isOverdue: false,
+      label: "✓ Solved Within Directive",
+      color: "#34d399",
+      bg: "rgba(16, 185, 129, 0.14)",
+      border: "rgba(16, 185, 129, 0.4)",
+      deadlineHours: targetHours,
+    };
+  }
+
+  const issuedMs = issuedAt ? new Date(issuedAt).getTime() : NaN;
+  if (!Number.isFinite(issuedMs)) {
+    return {
+      isResolved: false,
+      isOverdue: false,
+      label: `⏳ ${targetHours >= 24 && targetHours % 24 === 0 ? `${targetHours / 24}d` : `${targetHours}h`} SLA`,
+      color: "#fbbf24",
+      bg: "rgba(245, 158, 11, 0.14)",
+      border: "rgba(245, 158, 11, 0.4)",
+      deadlineHours: targetHours,
+    };
+  }
+
+  const deadlineMs = issuedMs + targetHours * 60 * 60 * 1000;
+  const diffMinutes = (deadlineMs - nowMs) / (60 * 1000);
+
+  if (diffMinutes >= 0) {
+    return {
+      isResolved: false,
+      isOverdue: false,
+      label: `⏳ ${formatDurationCompact(diffMinutes)} left`,
+      color: "#fbbf24",
+      bg: "rgba(245, 158, 11, 0.14)",
+      border: "rgba(245, 158, 11, 0.45)",
+      deadlineHours: targetHours,
+    };
+  }
+
+  return {
+    isResolved: false,
+    isOverdue: true,
+    label: `🚨 OVERDUE by ${formatDurationCompact(Math.abs(diffMinutes))}`,
+    color: "#f87171",
+    bg: "rgba(239, 68, 68, 0.18)",
+    border: "rgba(239, 68, 68, 0.55)",
+    deadlineHours: targetHours,
+  };
 }
