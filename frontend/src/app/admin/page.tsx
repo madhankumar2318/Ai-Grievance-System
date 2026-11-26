@@ -2238,27 +2238,6 @@ export default function AdminDashboard() {
                                         color: "var(--text-main)", fontSize: "0.85rem", resize: "vertical", outline: "none"
                                     }}
                                 />
-                                {/* Quick Preset Buttons */}
-                                <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginTop: "0.45rem" }}>
-                                    {[
-                                        "Critical public health risk — expedite resolution immediately.",
-                                        "Severe safety hazard detected — deploy emergency repair crew.",
-                                        "Direct inspection required — submit ATR and photo proof within 24 hours.",
-                                    ].map((preset, idx) => (
-                                        <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() => setDirectiveForm(prev => ({ ...prev, note: preset }))}
-                                            style={{
-                                                fontSize: "0.68rem", padding: "0.2rem 0.55rem", borderRadius: "99px",
-                                                background: "rgba(245, 158, 11, 0.08)", border: "1px solid rgba(245, 158, 11, 0.25)",
-                                                color: "#fef08a", cursor: "pointer"
-                                            }}
-                                        >
-                                            + "{preset.slice(0, 32)}..."
-                                        </button>
-                                    ))}
-                                </div>
                             </div>
 
                             {/* Footer Buttons */}
