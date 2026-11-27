@@ -1498,41 +1498,65 @@ export default function AdminDashboard() {
                                                                                 );
                                                                             }
 
-                                                                            return (
-                                                                                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.25rem" }}>
-                                                                                    {c.status === "Pending" && !claimData && (
-                                                                                        <button
-                                                                                            disabled={claimingId === c.id}
-                                                                                            onClick={() => handleClaimComplaint(c.id)}
-                                                                                            style={{
-                                                                                                width: "100%",
-                                                                                                padding: "0.55rem 0",
-                                                                                                fontSize: "0.82rem",
-                                                                                                borderRadius: "0.625rem",
-                                                                                                background: "rgba(99, 102, 241, 0.16)",
-                                                                                                color: "#c7d2fe",
-                                                                                                border: "1px solid rgba(99, 102, 241, 0.45)",
-                                                                                                cursor: claimingId === c.id ? "wait" : "pointer",
-                                                                                                fontWeight: "800",
-                                                                                                transition: "var(--transition)",
-                                                                                            }}
-                                                                                        >
-                                                                                            {claimingId === c.id ? "Claiming..." : "🙋 Claim & Start Work"}
-                                                                                        </button>
-                                                                                    )}
-                                                                                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                                                                                        <button
-                                                                                            className="btn btn-primary"
-                                                                                            style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
-                                                                                            onClick={() => handleOpenResolveModal(c)}
-                                                                                        >✓ Mark Resolved</button>
-                                                                                        <button
-                                                                                            style={{ flex: 1, padding: "0.55rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
-                                                                                            onClick={() => updateStatus(c.id, "Rejected")}
-                                                                                            onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
-                                                                                            onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
-                                                                                        >✕ Reject</button>
+                                                                            const isUnclaimedPending = c.status === "Pending" && !claimData;
+
+                                                                            if (isUnclaimedPending) {
+                                                                                return (
+                                                                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginTop: "0.25rem" }}>
+                                                                                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                                                                                            <button
+                                                                                                disabled={claimingId === c.id}
+                                                                                                onClick={() => handleClaimComplaint(c.id)}
+                                                                                                className="btn btn-primary"
+                                                                                                style={{
+                                                                                                    flex: 1.4,
+                                                                                                    padding: "0.58rem 0.75rem",
+                                                                                                    fontSize: "0.82rem",
+                                                                                                    borderRadius: "0.625rem",
+                                                                                                    cursor: claimingId === c.id ? "wait" : "pointer",
+                                                                                                    fontWeight: "800",
+                                                                                                }}
+                                                                                            >
+                                                                                                {claimingId === c.id ? "Claiming..." : "🙋 Claim & Start Work"}
+                                                                                            </button>
+                                                                                            <button
+                                                                                                style={{
+                                                                                                    flex: 0.75,
+                                                                                                    padding: "0.58rem 0.5rem",
+                                                                                                    fontSize: "0.82rem",
+                                                                                                    borderRadius: "0.625rem",
+                                                                                                    background: "#ef444412",
+                                                                                                    color: "#ef4444",
+                                                                                                    border: "1px solid #ef444428",
+                                                                                                    cursor: "pointer",
+                                                                                                    fontWeight: "700",
+                                                                                                    transition: "var(--transition)",
+                                                                                                }}
+                                                                                                onClick={() => updateStatus(c.id, "Rejected")}
+                                                                                                onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
+                                                                                                onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
+                                                                                            >✕ Reject</button>
+                                                                                        </div>
+                                                                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center" }}>
+                                                                                            Claim this grievance first to lock it to your name and unlock resolution.
+                                                                                        </div>
                                                                                     </div>
+                                                                                );
+                                                                            }
+
+                                                                            return (
+                                                                                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+                                                                                    <button
+                                                                                        className="btn btn-primary"
+                                                                                        style={{ flex: 1, padding: "0.58rem 0", fontSize: "0.82rem", borderRadius: "0.625rem" }}
+                                                                                        onClick={() => handleOpenResolveModal(c)}
+                                                                                    >✓ Mark Resolved</button>
+                                                                                    <button
+                                                                                        style={{ flex: 1, padding: "0.58rem 0", fontSize: "0.82rem", borderRadius: "0.625rem", background: "#ef444412", color: "#ef4444", border: "1px solid #ef444428", cursor: "pointer", fontWeight: "700", transition: "var(--transition)" }}
+                                                                                        onClick={() => updateStatus(c.id, "Rejected")}
+                                                                                        onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
+                                                                                        onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
+                                                                                    >✕ Reject</button>
                                                                                 </div>
                                                                             );
                                                                         })()}
