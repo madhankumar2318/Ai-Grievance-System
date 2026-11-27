@@ -18,6 +18,7 @@ export interface DbComplaintRecord {
 import { getVerifiedSessionServerAction } from "./authActions";
 import { cookies } from "next/headers";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
+import { findMatchingAreaComplaints, OpenComplaintSummary } from "@/lib/grievanceUtils";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
@@ -195,7 +196,7 @@ export async function updateComplaintStatusServerAction(
   id: string,
   newStatus: "Pending" | "In Progress" | "Under Review" | "Resolved" | "Escalated" | "Rejected",
   atr?: ActionTakenReportData | null
-): Promise<{ success: boolean; conflict?: boolean; error?: string }> {
+): Promise<{ success: boolean; conflict?: boolean; autoResolvedIds?: string[]; error?: string }> {
   const ip = await getClientIp();
 
   // 1. Rate limit: 30 status updates per minute per IP
@@ -250,9 +251,14 @@ export async function updateComplaintStatusServerAction(
 
   // 4b. Optimistic concurrency & claim lock check against live Supabase row
   let existingRawDesc = "";
+  let resolvedMeta: { subject: string; category: string; location: string } = {
+    subject: "",
+    category: atr?.department || "",
+    location: "",
+  };
   try {
     const checkRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}&select=status,description`,
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(id)}&select=status,description,subject,category,location`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -266,6 +272,11 @@ export async function updateComplaintStatusServerAction(
       if (rows && rows.length > 0) {
         const currentStatus = rows[0].status as string;
         existingRawDesc = (rows[0].description as string) || "";
+        resolvedMeta = {
+          subject: (rows[0].subject as string) || "",
+          category: (rows[0].category as string) || atr?.department || "",
+          location: (rows[0].location as string) || "",
+        };
 
         if (currentStatus === "Resolved" || currentStatus === "Rejected") {
           const atrMatch = existingRawDesc.match(/\[ACTION_TAKEN_REPORT:([\s\S]*?)\]/);
@@ -391,7 +402,68 @@ export async function updateComplaintStatusServerAction(
     );
 
     if (res.ok) {
-      return { success: true };
+      // 7. Automatic Area Cascade Resolve: resolve matching open complaints from other citizens in the same area
+      const autoResolvedIds: string[] = [];
+      if (newStatus === "Resolved" && atr && resolvedMeta.category && resolvedMeta.location) {
+        try {
+          const peersRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/complaints?category=eq.${encodeURIComponent(resolvedMeta.category)}&status=not.in.(Resolved,Rejected)&select=id,subject,description,location,category,status&limit=50`,
+            {
+              headers: {
+                apikey: SUPABASE_ANON_KEY,
+                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              },
+              cache: "no-store",
+            }
+          );
+          if (peersRes.ok) {
+            const candidates = (await peersRes.json()) as OpenComplaintSummary[];
+            const matches = findMatchingAreaComplaints(
+              {
+                id,
+                subject: resolvedMeta.subject,
+                description: existingRawDesc,
+                location: resolvedMeta.location,
+                category: resolvedMeta.category,
+              },
+              candidates
+            );
+
+            for (const m of matches) {
+              const cascadeAtr: ActionTakenReportData = {
+                ...atr,
+                actionDescription: `${atr.actionDescription} (Auto-resolved alongside #${id} — same area issue fixed.)`,
+              };
+              const mBase = (m.description || "").replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "").trim();
+              const mDesc = `${mBase}\n\n[ACTION_TAKEN_REPORT:${JSON.stringify(cascadeAtr)}]`;
+              const patchPeer = await fetch(
+                `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(m.id)}`,
+                {
+                  method: "PATCH",
+                  headers: {
+                    apikey: SUPABASE_ANON_KEY,
+                    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                    "Content-Type": "application/json",
+                    Prefer: "return=minimal",
+                  },
+                  body: JSON.stringify({
+                    status: "Resolved",
+                    description: mDesc,
+                    updated_at: now,
+                  }),
+                }
+              );
+              if (patchPeer.ok) {
+                autoResolvedIds.push(m.id);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Auto-cascade resolve warning:", err);
+        }
+      }
+
+      return { success: true, autoResolvedIds };
     } else {
       const errText = await res.text();
       console.error("Supabase update error:", errText);

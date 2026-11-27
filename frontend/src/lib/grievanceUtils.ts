@@ -253,6 +253,7 @@ export interface OpenComplaintSummary {
   subject: string;
   description?: string;
   location?: string;
+  category?: string;
   status: string;
 }
 
@@ -282,13 +283,28 @@ function extractKeywords(text: string): Set<string> {
   return out;
 }
 
+const GENERIC_LOCATION_TOKENS = new Set([
+  "tiruchirappalli", "trichy", "chennai", "coimbatore", "madurai", "salem",
+  "tamil", "nadu", "tamilnadu", "india", "district", "city", "town", "center",
+]);
+
 function locationsOverlap(locA: string, locB: string): boolean {
   const a = normalizeText(locA);
   const b = normalizeText(locB);
   if (!a || !b) return false;
-  if (a.includes(b) || b.includes(a)) return true;
-  const tokensA = extractKeywords(a);
-  const tokensB = extractKeywords(b);
+  if (a === b) return true;
+
+  const tokensA = new Set(
+    Array.from(extractKeywords(a)).filter((t) => !GENERIC_LOCATION_TOKENS.has(t))
+  );
+  const tokensB = new Set(
+    Array.from(extractKeywords(b)).filter((t) => !GENERIC_LOCATION_TOKENS.has(t))
+  );
+
+  if (tokensA.size === 0 || tokensB.size === 0) {
+    return a.includes(b) || b.includes(a);
+  }
+
   for (const t of tokensA) {
     if (tokensB.has(t)) return true;
   }
@@ -342,4 +358,38 @@ export function findDuplicateComplaint(
   }
 
   return null;
+}
+
+/**
+ * Finds other open complaints in the same department and same area that describe
+ * the same civic issue, so resolving one automatically resolves all matching reports.
+ */
+export function findMatchingAreaComplaints(
+  resolved: {
+    id: string;
+    subject: string;
+    description?: string;
+    location?: string;
+    category?: string;
+  },
+  candidates: OpenComplaintSummary[]
+): OpenComplaintSummary[] {
+  if (!resolved.location || !resolved.category) return [];
+
+  return candidates.filter((other) => {
+    if (!other || other.id === resolved.id) return false;
+    const st = (other.status || "").toLowerCase();
+    if (st === "resolved" || st === "rejected") return false;
+    if ((other.category || "") !== resolved.category) return false;
+    if (!locationsOverlap(resolved.location || "", other.location || "")) return false;
+
+    return (
+      findDuplicateComplaint(
+        resolved.subject,
+        resolved.description || "",
+        resolved.location || "",
+        [other]
+      ) !== null
+    );
+  });
 }

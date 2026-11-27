@@ -14,7 +14,7 @@ interface ActionTakenReportModalProps {
         citizenEvidencePhoto?: string | null;
     } | null;
     officerDistrict?: string;
-    onResolveSuccess: (id: string, atr: ActionTakenReportData) => void;
+    onResolveSuccess: (id: string, atr: ActionTakenReportData, autoResolvedIds?: string[]) => void;
 }
 
 /**
@@ -171,7 +171,7 @@ export default function ActionTakenReportModal({
         try {
             const res = await updateComplaintStatusServerAction(complaint.id, "Resolved", atrPayload);
             if (res.success) {
-                onResolveSuccess(complaint.id, atrPayload);
+                onResolveSuccess(complaint.id, atrPayload, res.autoResolvedIds);
                 onClose();
             } else {
                 setErrorMessage(res.error || "Failed to update complaint status. Please try again.");

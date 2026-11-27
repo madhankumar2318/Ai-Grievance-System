@@ -196,7 +196,8 @@ export default function AdminDashboard() {
         });
     };
 
-    const handleResolveSuccess = (id: string, atr: ActionTakenReportData) => {
+    const handleResolveSuccess = (id: string, atr: ActionTakenReportData, autoResolvedIds?: string[]) => {
+        const autoSet = new Set(autoResolvedIds || []);
         setComplaints(prev => prev.map(c => {
             if (c.id === id) {
                 const baseDesc = c.description.replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, '').trim();
@@ -206,9 +207,24 @@ export default function AdminDashboard() {
                     description: baseDesc + '\n\n[ACTION_TAKEN_REPORT:' + JSON.stringify(atr) + ']',
                 };
             }
+            if (autoSet.has(c.id)) {
+                const cascadeAtr: ActionTakenReportData = {
+                    ...atr,
+                    actionDescription: `${atr.actionDescription} (Auto-resolved alongside #${id} — same area issue fixed.)`,
+                };
+                const baseDesc = c.description.replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, '').trim();
+                return {
+                    ...c,
+                    status: 'Resolved',
+                    description: baseDesc + '\n\n[ACTION_TAKEN_REPORT:' + JSON.stringify(cascadeAtr) + ']',
+                };
+            }
             return c;
         }));
         setExpandedId(null);
+        if (autoResolvedIds && autoResolvedIds.length > 0) {
+            alert(`✓ Resolved #${id} and automatically resolved ${autoResolvedIds.length} matching complaint(s) in the same area (${autoResolvedIds.join(", ")}).`);
+        }
     };
 
     // Authority Officer's locked jurisdiction (strictly derived from their login / profile)

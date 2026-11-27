@@ -9,6 +9,7 @@ import {
   parseDeadlineHours,
   computeDirectiveSlaStatus,
   findDuplicateComplaint,
+  findMatchingAreaComplaints,
 } from "./grievanceUtils.ts";
 
 describe("maskEmail (PII Protection)", () => {
@@ -160,5 +161,63 @@ describe("findDuplicateComplaint", () => {
       openList
     );
     assert.equal(resolvedIssue, null);
+  });
+});
+
+describe("findMatchingAreaComplaints (Auto-Cascade Resolve)", () => {
+  it("matches only open complaints in the same department, same area, and same issue", () => {
+    const resolved = {
+      id: "GRV-10001",
+      subject: "Water pipe burst on main road",
+      description: "Drinking water pipe leaking badly",
+      location: "Kaikatti, Tiruchirappalli",
+      category: "Infrastructure",
+    };
+
+    const candidates = [
+      {
+        id: "GRV-10001",
+        subject: "Water pipe burst on main road",
+        location: "Kaikatti, Tiruchirappalli",
+        category: "Infrastructure",
+        status: "In Progress",
+      },
+      {
+        id: "GRV-10002",
+        subject: "Drinking water pipe leaking near Kaikatti",
+        description: "Water wasted on road",
+        location: "Kaikatti Junction, Tiruchirappalli",
+        category: "Infrastructure",
+        status: "Pending",
+      },
+      {
+        id: "GRV-10003",
+        subject: "Streetlight not working",
+        description: "Dark road at night",
+        location: "Kaikatti, Tiruchirappalli",
+        category: "Infrastructure",
+        status: "Pending",
+      },
+      {
+        id: "GRV-10004",
+        subject: "Water pipe burst on main road",
+        description: "Drinking water leaking",
+        location: "Cantonment, Tiruchirappalli",
+        category: "Infrastructure",
+        status: "Pending",
+      },
+      {
+        id: "GRV-10005",
+        subject: "Water pipe burst on main road",
+        description: "Drinking water leaking",
+        location: "Kaikatti, Tiruchirappalli",
+        category: "Environment",
+        status: "Pending",
+      },
+    ];
+
+    const matches = findMatchingAreaComplaints(resolved, candidates);
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].id, "GRV-10002");
   });
 });
