@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/context/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -42,7 +41,6 @@ function getDepartmentForRole(roleStr: string): string {
 
 export default function ProfilePage() {
     const { user, login } = useAuth();
-    const { theme, toggleTheme } = useTheme();
 
     const [profileData, setProfileData] = useState(() => {
         const initRole = user?.authorityRole || (user?.role === "authority" ? "Environment Protection Officer" : "Chief Commissioner");
@@ -270,10 +268,6 @@ export default function ProfilePage() {
                         <div style={{ height: "130px", background: cfg.gradient, position: "relative" }}>
                             <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
                             
-                            {/* Theme toggle on banner */}
-                            <button onClick={toggleTheme} title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-                                style={{ position: "absolute", top: "1rem", right: "1rem", width: "36px", height: "36px", borderRadius: "50%", border: "2px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", cursor: "pointer", fontSize: "1rem", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}
-                            >{theme === "light" ? "🌙" : "☀️"}</button>
                         </div>
 
                         {/* Avatar + Primary Identification */}
