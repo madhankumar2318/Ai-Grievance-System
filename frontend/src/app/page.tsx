@@ -276,9 +276,11 @@ async function analyzePhotoWithAI(file: File): Promise<{ subject: string; catego
 function GpsCameraModal({
   onCapture,
   onClose,
+  fallbackLocation = "",
 }: {
   onCapture: (file: MediaFile, coords: GpsCoords | null, address: string) => void;
   onClose: () => void;
+  fallbackLocation?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -379,8 +381,11 @@ function GpsCameraModal({
     return () => stopCamera();
   }, [start, stopCamera]);
 
+  const isLowAccuracy = Boolean(gps && gps.accuracy > 1000);
+
   const buildAddress = (g: GpsCoords | null) => {
-    if (!g) return "";
+    if (!g) return fallbackLocation || "";
+    if (g.accuracy > 1000) return fallbackLocation || "";
     if (landmark) return `${landmark} (${g.lat.toFixed(5)}, ${g.lng.toFixed(5)})`;
     return `${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`;
   };
@@ -389,12 +394,18 @@ function GpsCameraModal({
     const ctx = canvas.getContext("2d")!;
     const w = canvas.width, h = canvas.height;
     const now = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    const lowAcc = Boolean(g && g.accuracy > 1000);
     const lines = g
-      ? [
-          landmark ? `📍 ${landmark}` : `📍 Location: ${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`,
-          `🎯 ±${Math.round(g.accuracy)}m  •  ${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}  •  ${now}`,
-        ]
-      : [`📅 ${now}`, "📍 Location unavailable"];
+      ? lowAcc
+        ? [
+            fallbackLocation ? `📍 ${fallbackLocation} (Verified Area)` : "📍 Approximate PC/Wi-Fi Location",
+            `⚠️ GPS ±${Math.round(g.accuracy / 1000)}km (Non-GPS Device)  •  ${now}`,
+          ]
+        : [
+            landmark ? `📍 ${landmark}` : `📍 Location: ${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}`,
+            `🎯 ±${Math.round(g.accuracy)}m  •  ${g.lat.toFixed(5)}, ${g.lng.toFixed(5)}  •  ${now}`,
+          ]
+      : [`📅 ${now}`, fallbackLocation ? `📍 ${fallbackLocation}` : "📍 Location unavailable"];
     const padX = 16, padY = 10, lineH = 22, fontSize = 14;
     const boxH = lines.length * lineH + padY * 2;
     ctx.fillStyle = "rgba(0,0,0,0.65)";
@@ -469,11 +480,13 @@ function GpsCameraModal({
                   style={{ width: "100%", display: "block", maxHeight: "340px", objectFit: "cover", background: "#111" }}
                 />
                 <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,0.65)", padding: "0.5rem 0.75rem", fontSize: "0.7rem", fontFamily: "monospace", color: "white", display: "flex", flexDirection: "column", gap: "2px" }}>
-                  <div style={{ fontWeight: "700", color: "#67e8f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {landmark ? `📍 ${landmark}` : gpsStatus === "ok" ? "📍 Locking landmark address…" : "📍 Acquiring GPS…"}
+                  <div style={{ fontWeight: "700", color: isLowAccuracy ? "#fbbf24" : "#67e8f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {isLowAccuracy
+                      ? (fallbackLocation ? `📍 ${fallbackLocation} (Verified Area)` : "⚠️ Approximate PC/Wi-Fi Location")
+                      : landmark ? `📍 ${landmark}` : gpsStatus === "ok" ? "📍 Locking landmark address…" : "📍 Acquiring GPS…"}
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span>{gpsStatus === "ok" && gps ? `🌐 ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${Math.round(gps.accuracy)}m)` : "Searching satellites…"}</span>
+                    <span>{gpsStatus === "ok" && gps ? (isLowAccuracy ? `⚠️ ±${Math.round(gps.accuracy / 1000)}km (PC IP) — select District/Town on form` : `🌐 ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${Math.round(gps.accuracy)}m)`) : "Searching satellites…"}</span>
                     <span>{new Date().toLocaleTimeString("en-IN")}</span>
                   </div>
                 </div>
@@ -491,9 +504,20 @@ function GpsCameraModal({
                 <img src={captured} alt="Captured" style={{ width: "100%", display: "block" }} />
               </div>
               {gpsStatus === "ok" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.9rem", borderRadius: "0.75rem", background: "#22c55e15", border: "1px solid #22c55e44", fontSize: "0.8rem", color: "#22c55e", fontWeight: "600" }}>
-                  <div>✅ Location Stamped on Photo</div>
-                  {landmark && <div style={{ fontSize: "0.75rem", color: "var(--text-main)", fontWeight: "400" }}>📍 {landmark}</div>}
+                <div style={{
+                  display: "flex", flexDirection: "column", gap: "0.2rem", padding: "0.6rem 0.9rem", borderRadius: "0.75rem",
+                  background: isLowAccuracy ? "#f59e0b15" : "#22c55e15",
+                  border: `1px solid ${isLowAccuracy ? "#f59e0b44" : "#22c55e44"}`,
+                  fontSize: "0.8rem",
+                  color: isLowAccuracy ? "#fbbf24" : "#22c55e",
+                  fontWeight: "600",
+                }}>
+                  <div>{isLowAccuracy ? `⚠️ Approximate PC/Wi-Fi GPS (±${Math.round((gps?.accuracy || 0) / 1000)}km)` : "✅ Location Stamped on Photo"}</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-main)", fontWeight: "400" }}>
+                    {isLowAccuracy
+                      ? (fallbackLocation ? `📍 Using your selected area: ${fallbackLocation}` : "Please select your exact District & Town on the form.")
+                      : (landmark ? `📍 ${landmark}` : "")}
+                  </div>
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
@@ -630,9 +654,14 @@ export default function Home() {
     }
   };
 
-  const handleGpsCapture = (file: MediaFile, _coords: GpsCoords | null, address: string) => {
+  const handleGpsCapture = (file: MediaFile, coords: GpsCoords | null, address: string) => {
     setMediaFiles((prev) => [...prev, file].slice(0, 5));
-    if (address) setFormData((prev) => ({ ...prev, location: address }));
+    if (address) {
+      setFormData((prev) => {
+        if (coords && coords.accuracy > 1000 && prev.location) return prev;
+        return { ...prev, location: address };
+      });
+    }
     // GPS photos are images — enable analysis
     if (file.file) { lastImageFileRef.current = file.file; setHasImageForAnalysis(true); }
     setAnalysisResult(null);
@@ -838,7 +867,7 @@ export default function Home() {
 
   return (
     <ProtectedRoute allowedRoles={["user", "authority", "chief"]}>
-      {showGpsCamera && <GpsCameraModal onCapture={handleGpsCapture} onClose={() => setShowGpsCamera(false)} />}
+      {showGpsCamera && <GpsCameraModal fallbackLocation={formData.location} onCapture={handleGpsCapture} onClose={() => setShowGpsCamera(false)} />}
 
       <main>
         <section className="section" style={{ background: "radial-gradient(circle at top right, hsla(245,75%,60%,0.1), transparent)" }}>
