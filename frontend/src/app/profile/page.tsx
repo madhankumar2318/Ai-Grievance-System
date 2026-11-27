@@ -405,47 +405,6 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* ── Authority Command & Jurisdiction Banner ── */}
-                    {user.role === "authority" && (
-                        <>
-                            <div className="glass animate-slide-up" style={{ borderRadius: "var(--radius-lg)", padding: "1.5rem", border: "1px solid rgba(249,115,22,0.3)", background: "linear-gradient(135deg, rgba(249,115,22,0.06), rgba(251,146,60,0.03))", marginBottom: "1.5rem" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-                                    <div>
-                                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.25rem 0.65rem", borderRadius: "99px", background: "rgba(249,115,22,0.15)", color: "#f97316", fontSize: "0.72rem", fontWeight: "800", marginBottom: "0.5rem" }}>
-                                            🏛️ Assigned District Area
-                                        </div>
-                                        <h3 style={{ margin: "0 0 0.35rem 0", fontSize: "1.15rem", fontWeight: "800" }}>
-                                            📍 {profileData.district} District, {profileData.state}
-                                        </h3>
-                                        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--text-muted)", lineHeight: "1.5", maxWidth: "520px" }}>
-                                            Operating from <strong>{profileData.workingPlace}</strong>. Authorized to conduct AI triage reviews, inspect citizen photo evidence, and publish official Action Taken Reports (ATRs) with before/after resolution verification.
-                                        </p>
-                                    </div>
-
-                                    <Link
-                                        href="/admin"
-                                        style={{
-                                            padding: "0.75rem 1.4rem",
-                                            borderRadius: "0.75rem",
-                                            background: "linear-gradient(135deg, #f97316, #fb923c)",
-                                            color: "white",
-                                            fontWeight: "800",
-                                            fontSize: "0.88rem",
-                                            textDecoration: "none",
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "0.5rem",
-                                            boxShadow: "0 4px 14px rgba(249,115,22,0.35)",
-                                            flexShrink: 0,
-                                        }}
-                                    >
-                                        <span>Open Authority Portal →</span>
-                                    </Link>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
                     {/* ── Citizen View: Stats & Grievance History ── */}
                     {user.role === "user" && (
                         <>
