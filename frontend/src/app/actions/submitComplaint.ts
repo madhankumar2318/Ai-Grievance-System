@@ -69,7 +69,7 @@ export async function submitComplaintServerAction(params: SubmitComplaintParams)
   if (email) {
     try {
       const dupRes = await fetch(
-        `${supabaseUrl}/rest/v1/complaints?user_email=eq.${encodeURIComponent(email)}&status=in.(Pending,In%20Progress,Under%20Review,Escalated)&select=id,subject,description,location,status&order=created_at.desc&limit=10`,
+        `${supabaseUrl}/rest/v1/complaints?user_email=eq.${encodeURIComponent(email)}&status=not.in.(Resolved,Rejected)&select=id,subject,description,location,status&order=created_at.desc&limit=10`,
         {
           headers: {
             apikey: supabaseAnonKey,
