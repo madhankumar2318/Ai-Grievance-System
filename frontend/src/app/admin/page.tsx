@@ -1585,7 +1585,7 @@ export default function AdminDashboard() {
                                                                         })()}
 
                                                                         {/* Collector Executive Control: Transfer Department & Executive Directive */}
-                                                                        {isDistrictHead && c.status !== "Resolved" && c.status !== "Rejected" && (
+                                                                        {isDistrictHead && c.status !== "Resolved" && c.status !== "Rejected" && c.status !== "Pending" && (
                                                                             <>
                                                                                 <div
                                                                                     onClick={e => e.stopPropagation()}
