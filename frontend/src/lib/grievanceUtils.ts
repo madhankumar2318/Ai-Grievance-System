@@ -153,20 +153,20 @@ export function computeDepartmentClearancePct(pending: number, resolved: number)
 }
 
 /**
- * Resolves the target SLA window in hours (clamped between 1 hour and 168 hours / 7 days).
+ * Resolves the target SLA window in hours (clamped between 1 hour and 720 hours / 30 days).
  */
 export function parseDeadlineHours(priorityTarget: string, deadlineHours?: number): number {
   if (typeof deadlineHours === "number" && Number.isFinite(deadlineHours) && deadlineHours > 0) {
-    return Math.min(168, Math.max(1, Math.round(deadlineHours)));
+    return Math.min(720, Math.max(1, Math.round(deadlineHours)));
   }
   const t = (priorityTarget || "").toLowerCase();
   const hourMatch = t.match(/(\d+)[\s-]*(?:hours?|hrs?|h)\b/);
   if (hourMatch) {
-    return Math.min(168, Math.max(1, parseInt(hourMatch[1], 10)));
+    return Math.min(720, Math.max(1, parseInt(hourMatch[1], 10)));
   }
   const dayMatch = t.match(/(\d+)[\s-]*(?:days?|d)\b/);
   if (dayMatch) {
-    return Math.min(168, Math.max(1, parseInt(dayMatch[1], 10) * 24));
+    return Math.min(720, Math.max(1, parseInt(dayMatch[1], 10) * 24));
   }
   if (t.includes("immediate")) return 6;
   return 24;

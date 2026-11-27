@@ -77,13 +77,14 @@ describe("computeDepartmentClearancePct", () => {
 });
 
 describe("parseDeadlineHours & computeDirectiveSlaStatus", () => {
-  it("parses preset and custom hour/day targets and clamps to 7 days (168h)", () => {
-    assert.equal(parseDeadlineHours("⚡ 6 Hours — Immediate Emergency"), 6);
+  it("parses preset and custom hour/day targets and clamps to 30 days (720h)", () => {
     assert.equal(parseDeadlineHours("🚨 24-Hour Expedite"), 24);
     assert.equal(parseDeadlineHours("⏱️ 48-Hour Priority Directive"), 48);
     assert.equal(parseDeadlineHours("📅 3 Days — Standard Repair"), 72);
-    assert.equal(parseDeadlineHours("📆 7 Days — Major Engineering"), 168);
-    assert.equal(parseDeadlineHours("Custom", 999), 168);
+    assert.equal(parseDeadlineHours("🛠️ 7 Days — Heavy Repair"), 168);
+    assert.equal(parseDeadlineHours("🏗️ 15 Days — Major Work"), 360);
+    assert.equal(parseDeadlineHours("📆 30 Days — Reconstruction"), 720);
+    assert.equal(parseDeadlineHours("Max Clamp", 9999), 720);
   });
 
   it("reports remaining time when within SLA and overdue when past deadline", () => {

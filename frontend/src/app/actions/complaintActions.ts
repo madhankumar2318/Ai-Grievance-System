@@ -754,10 +754,10 @@ export async function issueCollectorDirectiveServerAction(
     };
   }
 
-  // Clamp deadlineHours to 1..168h (max 7 days) server-side
+  // Clamp deadlineHours to 1..720h (max 30 days) server-side
   const safeDeadlineHours =
     typeof directive.deadlineHours === "number" && Number.isFinite(directive.deadlineHours)
-      ? Math.min(168, Math.max(1, Math.round(directive.deadlineHours)))
+      ? Math.min(720, Math.max(1, Math.round(directive.deadlineHours)))
       : 24;
 
   const sanitizedDirective: CollectorDirectiveData = {
