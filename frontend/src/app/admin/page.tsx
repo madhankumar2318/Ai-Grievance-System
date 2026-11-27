@@ -1179,7 +1179,8 @@ export default function AdminDashboard() {
                                                     </span>
                                                     {c.description && c.description.includes("[COLLECTOR_DIRECTIVE:") && (() => {
                                                         const dir = parseEmbeddedTag<EmbeddedDirective>(c.description, "COLLECTOR_DIRECTIVE");
-                                                        const sla = dir ? computeDirectiveSlaStatus(dir.issuedAt, dir.priorityTarget, c.status, dir.deadlineHours) : null;
+                                                        const atr = parseEmbeddedTag<{ resolvedAt?: string }>(c.description, "ACTION_TAKEN_REPORT");
+                                                        const sla = dir ? computeDirectiveSlaStatus(dir.issuedAt, dir.priorityTarget, c.status, dir.deadlineHours, Date.now(), atr?.resolvedAt) : null;
                                                         return (
                                                             <div style={{ marginTop: "0.3rem", display: "flex", flexDirection: "column", gap: "0.22rem", alignItems: "flex-start" }}>
                                                                 <span style={{
@@ -1341,22 +1342,29 @@ export default function AdminDashboard() {
                                                             }}>
                                                                 {/* Collector Directive Official Order Card */}
                                                                 {directiveData && (() => {
+                                                                    const atr = parseEmbeddedTag<{ resolvedAt?: string }>(c.description, "ACTION_TAKEN_REPORT");
                                                                     const sla = computeDirectiveSlaStatus(
                                                                         directiveData.issuedAt,
                                                                         directiveData.priorityTarget,
                                                                         c.status,
-                                                                        directiveData.deadlineHours
+                                                                        directiveData.deadlineHours,
+                                                                        Date.now(),
+                                                                        atr?.resolvedAt
                                                                     );
                                                                     return (
                                                                         <div style={{
                                                                             marginBottom: "1.25rem",
                                                                             padding: "1rem 1.25rem",
                                                                             borderRadius: "0.85rem",
-                                                                            background: sla.isOverdue
+                                                                            background: sla.isDelayedResolution
+                                                                                ? "linear-gradient(135deg, rgba(251, 146, 60, 0.16), rgba(194, 65, 12, 0.08))"
+                                                                                : sla.isOverdue
                                                                                 ? "linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(185, 28, 28, 0.08))"
+                                                                                : sla.isResolved
+                                                                                ? "linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(5, 150, 105, 0.08))"
                                                                                 : "linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.08))",
-                                                                            border: `1.5px solid ${sla.isOverdue ? "rgba(239, 68, 68, 0.5)" : "rgba(245, 158, 11, 0.45)"}`,
-                                                                            boxShadow: `0 0 20px ${sla.isOverdue ? "rgba(239, 68, 68, 0.18)" : "rgba(245, 158, 11, 0.15)"}`,
+                                                                            border: `1.5px solid ${sla.isDelayedResolution ? "rgba(251, 146, 60, 0.5)" : sla.isOverdue ? "rgba(239, 68, 68, 0.5)" : sla.isResolved ? "rgba(16, 185, 129, 0.45)" : "rgba(245, 158, 11, 0.45)"}`,
+                                                                            boxShadow: `0 0 20px ${sla.isDelayedResolution ? "rgba(251, 146, 60, 0.18)" : sla.isOverdue ? "rgba(239, 68, 68, 0.18)" : sla.isResolved ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)"}`,
                                                                         }}>
                                                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem", flexWrap: "wrap", gap: "0.5rem" }}>
                                                                                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>

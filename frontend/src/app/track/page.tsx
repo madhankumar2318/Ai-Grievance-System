@@ -386,13 +386,16 @@ export default function TrackPage() {
                                     const photoMatch = complaint.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
                                     const evidencePhoto = photoMatch ? photoMatch[1] : null;
                                     const directiveData = parseEmbeddedTag<EmbeddedDirective>(complaint.description, "COLLECTOR_DIRECTIVE");
+                                    const atrData = parseEmbeddedTag<{ resolvedAt?: string }>(complaint.description, "ACTION_TAKEN_REPORT");
                                     const cleanDesc = stripEmbeddedTags(complaint.description);
                                     const sla = directiveData
                                         ? computeDirectiveSlaStatus(
                                               directiveData.issuedAt,
                                               directiveData.priorityTarget,
                                               complaint.status,
-                                              directiveData.deadlineHours
+                                              directiveData.deadlineHours,
+                                              Date.now(),
+                                              atrData?.resolvedAt
                                           )
                                         : null;
                                     const orderId = directiveData?.orderId || directiveData?.directiveId || "DIR-2026";

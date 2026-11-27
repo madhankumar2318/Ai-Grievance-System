@@ -18,6 +18,8 @@ export interface EmbeddedDirective {
 export interface DirectiveSlaStatus {
   isResolved: boolean;
   isOverdue: boolean;
+  isDelayedResolution?: boolean;
+  delayText?: string;
   label: string;
   color: string;
   bg: string;
@@ -187,20 +189,43 @@ function formatDurationCompact(totalMinutes: number): string {
 
 /**
  * Computes live SLA countdown or overdue breach status for a Collector Executive Directive.
+ * If status is Resolved, checks resolvedAt timestamp to see if resolution was on-time or delayed.
  */
 export function computeDirectiveSlaStatus(
   issuedAt: string | undefined,
   priorityTarget: string,
   status: string,
   deadlineHours?: number,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  resolvedAt?: string
 ): DirectiveSlaStatus {
   const targetHours = parseDeadlineHours(priorityTarget, deadlineHours);
+  const issuedMs = issuedAt ? new Date(issuedAt).getTime() : NaN;
 
   if (status === "Resolved") {
+    const resolvedMs = resolvedAt ? new Date(resolvedAt).getTime() : NaN;
+    if (Number.isFinite(issuedMs) && Number.isFinite(resolvedMs)) {
+      const deadlineMs = issuedMs + targetHours * 60 * 60 * 1000;
+      const delayMins = (resolvedMs - deadlineMs) / (60 * 1000);
+      if (delayMins > 0) {
+        const delayStr = formatDurationCompact(delayMins);
+        return {
+          isResolved: true,
+          isOverdue: false,
+          isDelayedResolution: true,
+          delayText: delayStr,
+          label: `⚠️ Resolved (Delayed by ${delayStr})`,
+          color: "#fb923c",
+          bg: "rgba(251, 146, 60, 0.15)",
+          border: "rgba(251, 146, 60, 0.45)",
+          deadlineHours: targetHours,
+        };
+      }
+    }
     return {
       isResolved: true,
       isOverdue: false,
+      isDelayedResolution: false,
       label: "✓ Solved Within Directive",
       color: "#34d399",
       bg: "rgba(16, 185, 129, 0.14)",
@@ -209,7 +234,6 @@ export function computeDirectiveSlaStatus(
     };
   }
 
-  const issuedMs = issuedAt ? new Date(issuedAt).getTime() : NaN;
   if (!Number.isFinite(issuedMs)) {
     return {
       isResolved: false,

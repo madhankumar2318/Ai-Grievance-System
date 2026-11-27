@@ -101,9 +101,32 @@ describe("parseDeadlineHours & computeDirectiveSlaStatus", () => {
     assert.equal(overdue.isOverdue, true);
     assert.equal(overdue.label, "🚨 OVERDUE by 6h");
 
-    const resolved = computeDirectiveSlaStatus(issued, "24-Hour Expedite", "Resolved", 24, thirtyHoursLater);
-    assert.equal(resolved.isResolved, true);
-    assert.equal(resolved.isOverdue, false);
+    // Resolved within directive deadline
+    const resolvedOnTime = computeDirectiveSlaStatus(
+      issued,
+      "24-Hour Expedite",
+      "Resolved",
+      24,
+      thirtyHoursLater,
+      "2026-11-26T20:00:00.000Z" // resolved in 10 hours (well within 24h)
+    );
+    assert.equal(resolvedOnTime.isResolved, true);
+    assert.equal(resolvedOnTime.isDelayedResolution, false);
+    assert.equal(resolvedOnTime.label, "✓ Solved Within Directive");
+
+    // Resolved after directive deadline passed (delayed resolution)
+    const resolvedDelayed = computeDirectiveSlaStatus(
+      issued,
+      "24-Hour Expedite",
+      "Resolved",
+      24,
+      thirtyHoursLater,
+      "2026-11-27T16:00:00.000Z" // resolved at 30 hours (6 hours past 24h deadline)
+    );
+    assert.equal(resolvedDelayed.isResolved, true);
+    assert.equal(resolvedDelayed.isDelayedResolution, true);
+    assert.equal(resolvedDelayed.label, "⚠️ Resolved (Delayed by 6h)");
+    assert.equal(resolvedDelayed.color, "#fb923c");
   });
 });
 
