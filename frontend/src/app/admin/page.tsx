@@ -118,6 +118,8 @@ export default function AdminDashboard() {
     const [directiveForm, setDirectiveForm] = useState({
         target: "🚨 24 Hours — Urgent Expedite",
         deadlineHours: 24,
+        isCustom: false,
+        customDaysInput: "6",
         note: "",
     });
     const [issuingDirective, setIssuingDirective] = useState(false);
@@ -128,14 +130,20 @@ export default function AdminDashboard() {
         if (!directingComplaint || !directiveForm.note.trim() || issuingDirective) return;
         setIssuingDirective(true);
         try {
+            const parsedDays = Math.min(30, Math.max(1, parseInt(directiveForm.customDaysInput, 10) || 6));
+            const finalHours = directiveForm.isCustom ? parsedDays * 24 : directiveForm.deadlineHours;
+            const finalTarget = directiveForm.isCustom
+                ? `🗓️ ${parsedDays} ${parsedDays === 1 ? "Day" : "Days"} — Collectorate Mandate`
+                : directiveForm.target;
+
             const directiveData: CollectorDirectiveData = {
                 orderId: `DIR-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
                 directiveNote: directiveForm.note.trim(),
-                priorityTarget: directiveForm.target,
+                priorityTarget: finalTarget,
                 officerTitle: user?.authorityRole || "District Collector & District Magistrate",
                 officerName: user?.username || "District Magistrate",
                 issuedAt: new Date().toISOString(),
-                deadlineHours: directiveForm.deadlineHours,
+                deadlineHours: finalHours,
             };
 
             const res = await issueCollectorDirectiveServerAction(directingComplaint.id, directiveData);
@@ -157,6 +165,8 @@ export default function AdminDashboard() {
                 setDirectiveForm({
                     target: "🚨 24 Hours — Urgent Expedite",
                     deadlineHours: 24,
+                    isCustom: false,
+                    customDaysInput: "6",
                     note: "",
                 });
             } else {
@@ -1654,15 +1664,20 @@ export default function AdminDashboard() {
                                                                                             setDirectingComplaint({ id: c.id, subject: c.subject, category: c.category });
                                                                                             if (directiveData) {
                                                                                                 const hrs = directiveData.deadlineHours || 24;
+                                                                                                const matchingPreset = DIRECTIVE_TIME_CHIPS.find(ch => ch.hours === hrs);
                                                                                                 setDirectiveForm({
                                                                                                     target: directiveData.priorityTarget,
                                                                                                     deadlineHours: hrs,
+                                                                                                    isCustom: !matchingPreset,
+                                                                                                    customDaysInput: String(Math.min(30, Math.max(1, Math.round(hrs / 24)))),
                                                                                                     note: directiveData.directiveNote,
                                                                                                 });
                                                                                             } else {
                                                                                                 setDirectiveForm({
                                                                                                     target: "🚨 24 Hours — Urgent Expedite",
                                                                                                     deadlineHours: 24,
+                                                                                                    isCustom: false,
+                                                                                                    customDaysInput: "6",
                                                                                                     note: "",
                                                                                                 });
                                                                                             }
@@ -2273,16 +2288,17 @@ export default function AdminDashboard() {
                                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.45rem" }}>
                                     ⚡ Target Resolution Window:
                                 </label>
-                                {/* 1-Click Time Chips */}
-                                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                                {/* 1-Click Time Chips + Inline Morphing Custom Pill */}
+                                <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
                                     {DIRECTIVE_TIME_CHIPS.map(chip => {
-                                        const active = directiveForm.deadlineHours === chip.hours;
+                                        const active = !directiveForm.isCustom && directiveForm.deadlineHours === chip.hours;
                                         return (
                                             <button
                                                 key={chip.id}
                                                 type="button"
                                                 onClick={() => setDirectiveForm(prev => ({
                                                     ...prev,
+                                                    isCustom: false,
                                                     deadlineHours: chip.hours,
                                                     target: chip.targetText,
                                                 }))}
@@ -2303,6 +2319,77 @@ export default function AdminDashboard() {
                                             </button>
                                         );
                                     })}
+
+                                    {/* Inline Morphing Custom Pill (no extra box, no spinner arrows) */}
+                                    {!directiveForm.isCustom ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setDirectiveForm(prev => ({ ...prev, isCustom: true }))}
+                                            style={{
+                                                padding: "0.42rem 0.78rem",
+                                                borderRadius: "99px",
+                                                fontSize: "0.76rem",
+                                                fontWeight: "800",
+                                                cursor: "pointer",
+                                                transition: "all 0.15s ease",
+                                                background: "rgba(255, 255, 255, 0.05)",
+                                                border: "1px dashed rgba(245, 158, 11, 0.45)",
+                                                color: "#fde68a",
+                                            }}
+                                        >
+                                            ✏️ Custom
+                                        </button>
+                                    ) : (
+                                        <div style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "0.35rem",
+                                            padding: "0.24rem 0.7rem",
+                                            borderRadius: "99px",
+                                            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.2))",
+                                            border: "1.5px solid #fbbf24",
+                                            boxShadow: "0 0 12px rgba(245, 158, 11, 0.28)",
+                                        }}>
+                                            <span style={{ fontSize: "0.74rem" }}>✏️</span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                maxLength={2}
+                                                autoFocus
+                                                aria-label="Custom deadline in days (1 to 30)"
+                                                value={directiveForm.customDaysInput}
+                                                onChange={e => {
+                                                    const digits = e.target.value.replace(/[^0-9]/g, "");
+                                                    if (!digits) {
+                                                        setDirectiveForm(prev => ({ ...prev, customDaysInput: "" }));
+                                                        return;
+                                                    }
+                                                    const clamped = Math.min(30, Math.max(1, parseInt(digits, 10)));
+                                                    setDirectiveForm(prev => ({ ...prev, customDaysInput: String(clamped) }));
+                                                }}
+                                                onBlur={() => {
+                                                    if (!directiveForm.customDaysInput) {
+                                                        setDirectiveForm(prev => ({ ...prev, customDaysInput: "6" }));
+                                                    }
+                                                }}
+                                                style={{
+                                                    width: "26px",
+                                                    background: "rgba(0, 0, 0, 0.35)",
+                                                    border: "1px solid rgba(251, 191, 36, 0.45)",
+                                                    borderRadius: "6px",
+                                                    color: "#ffffff",
+                                                    fontSize: "0.78rem",
+                                                    fontWeight: "900",
+                                                    textAlign: "center",
+                                                    padding: "0.12rem 0",
+                                                    outline: "none",
+                                                }}
+                                            />
+                                            <span style={{ fontSize: "0.74rem", fontWeight: "800", color: "#fef3c7" }}>
+                                                Days
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
