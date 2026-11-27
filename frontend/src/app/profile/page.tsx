@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { getUserComplaintsServerAction, getComplaintsServerAction } from "@/app/actions/complaintActions";
+import { getUserComplaintsServerAction } from "@/app/actions/complaintActions";
 import { getFullUserProfileServerAction, updateUserProfileServerAction } from "@/app/actions/authActions";
 import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 
@@ -70,7 +70,6 @@ export default function ProfilePage() {
 
     // Complaints lists & stats
     const [complaints, setComplaints] = useState<{ id: string; subject: string; status: string; date: string }[]>([]);
-    const [authorityStats, setAuthorityStats] = useState({ total: 0, pending: 0, inProgress: 0, resolved: 0 });
     const [loadingComplaints, setLoadingComplaints] = useState(false);
 
     // Edit modal state
@@ -155,26 +154,6 @@ export default function ProfilePage() {
                 }
                 setLoadingComplaints(false);
             }).catch(() => setLoadingComplaints(false));
-        } else if (user.role === "authority") {
-            // Authority stats for their district
-            const targetDistrict = (user.district || "Tiruchirappalli").toLowerCase();
-            getComplaintsServerAction().then(res => {
-                if (res.success && res.complaints) {
-                    const jurisdictionComplaints = res.complaints.filter((c: any) => {
-                        const loc = (c.location || "").toLowerCase();
-                        return loc.includes(targetDistrict) || loc.includes("musiri") || loc.includes("thottiyam") || loc.includes("tiruchirappalli");
-                    });
-                    setAuthorityStats({
-                        total: jurisdictionComplaints.length,
-                        pending: jurisdictionComplaints.filter((c: any) => c.status === "Pending").length,
-                        inProgress: jurisdictionComplaints.filter((c: any) => c.status === "In Progress").length,
-                        resolved: jurisdictionComplaints.filter((c: any) => c.status === "Resolved").length,
-                    });
-                }
-            }).catch(() => {
-                // High-fidelity fallback metrics for Tiruchirappalli
-                setAuthorityStats({ total: 11, pending: 5, inProgress: 2, resolved: 4 });
-            });
         }
     }, [user?.email, user?.role, user?.district]);
 
@@ -463,14 +442,6 @@ export default function ProfilePage() {
                                         <span>Open Authority Portal →</span>
                                     </Link>
                                 </div>
-                            </div>
-
-                            {/* Jurisdiction Metrics */}
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-                                <StatCard label={`Total in ${profileData.district}`} value={authorityStats.total} icon="📋" color="#6366f1" />
-                                <StatCard label="Pending Review" value={authorityStats.pending} icon="⏳" color="#f59e0b" />
-                                <StatCard label="In Progress" value={authorityStats.inProgress} icon="⚡" color="#3b82f6" />
-                                <StatCard label="Resolved with ATR" value={authorityStats.resolved} icon="✅" color="#10b981" />
                             </div>
                         </>
                     )}

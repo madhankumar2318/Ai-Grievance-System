@@ -205,22 +205,24 @@ export default function Navbar() {
                                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--primary)"; (e.currentTarget as HTMLElement).style.color = "var(--primary)"; }}
                                 onMouseLeave={e => { if (!showNotifMenu) { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; } }}
                             >
-                                🔔
-                                {/* Badge */}
-                                {hasUnread && (
-                                    <span style={{
-                                        position: "absolute", top: "4px", right: "4px",
-                                        width: "9px", height: "9px", borderRadius: "50%",
-                                        background: "#ef4444",
-                                        boxShadow: "0 0 0 2px var(--bg-card)",
-                                    }}>
+                                <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                                    🔔
+                                    {/* Badge */}
+                                    {hasUnread && (
                                         <span style={{
-                                            position: "absolute", inset: 0, borderRadius: "50%",
+                                            position: "absolute", top: "-1px", right: "-1px",
+                                            width: "8px", height: "8px", borderRadius: "50%",
                                             background: "#ef4444",
-                                            animation: "ping 1.5s ease-out infinite",
-                                        }} />
-                                    </span>
-                                )}
+                                            boxShadow: "0 0 0 2px var(--bg-card)",
+                                        }}>
+                                            <span style={{
+                                                position: "absolute", inset: 0, borderRadius: "50%",
+                                                background: "#ef4444",
+                                                animation: "ping 1.5s ease-out infinite",
+                                            }} />
+                                        </span>
+                                    )}
+                                </span>
                             </button>
 
                             {/* Notification Dropdown Panel */}
