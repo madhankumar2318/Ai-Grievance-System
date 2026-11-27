@@ -210,7 +210,7 @@ export default function AdminDashboard() {
             if (autoSet.has(c.id)) {
                 const cascadeAtr: ActionTakenReportData = {
                     ...atr,
-                    actionDescription: `${atr.actionDescription} (Auto-resolved alongside #${id} — same area issue fixed.)`,
+                    actionDescription: atr.actionDescription,
                 };
                 const baseDesc = c.description.replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, '').trim();
                 return {

@@ -432,7 +432,7 @@ export async function updateComplaintStatusServerAction(
             for (const m of matches) {
               const cascadeAtr: ActionTakenReportData = {
                 ...atr,
-                actionDescription: `${atr.actionDescription} (Auto-resolved alongside #${id} — same area issue fixed.)`,
+                actionDescription: atr.actionDescription,
               };
               const mBase = (m.description || "").replace(/\n\n\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "").trim();
               const mDesc = `${mBase}\n\n[ACTION_TAKEN_REPORT:${JSON.stringify(cascadeAtr)}]`;
