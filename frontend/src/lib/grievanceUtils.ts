@@ -267,6 +267,9 @@ const DUPLICATE_STOPWORDS = new Set([
 function normalizeText(text: string): string {
   return (text || "")
     .toLowerCase()
+    .replace(/\bstreetlights?\b/g, "street light")
+    .replace(/\bwaterpipes?\b/g, "water pipe")
+    .replace(/\bpotholes\b/g, "pothole")
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -288,11 +291,29 @@ const GENERIC_LOCATION_TOKENS = new Set([
   "tamil", "nadu", "tamilnadu", "india", "district", "city", "town", "center",
 ]);
 
+function parseGpsCoords(loc: string): { lat: number; lng: number } | null {
+  const m = (loc || "").match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+  if (!m) return null;
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
 function locationsOverlap(locA: string, locB: string): boolean {
   const a = normalizeText(locA);
   const b = normalizeText(locB);
   if (!a || !b) return false;
   if (a === b) return true;
+
+  // Match nearby GPS coordinates within ~330 meters (~0.003 degrees)
+  const gpsA = parseGpsCoords(locA);
+  const gpsB = parseGpsCoords(locB);
+  if (gpsA && gpsB) {
+    if (Math.abs(gpsA.lat - gpsB.lat) <= 0.003 && Math.abs(gpsA.lng - gpsB.lng) <= 0.003) {
+      return true;
+    }
+  }
 
   const tokensA = new Set(
     Array.from(extractKeywords(a)).filter((t) => !GENERIC_LOCATION_TOKENS.has(t))

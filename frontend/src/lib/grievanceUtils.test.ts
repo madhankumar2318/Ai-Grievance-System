@@ -220,4 +220,29 @@ describe("findMatchingAreaComplaints (Auto-Cascade Resolve)", () => {
     assert.equal(matches.length, 1);
     assert.equal(matches[0].id, "GRV-10002");
   });
+
+  it("matches nearby GPS coordinates and compound words like Streetlight vs Street light", () => {
+    const resolved = {
+      id: "GRV-20001",
+      subject: "Streetlight not working",
+      description: "Dark road",
+      location: "10.95181, 78.44000",
+      category: "Infrastructure",
+    };
+
+    const nearby = [
+      {
+        id: "GRV-20002",
+        subject: "Street light not working",
+        description: "Pole light off",
+        location: "10.95195, 78.44012",
+        category: "Infrastructure",
+        status: "Pending",
+      },
+    ];
+
+    const matches = findMatchingAreaComplaints(resolved, nearby);
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].id, "GRV-20002");
+  });
 });
