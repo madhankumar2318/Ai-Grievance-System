@@ -247,3 +247,99 @@ export function computeDirectiveSlaStatus(
     deadlineHours: targetHours,
   };
 }
+
+export interface OpenComplaintSummary {
+  id: string;
+  subject: string;
+  description?: string;
+  location?: string;
+  status: string;
+}
+
+const DUPLICATE_STOPWORDS = new Set([
+  "the", "and", "for", "with", "that", "this", "from", "near", "here", "there",
+  "have", "has", "been", "being", "are", "was", "were", "will", "not", "our",
+  "your", "please", "kindly", "issue", "problem", "complaint", "grievance",
+  "area", "road", "street", "days", "day", "very", "much", "many", "into",
+]);
+
+function normalizeText(text: string): string {
+  return (text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractKeywords(text: string): Set<string> {
+  const words = normalizeText(text).split(" ");
+  const out = new Set<string>();
+  for (const w of words) {
+    if (w.length >= 3 && !DUPLICATE_STOPWORDS.has(w)) {
+      out.add(w);
+    }
+  }
+  return out;
+}
+
+function locationsOverlap(locA: string, locB: string): boolean {
+  const a = normalizeText(locA);
+  const b = normalizeText(locB);
+  if (!a || !b) return false;
+  if (a.includes(b) || b.includes(a)) return true;
+  const tokensA = extractKeywords(a);
+  const tokensB = extractKeywords(b);
+  for (const t of tokensA) {
+    if (tokensB.has(t)) return true;
+  }
+  return false;
+}
+
+/**
+ * Checks whether a newly submitted grievance duplicates one of the same citizen's
+ * currently open grievances (Pending / In Progress / Under Review / Escalated).
+ */
+export function findDuplicateComplaint(
+  newSubject: string,
+  newDescription: string,
+  newLocation: string,
+  existingComplaints: OpenComplaintSummary[]
+): OpenComplaintSummary | null {
+  const normNewSubject = normalizeText(newSubject);
+  const newKeywords = extractKeywords(`${newSubject} ${stripEmbeddedTags(newDescription)}`);
+  if (!normNewSubject) return null;
+
+  for (const existing of existingComplaints) {
+    const st = (existing.status || "").toLowerCase();
+    if (st === "resolved" || st === "rejected") continue;
+
+    const normOldSubject = normalizeText(existing.subject);
+    if (normOldSubject && normOldSubject === normNewSubject) {
+      return existing;
+    }
+
+    const oldKeywords = extractKeywords(
+      `${existing.subject} ${stripEmbeddedTags(existing.description || "")}`
+    );
+    if (newKeywords.size === 0 || oldKeywords.size === 0) continue;
+
+    let overlapCount = 0;
+    for (const kw of newKeywords) {
+      if (oldKeywords.has(kw)) overlapCount++;
+    }
+
+    const minSize = Math.min(newKeywords.size, oldKeywords.size);
+    const overlapRatio = minSize > 0 ? overlapCount / minSize : 0;
+    const sameArea = locationsOverlap(newLocation, existing.location || "");
+
+    if (
+      (overlapCount >= 2 && sameArea) ||
+      overlapCount >= 3 ||
+      (overlapCount >= 2 && overlapRatio >= 0.6)
+    ) {
+      return existing;
+    }
+  }
+
+  return null;
+}

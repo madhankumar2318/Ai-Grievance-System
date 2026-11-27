@@ -8,6 +8,7 @@ import {
   computeDepartmentClearancePct,
   parseDeadlineHours,
   computeDirectiveSlaStatus,
+  findDuplicateComplaint,
 } from "./grievanceUtils.ts";
 
 describe("maskEmail (PII Protection)", () => {
@@ -100,5 +101,64 @@ describe("parseDeadlineHours & computeDirectiveSlaStatus", () => {
     const resolved = computeDirectiveSlaStatus(issued, "24-Hour Expedite", "Resolved", 24, thirtyHoursLater);
     assert.equal(resolved.isResolved, true);
     assert.equal(resolved.isOverdue, false);
+  });
+});
+
+describe("findDuplicateComplaint", () => {
+  const openList = [
+    {
+      id: "GRV-19821",
+      subject: "Water pipe broken on main street",
+      description: "Drinking water pipe leaking badly near bus stop",
+      location: "Kaikatti, Tiruchirappalli",
+      status: "Pending",
+    },
+    {
+      id: "GRV-10005",
+      subject: "Factory releasing black smoke",
+      description: "Smoke pollution",
+      location: "Industrial Area, Tiruchirappalli",
+      status: "Resolved",
+    },
+  ];
+
+  it("blocks exact duplicate active complaints", () => {
+    const dup = findDuplicateComplaint(
+      "Water pipe broken on main street!",
+      "Same pipe issue",
+      "Kaikatti",
+      openList
+    );
+    assert.ok(dup);
+    assert.equal(dup.id, "GRV-19821");
+  });
+
+  it("blocks differently worded duplicate complaints for the same problem", () => {
+    const dup = findDuplicateComplaint(
+      "Drinking water leaking near bus stop",
+      "Pipe burst wasting water",
+      "Kaikatti, Tiruchirappalli",
+      openList
+    );
+    assert.ok(dup);
+    assert.equal(dup.id, "GRV-19821");
+  });
+
+  it("allows different problems at the same location and allows re-filing resolved issues", () => {
+    const differentProblem = findDuplicateComplaint(
+      "Streetlight fused and dark at night",
+      "Pole light not glowing",
+      "Kaikatti, Tiruchirappalli",
+      openList
+    );
+    assert.equal(differentProblem, null);
+
+    const resolvedIssue = findDuplicateComplaint(
+      "Factory releasing black smoke",
+      "Smoke started again",
+      "Industrial Area, Tiruchirappalli",
+      openList
+    );
+    assert.equal(resolvedIssue, null);
   });
 });
