@@ -1048,10 +1048,10 @@ export async function getUserComplaintsServerAction(targetEmail?: string): Promi
     }
   }
 
-  // 4. Try Supabase cloud database
+  // 4. Try Supabase cloud database (lightweight projection: skip heavy base64 descriptions)
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/complaints?user_email=eq.${encodeURIComponent(requestedEmail)}&order=created_at.desc`,
+      `${SUPABASE_URL}/rest/v1/complaints?user_email=eq.${encodeURIComponent(requestedEmail)}&select=id,subject,status,created_at&order=created_at.desc`,
       {
         method: "GET",
         headers: {

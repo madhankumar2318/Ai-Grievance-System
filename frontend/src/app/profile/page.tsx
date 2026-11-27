@@ -120,9 +120,22 @@ export default function ProfilePage() {
             }
         });
 
-        // 2. Fetch complaints data depending on role
+        // 2. Fetch complaints data depending on role (with instant sessionStorage cache)
         if (user.role === "user") {
-            setLoadingComplaints(true);
+            const cacheKey = `gs_profile_complaints_${user.email.toLowerCase()}`;
+            let hasCache = false;
+            try {
+                const cached = sessionStorage.getItem(cacheKey);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed)) {
+                        setComplaints(parsed);
+                        hasCache = true;
+                    }
+                }
+            } catch {}
+
+            if (!hasCache) setLoadingComplaints(true);
             getUserComplaintsServerAction().then(res => {
                 if (res.success && res.complaints) {
                     const mapped = res.complaints.map((c: any) => ({
@@ -138,6 +151,9 @@ export default function ProfilePage() {
                             : new Date().toLocaleDateString("en-IN"),
                     }));
                     setComplaints(mapped);
+                    try {
+                        sessionStorage.setItem(cacheKey, JSON.stringify(mapped));
+                    } catch {}
                 }
                 setLoadingComplaints(false);
             }).catch(() => setLoadingComplaints(false));
@@ -466,9 +482,9 @@ export default function ProfilePage() {
                     {user.role === "user" && (
                         <>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-                                <StatCard label="Total Filed" value={complaints.length} icon="📋" color="#6366f1" />
-                                <StatCard label="Resolved" value={resolved} icon="✅" color="#10b981" />
-                                <StatCard label="Pending" value={pending} icon="⏳" color="#f59e0b" />
+                                <StatCard label="Total Filed" value={loadingComplaints ? "—" : complaints.length} icon="📋" color="#6366f1" />
+                                <StatCard label="Resolved" value={loadingComplaints ? "—" : resolved} icon="✅" color="#10b981" />
+                                <StatCard label="Pending" value={loadingComplaints ? "—" : pending} icon="⏳" color="#f59e0b" />
                             </div>
 
                             <div className="glass animate-slide-up" style={{ borderRadius: "var(--radius-lg)", padding: "1.5rem", boxShadow: "var(--shadow-lg)" }}>
