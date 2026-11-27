@@ -18,7 +18,7 @@ export interface DbComplaintRecord {
 import { getVerifiedSessionServerAction } from "./authActions";
 import { cookies } from "next/headers";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
-import { findMatchingAreaComplaints, OpenComplaintSummary } from "@/lib/grievanceUtils";
+import { findMatchingAreaComplaints, findOfficerActiveClaim, OpenComplaintSummary } from "@/lib/grievanceUtils";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
@@ -631,6 +631,33 @@ export async function claimComplaintServerAction(id: string): Promise<ClaimGriev
   }
   if (session.user.role !== "authority" && session.user.role !== "chief") {
     return { success: false, error: "Access Denied: Only officers can claim grievances." };
+  }
+
+  // 1. Enforce 1-active-grievance-at-a-time rule for this officer
+  try {
+    const activeRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?status=not.in.(Resolved,Rejected)&select=id,subject,description,status&limit=100`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (activeRes.ok) {
+      const openRows = (await activeRes.json()) as OpenComplaintSummary[];
+      const existingActive = findOfficerActiveClaim(session.user.email, openRows);
+      if (existingActive && existingActive.id !== id) {
+        return {
+          success: false,
+          conflict: true,
+          error: `⚠️ You already have an active grievance in progress (#${existingActive.id} — "${existingActive.subject}"). Please finish it before claiming another grievance.`,
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Active claim check error:", err);
   }
 
   let existingDesc = "";

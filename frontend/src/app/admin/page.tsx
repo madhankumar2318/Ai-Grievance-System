@@ -6,7 +6,7 @@ import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, claimComplaintServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
-import { parseEmbeddedTag, computeDirectiveSlaStatus, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
+import { parseEmbeddedTag, computeDirectiveSlaStatus, findOfficerActiveClaim, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
 
 const DIRECTIVE_TIME_CHIPS = [
     { id: "24h", chipLabel: "🚨 24h", hours: 24, targetText: "🚨 24 Hours — Urgent Expedite" },
@@ -1515,13 +1515,17 @@ export default function AdminDashboard() {
                                                                             }
 
                                                                             const isUnclaimedPending = c.status === "Pending" && !claimData;
+                                                                            const myActiveClaim = !isDistrictHead && user?.email
+                                                                                ? findOfficerActiveClaim(user.email, officerDomainComplaints)
+                                                                                : null;
+                                                                            const hasOtherActiveClaim = Boolean(myActiveClaim && myActiveClaim.id !== c.id);
 
                                                                             if (isUnclaimedPending) {
                                                                                 return (
                                                                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginTop: "0.25rem" }}>
                                                                                         <div style={{ display: "flex", gap: "0.5rem" }}>
                                                                                             <button
-                                                                                                disabled={claimingId === c.id}
+                                                                                                disabled={claimingId === c.id || hasOtherActiveClaim}
                                                                                                 onClick={() => handleClaimComplaint(c.id)}
                                                                                                 className="btn btn-primary"
                                                                                                 style={{
@@ -1529,11 +1533,12 @@ export default function AdminDashboard() {
                                                                                                     padding: "0.58rem 0.75rem",
                                                                                                     fontSize: "0.82rem",
                                                                                                     borderRadius: "0.625rem",
-                                                                                                    cursor: claimingId === c.id ? "wait" : "pointer",
+                                                                                                    cursor: hasOtherActiveClaim ? "not-allowed" : claimingId === c.id ? "wait" : "pointer",
+                                                                                                    opacity: hasOtherActiveClaim ? 0.45 : 1,
                                                                                                     fontWeight: "800",
                                                                                                 }}
                                                                                             >
-                                                                                                {claimingId === c.id ? "Claiming..." : "🙋 Claim & Start Work"}
+                                                                                                {claimingId === c.id ? "Claiming..." : hasOtherActiveClaim ? "🔒 Finish Active First" : "🙋 Claim & Start Work"}
                                                                                             </button>
                                                                                             <button
                                                                                                 style={{
@@ -1553,8 +1558,10 @@ export default function AdminDashboard() {
                                                                                                 onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
                                                                                             >✕ Reject</button>
                                                                                         </div>
-                                                                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", textAlign: "center" }}>
-                                                                                            Claim this grievance first to lock it to your name and unlock resolution.
+                                                                                        <div style={{ fontSize: "0.7rem", color: hasOtherActiveClaim ? "#fbbf24" : "var(--text-muted)", textAlign: "center", fontWeight: hasOtherActiveClaim ? "700" : "400" }}>
+                                                                                            {hasOtherActiveClaim && myActiveClaim
+                                                                                                ? `⏳ Finish your active grievance (#${myActiveClaim.id}) first before claiming another.`
+                                                                                                : "Claim this grievance first to lock it to your name and unlock resolution."}
                                                                                         </div>
                                                                                     </div>
                                                                                 );

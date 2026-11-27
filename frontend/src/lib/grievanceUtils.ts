@@ -414,3 +414,25 @@ export function findMatchingAreaComplaints(
     );
   });
 }
+
+/**
+ * Returns the currently active (not Resolved/Rejected) grievance claimed by the given officer,
+ * enforcing a strict 1-active-grievance-at-a-time rule per officer.
+ */
+export function findOfficerActiveClaim(
+  officerEmail: string,
+  complaints: OpenComplaintSummary[]
+): OpenComplaintSummary | null {
+  const emailLower = (officerEmail || "").toLowerCase().trim();
+  if (!emailLower) return null;
+
+  for (const c of complaints) {
+    const st = (c.status || "").toLowerCase();
+    if (st === "resolved" || st === "rejected") continue;
+    const claim = parseEmbeddedTag<EmbeddedClaim>(c.description || "", "CLAIMED_BY");
+    if (claim?.officerEmail && claim.officerEmail.toLowerCase().trim() === emailLower) {
+      return c;
+    }
+  }
+  return null;
+}

@@ -10,6 +10,7 @@ import {
   computeDirectiveSlaStatus,
   findDuplicateComplaint,
   findMatchingAreaComplaints,
+  findOfficerActiveClaim,
 } from "./grievanceUtils.ts";
 
 describe("maskEmail (PII Protection)", () => {
@@ -245,5 +246,31 @@ describe("findMatchingAreaComplaints (Auto-Cascade Resolve)", () => {
     const matches = findMatchingAreaComplaints(resolved, nearby);
     assert.equal(matches.length, 1);
     assert.equal(matches[0].id, "GRV-20002");
+  });
+});
+
+describe("findOfficerActiveClaim (1 Grievance At A Time Rule)", () => {
+  it("detects an officer's active claim and clears it once Resolved or Rejected", () => {
+    const list = [
+      {
+        id: "GRV-10001",
+        subject: "Garbage pile",
+        description: 'Details [CLAIMED_BY:{"officerName":"Madhan","officerEmail":"madhan@gov.in","claimedAt":"2026-11-27T10:00:00Z"}]',
+        status: "In Progress",
+      },
+      {
+        id: "GRV-10002",
+        subject: "Water leak",
+        description: 'Details [CLAIMED_BY:{"officerName":"Ravi","officerEmail":"ravi@gov.in","claimedAt":"2026-11-27T09:00:00Z"}]',
+        status: "Resolved",
+      },
+    ];
+
+    const madhanActive = findOfficerActiveClaim("madhan@gov.in", list);
+    assert.ok(madhanActive);
+    assert.equal(madhanActive.id, "GRV-10001");
+
+    const raviActive = findOfficerActiveClaim("ravi@gov.in", list);
+    assert.equal(raviActive, null);
   });
 });
