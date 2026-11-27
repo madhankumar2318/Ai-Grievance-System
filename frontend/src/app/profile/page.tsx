@@ -203,14 +203,17 @@ export default function ProfilePage() {
         e.preventDefault();
         setIsSaving(true);
         try {
-            const res = await updateUserProfileServerAction(editForm);
+            const safePayload = {
+                username: editForm.username,
+                phone: editForm.phone,
+                workingPlace: editForm.workingPlace,
+            };
+            const res = await updateUserProfileServerAction(safePayload);
             if (res.success && res.user) {
-                setProfileData({ ...profileData, ...editForm });
-                // Update AuthContext session & local storage
+                setProfileData(prev => ({ ...prev, ...safePayload }));
                 login({
                     ...user,
-                    ...editForm,
-                    username: editForm.username,
+                    ...safePayload,
                     role: user.role,
                 });
                 setSaveSuccess(true);
@@ -585,43 +588,33 @@ export default function ProfilePage() {
                                 {user.role === "authority" && (
                                     <>
                                         <div>
-                                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                🎭 Official Role / Designation
+                                            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                <span>🎭 Official Role / Designation</span>
+                                                <span style={{ fontSize: "0.68rem", color: "#fbbf24" }}>🔒 Verified &amp; Locked</span>
                                             </label>
                                             <input
                                                 type="text"
-                                                required
+                                                disabled
                                                 value={editForm.authorityRole}
-                                                onChange={e => {
-                                                    const newRole = e.target.value;
-                                                    setEditForm({
-                                                        ...editForm,
-                                                        authorityRole: newRole,
-                                                        department: getDepartmentForRole(newRole),
-                                                    });
-                                                }}
-                                                placeholder="e.g. Environment Protection Officer"
-                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
                                             />
                                             <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.35rem" }}>
-                                                🏛️ Automatically linked Department: <strong style={{ color: "#34d399" }}>{getDepartmentForRole(editForm.authorityRole)}</strong>
+                                                🏛️ Linked Department: <strong style={{ color: "#34d399" }}>{getDepartmentForRole(editForm.authorityRole)}</strong>
                                             </div>
                                         </div>
 
                                         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "0.75rem" }}>
                                             <div>
-                                                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                    📍 Assigned District
+                                                <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                    <span>📍 Assigned District</span>
+                                                    <span style={{ fontSize: "0.68rem", color: "#fbbf24" }}>🔒</span>
                                                 </label>
-                                                <select
+                                                <input
+                                                    type="text"
+                                                    disabled
                                                     value={editForm.district}
-                                                    onChange={e => setEditForm({ ...editForm, district: e.target.value })}
-                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
-                                                >
-                                                    {TAMIL_NADU_DISTRICTS.map(d => (
-                                                        <option key={d} value={d}>{d}</option>
-                                                    ))}
-                                                </select>
+                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
+                                                />
                                             </div>
 
                                             <div>
@@ -631,8 +624,8 @@ export default function ProfilePage() {
                                                 <input
                                                     type="text"
                                                     disabled
-                                                    value="Tamil Nadu"
-                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed" }}
+                                                    value={editForm.state || "Tamil Nadu"}
+                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
                                                 />
                                             </div>
                                         </div>
@@ -652,16 +645,15 @@ export default function ProfilePage() {
                                         </div>
 
                                         <div>
-                                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                🪪 Government Service / Employee ID
+                                            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                <span>🪪 Government Service / Employee ID</span>
+                                                <span style={{ fontSize: "0.68rem", color: "#fbbf24" }}>🔒 Verified &amp; Locked</span>
                                             </label>
                                             <input
                                                 type="text"
-                                                required
+                                                disabled
                                                 value={editForm.serviceId}
-                                                onChange={e => setEditForm({ ...editForm, serviceId: e.target.value })}
-                                                placeholder="e.g. TN-AUTH-2024-8841"
-                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
                                             />
                                         </div>
                                     </>

@@ -704,18 +704,20 @@ export async function getFullUserProfileServerAction(): Promise<{
 export async function updateUserProfileServerAction(data: {
   username?: string;
   phone?: string;
-  state?: string;
-  district?: string;
-  authorityRole?: string;
-  serviceId?: string;
   workingPlace?: string;
-  department?: string;
 }): Promise<{ success: boolean; user?: any; error?: string }> {
   const session = await getVerifiedSessionServerAction();
   if (!session.authenticated || !session.user) {
     return { success: false, error: "Not authenticated" };
   }
   const email = session.user.email.toLowerCase().trim();
+
+  // Security allowlist: only personal contact/display fields may be updated.
+  // Role, authorityRole, department, district, state, and serviceId are strictly immutable.
+  const safeUsername = typeof data.username === "string" ? data.username.trim().slice(0, 100) : undefined;
+  const safePhone = typeof data.phone === "string" ? data.phone.trim().slice(0, 30) : undefined;
+  const safeWorkingPlace = typeof data.workingPlace === "string" ? data.workingPlace.trim().slice(0, 160) : undefined;
+
   try {
     await fetch(
       `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`,
@@ -728,14 +730,9 @@ export async function updateUserProfileServerAction(data: {
           "Prefer": "return=minimal",
         },
         body: JSON.stringify({
-          ...(data.username && { username: data.username }),
-          ...(data.phone && { phone: data.phone }),
-          ...(data.state && { state: data.state }),
-          ...(data.district && { district: data.district }),
-          ...(data.authorityRole && { authority_role: data.authorityRole }),
-          ...(data.department && { department: data.department }),
-          ...(data.serviceId && { service_id: data.serviceId }),
-          ...(data.workingPlace && { working_place: data.workingPlace }),
+          ...(safeUsername && { username: safeUsername }),
+          ...(safePhone && { phone: safePhone }),
+          ...(safeWorkingPlace && { working_place: safeWorkingPlace }),
         }),
       }
     );
@@ -745,7 +742,9 @@ export async function updateUserProfileServerAction(data: {
 
   const updatedUser = {
     ...session.user,
-    ...data,
+    ...(safeUsername && { username: safeUsername }),
+    ...(safePhone && { phone: safePhone }),
+    ...(safeWorkingPlace && { workingPlace: safeWorkingPlace }),
   };
   await setAuthCookie(updatedUser);
   return { success: true, user: updatedUser };
