@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
-import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, claimComplaintServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
+import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, claimComplaintServerAction, assignOfficerServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
+import { getDistrictOfficersServerAction, RegisteredOfficer } from "@/app/actions/authActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
-import { parseEmbeddedTag, computeDirectiveSlaStatus, findOfficerActiveClaim, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
+import { parseEmbeddedTag, computeDirectiveSlaStatus, findOfficerActiveClaim, mapRoleToDepartment, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
 
 const DIRECTIVE_TIME_CHIPS = [
     { id: "24h", chipLabel: "🚨 24h", hours: 24, targetText: "🚨 24 Hours — Urgent Expedite" },
@@ -39,6 +40,15 @@ const CATEGORY_ICONS: Record<string, string> = {
     Safety: "🛡️",
     "Public Health": "🏥",
 };
+
+interface AvailableOfficerCandidate {
+    email: string;
+    name: string;
+    role: string;
+    department: string;
+    isBusy: boolean;
+    busyComplaintId?: string;
+}
 
 export interface AdminComplaint {
     id: string;
@@ -112,6 +122,12 @@ export default function AdminDashboard() {
             setTransferringId(null);
         }
     };
+
+    // ── Collector Direct Officer Assignment State ──────────────────────────────
+    const [districtOfficers, setDistrictOfficers] = useState<RegisteredOfficer[]>([]);
+    const [selectedAssignOfficer, setSelectedAssignOfficer] = useState<Record<string, string>>({});
+    const [assigningComplaintId, setAssigningComplaintId] = useState<string | null>(null);
+    const [assignSuccessId, setAssignSuccessId] = useState<string | null>(null);
 
     // ── Collector Executive Directive State ───────────────────────────────────────
     const [directingComplaint, setDirectingComplaint] = useState<{ id: string; subject: string; category: string } | null>(null);
@@ -323,7 +339,16 @@ export default function AdminDashboard() {
         } catch {}
 
         fetchComplaints();
-    }, []);
+
+        // If District Head / Collector, also load registered officers for direct assignment dropdown
+        if (isDistrictHead) {
+            getDistrictOfficersServerAction().then(res => {
+                if (res.success && res.officers) {
+                    setDistrictOfficers(res.officers);
+                }
+            }).catch(err => console.error("Could not fetch officers for assignment:", err));
+        }
+    }, [isDistrictHead]);
 
     const [claimingId, setClaimingId] = useState<string | null>(null);
 
@@ -378,6 +403,53 @@ export default function AdminDashboard() {
             alert("Network error while claiming grievance.");
         } finally {
             setClaimingId(null);
+        }
+    };
+
+    const handleAssignOfficer = async (complaintId: string, officerEmail: string) => {
+        if (!officerEmail || assigningComplaintId) return;
+        const target = districtOfficers.find(o => o.email.toLowerCase() === officerEmail.toLowerCase());
+        if (!target) return;
+
+        setAssigningComplaintId(complaintId);
+        try {
+            const res = await assignOfficerServerAction(complaintId, {
+                officerName: target.username || "Department Field Officer",
+                officerEmail: target.email,
+                officerRole: target.authorityRole || "Department Officer",
+            });
+
+            if (res.success) {
+                const now = new Date().toISOString();
+                const claimData = {
+                    officerName: target.username || "Department Field Officer",
+                    officerEmail: target.email,
+                    officerRole: target.authorityRole || "Department Officer",
+                    assignedBy: user?.username || "District Collector",
+                    claimedAt: now,
+                };
+                setComplaints(prev => prev.map(c => {
+                    if (c.id === complaintId) {
+                        const baseDesc = (c.description || "").replace(/\n\n\[CLAIMED_BY:[\s\S]*?\]/g, "").trim();
+                        return {
+                            ...c,
+                            status: "In Progress",
+                            description: `${baseDesc}\n\n[CLAIMED_BY:${JSON.stringify(claimData)}]`,
+                        };
+                    }
+                    return c;
+                }));
+                setAssignSuccessId(complaintId);
+                setTimeout(() => setAssignSuccessId(null), 3500);
+            } else {
+                alert(res.error || "Failed to assign officer.");
+                await refreshComplaintsFromServer();
+            }
+        } catch (err) {
+            console.error("Assign officer error:", err);
+            alert("Network error while assigning officer.");
+        } finally {
+            setAssigningComplaintId(null);
         }
     };
 
@@ -1588,6 +1660,120 @@ export default function AdminDashboard() {
                                                                                         onMouseEnter={e => { e.currentTarget.style.background = "#ef444422"; }}
                                                                                         onMouseLeave={e => { e.currentTarget.style.background = "#ef444412"; }}
                                                                                     >✕ Reject</button>
+                                                                                </div>
+                                                                            );
+                                                                        })()}
+
+                                                                        {/* Collector Executive Assignment (for Pending grievances): Assign an available/free departmental officer */}
+                                                                        {isDistrictHead && c.status === "Pending" && (() => {
+                                                                            // 1. Filter officers strictly mapped to this grievance's category
+                                                                            const deptOfficers = districtOfficers.filter(o => {
+                                                                                const r = (o.authorityRole || "").toLowerCase();
+                                                                                // Exclude collectors/magistrates from field assignments
+                                                                                if (r.includes("collector") || r.includes("magistrate") || r.includes("commissioner")) return false;
+                                                                                const dept = mapRoleToDepartment(o.authorityRole || "");
+                                                                                return dept === c.category;
+                                                                            });
+
+                                                                            // 2. Identify which departmental officers are currently free vs. busy
+                                                                            const candidates: AvailableOfficerCandidate[] = deptOfficers.map(o => {
+                                                                                const activeClaim = findOfficerActiveClaim(o.email, complaints);
+                                                                                return {
+                                                                                    email: o.email,
+                                                                                    name: o.username || "Department Field Officer",
+                                                                                    role: o.authorityRole || `${c.category} Officer`,
+                                                                                    department: c.category,
+                                                                                    isBusy: Boolean(activeClaim),
+                                                                                    busyComplaintId: activeClaim?.id,
+                                                                                };
+                                                                            });
+
+                                                                            const freeCandidates = candidates.filter(cand => !cand.isBusy);
+                                                                            const selectedEmail = selectedAssignOfficer[c.id] || (freeCandidates[0]?.email || "");
+
+                                                                            return (
+                                                                                <div
+                                                                                    onClick={e => e.stopPropagation()}
+                                                                                    style={{
+                                                                                        marginTop: "0.25rem",
+                                                                                        padding: "0.75rem 0.9rem",
+                                                                                        borderRadius: "0.75rem",
+                                                                                        background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.08))",
+                                                                                        border: "1px solid rgba(16, 185, 129, 0.3)",
+                                                                                        display: "flex",
+                                                                                        flexDirection: "column",
+                                                                                        gap: "0.45rem",
+                                                                                    }}
+                                                                                >
+                                                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                                        <span style={{ fontSize: "0.7rem", fontWeight: "800", color: "#34d399", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                                                                                            <span>👤</span>
+                                                                                            <span>Assign Field Officer</span>
+                                                                                        </span>
+                                                                                        <span style={{ fontSize: "0.68rem", color: "var(--text-muted)" }}>
+                                                                                            Dept: <strong style={{ color: "#e2e8f0" }}>{c.category}</strong>
+                                                                                        </span>
+                                                                                    </div>
+
+                                                                                    {freeCandidates.length > 0 ? (
+                                                                                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                                                                            <select
+                                                                                                value={selectedEmail}
+                                                                                                onChange={e => setSelectedAssignOfficer(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                                                                                style={{
+                                                                                                    flex: 1,
+                                                                                                    padding: "0.45rem 0.65rem",
+                                                                                                    borderRadius: "0.5rem",
+                                                                                                    background: "#0f172a",
+                                                                                                    border: "1px solid rgba(16, 185, 129, 0.35)",
+                                                                                                    color: "#ffffff",
+                                                                                                    fontSize: "0.8rem",
+                                                                                                    outline: "none",
+                                                                                                    cursor: "pointer",
+                                                                                                }}
+                                                                                            >
+                                                                                                {freeCandidates.map(cand => (
+                                                                                                    <option key={cand.email} value={cand.email} style={{ background: "#0f172a", color: "#ffffff" }}>
+                                                                                                        🟢 {cand.name} ({cand.role}) — Available
+                                                                                                    </option>
+                                                                                                ))}
+                                                                                            </select>
+                                                                                            <button
+                                                                                                disabled={assigningComplaintId === c.id || !selectedEmail}
+                                                                                                onClick={() => handleAssignOfficer(c.id, selectedEmail)}
+                                                                                                style={{
+                                                                                                    padding: "0.45rem 0.85rem",
+                                                                                                    borderRadius: "0.5rem",
+                                                                                                    background: "linear-gradient(135deg, #10b981, #059669)",
+                                                                                                    color: "#ffffff",
+                                                                                                    border: "none",
+                                                                                                    fontSize: "0.78rem",
+                                                                                                    fontWeight: "800",
+                                                                                                    cursor: assigningComplaintId === c.id ? "wait" : "pointer",
+                                                                                                    whiteSpace: "nowrap",
+                                                                                                    transition: "all 0.2s ease",
+                                                                                                    boxShadow: "0 2px 8px rgba(16, 185, 129, 0.25)",
+                                                                                                }}
+                                                                                            >
+                                                                                                {assigningComplaintId === c.id ? "Assigning..." : "Assign Officer →"}
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    ) : deptOfficers.length === 0 ? (
+                                                                                        <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                                                                                            ℹ️ No registered {c.category} officers found in this district.
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div style={{ fontSize: "0.74rem", color: "#fbbf24", fontWeight: "700" }}>
+                                                                                            ⏳ All {deptOfficers.length} {c.category} officer(s) currently busy on active grievances.
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {assignSuccessId === c.id && (
+                                                                                        <div style={{ fontSize: "0.72rem", color: "#10b981", fontWeight: "700", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                                                                                            <span>✓</span>
+                                                                                            <span>Officer assigned successfully! Grievance now In Progress.</span>
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
                                                                             );
                                                                         })()}

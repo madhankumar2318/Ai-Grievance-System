@@ -615,6 +615,147 @@ export interface ClaimGrievanceResult {
  * Allows an authenticated field officer to claim ownership of a Pending grievance
  * and move it to "In Progress", preventing duplicate work or silent overwrites.
  */
+/**
+ * Collector Direct Assignment Server Action:
+ * Allows a District Collector / Magistrate to forcefully assign an open grievance to a specific field officer.
+ * Enforces the 1-grievance-at-a-time rule for the target officer.
+ */
+export async function assignOfficerServerAction(
+  complaintId: string,
+  targetOfficer: {
+    officerName: string;
+    officerEmail: string;
+    officerRole: string;
+  }
+): Promise<{ success: boolean; conflict?: boolean; error?: string }> {
+  const ip = await getClientIp();
+  const rateResult = checkRateLimit(ip, "assign_officer", 30, 60000);
+  if (!rateResult.success) {
+    return {
+      success: false,
+      error: `Rate limit exceeded. Please wait ${rateResult.retryAfterSeconds}s.`,
+    };
+  }
+
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Unauthorized: Please log in." };
+  }
+
+  const roleStr = `${session.user.authorityRole || ""} ${session.user.role || ""}`.toLowerCase();
+  const isDistrictHead =
+    roleStr.includes("collector") ||
+    roleStr.includes("magistrate") ||
+    roleStr.includes("commissioner") ||
+    session.user.role === "chief";
+
+  if (!isDistrictHead) {
+    return {
+      success: false,
+      error: "Access Denied: Only District Collector can assign officers to grievances.",
+    };
+  }
+
+  if (!targetOfficer.officerEmail) {
+    return { success: false, error: "Target officer email is required." };
+  }
+
+  // 1. Verify that the target officer is NOT already busy with an active grievance
+  try {
+    const activeRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?status=not.in.(Resolved,Rejected)&select=id,subject,description,status&limit=100`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (activeRes.ok) {
+      const openRows = (await activeRes.json()) as OpenComplaintSummary[];
+      const existingActive = findOfficerActiveClaim(targetOfficer.officerEmail, openRows);
+      if (existingActive && existingActive.id !== complaintId) {
+        return {
+          success: false,
+          conflict: true,
+          error: `⚠️ ${targetOfficer.officerName} already has an active grievance (#${existingActive.id} — "${existingActive.subject}"). Cannot assign another until it is resolved.`,
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Target officer active claim check error:", err);
+  }
+
+  // 2. Fetch current complaint description
+  let existingDesc = "";
+  try {
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(complaintId)}&select=status,description`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (checkRes.ok) {
+      const rows = await checkRes.json();
+      if (rows && rows.length > 0) {
+        existingDesc = (rows[0].description as string) || "";
+        const currentStatus = rows[0].status as string;
+        if (currentStatus === "Resolved" || currentStatus === "Rejected") {
+          return {
+            success: false,
+            conflict: true,
+            error: `⚠️ This grievance is already ${currentStatus}.`,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Fetch complaint for assignment error:", err);
+  }
+
+  const now = new Date().toISOString();
+  const claimPayload = {
+    officerName: targetOfficer.officerName,
+    officerEmail: targetOfficer.officerEmail,
+    officerRole: targetOfficer.officerRole,
+    assignedBy: session.user.username || "District Collector",
+    claimedAt: now,
+  };
+
+  const baseDesc = existingDesc.replace(/\n\n\[CLAIMED_BY:[\s\S]*?\]/g, "").trim();
+  const updatedDescription = `${baseDesc}\n\n[CLAIMED_BY:${JSON.stringify(claimPayload)}]`;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(complaintId)}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        status: "In Progress",
+        description: updatedDescription,
+        updated_at: now,
+      }),
+    });
+
+    if (res.ok) {
+      return { success: true };
+    }
+  } catch (err) {
+    console.error("Error assigning complaint to officer:", err);
+  }
+
+  return { success: false, error: "Database error while assigning officer." };
+}
+
 export async function claimComplaintServerAction(id: string): Promise<ClaimGrievanceResult> {
   const ip = await getClientIp();
   const rateResult = checkRateLimit(ip, "claim_complaint", 30, 60000);
