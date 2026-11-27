@@ -2373,15 +2373,15 @@ export default function AdminDashboard() {
                                                     }
                                                 }}
                                                 style={{
-                                                    width: "26px",
+                                                    width: "34px",
                                                     background: "rgba(0, 0, 0, 0.35)",
                                                     border: "1px solid rgba(251, 191, 36, 0.45)",
                                                     borderRadius: "6px",
                                                     color: "#ffffff",
-                                                    fontSize: "0.78rem",
+                                                    fontSize: "0.8rem",
                                                     fontWeight: "900",
                                                     textAlign: "center",
-                                                    padding: "0.12rem 0",
+                                                    padding: "0.15rem 0.2rem",
                                                     outline: "none",
                                                 }}
                                             />
