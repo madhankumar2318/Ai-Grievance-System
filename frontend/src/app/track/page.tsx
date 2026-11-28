@@ -354,7 +354,7 @@ export default function TrackPage() {
     const progress = timeline.length > 0 ? Math.round((doneCount / timeline.length) * 100) : 0;
 
     return (
-        <main className="container section animate-fade-in" style={{ maxWidth: "100%", overflowX: "hidden" }}>
+        <main className="container section animate-fade-in" style={{ maxWidth: "100%", overflowX: "hidden", paddingLeft: "1rem", paddingRight: "1rem", boxSizing: "border-box" }}>
 
             {/* ── Header ── */}
             <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
@@ -466,25 +466,31 @@ export default function TrackPage() {
             {complaint && (
                 <div className="animate-fade-in" style={{
                     maxWidth: "700px", margin: "0 auto",
-                    display: "flex", flexDirection: "column", gap: "1.5rem",
+                    width: "100%",
+                    display: "flex", flexDirection: "column", gap: "1.25rem",
+                    boxSizing: "border-box",
                 }}>
 
                     {/* Summary Card */}
                     <div className="glass" style={{
-                        padding: "2rem", borderRadius: "1.5rem",
+                        padding: "1.25rem 1.15rem",
+                        borderRadius: "1rem",
                         borderLeft: `4px solid ${STATUS_COLORS[complaint.status] ?? "#6366f1"}`,
+                        boxSizing: "border-box",
+                        width: "100%",
+                        overflow: "hidden",
                     }}>
                         {/* Top Header Row with ID, Subject, and Status/Priority Badges */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap", marginBottom: "0.85rem" }}>
-                            <div style={{ flex: "1 1 280px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.85rem" }}>
+                            <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                                 <div style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
                                     {complaint.id}
                                 </div>
-                                <h2 style={{ fontSize: "1.4rem", margin: 0, lineHeight: 1.3 }}>{complaint.subject}</h2>
+                                <h2 style={{ fontSize: "clamp(1.15rem, 3.5vw, 1.4rem)", margin: 0, lineHeight: 1.3, wordBreak: "break-word" }}>{complaint.subject}</h2>
                             </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                                 <span style={{
-                                    padding: "0.35rem 0.9rem", borderRadius: "99px", fontSize: "0.8rem", fontWeight: "700",
+                                    padding: "0.3rem 0.75rem", borderRadius: "99px", fontSize: "0.78rem", fontWeight: "700",
                                     background: `${STATUS_COLORS[complaint.status] ?? "#6366f1"}22`,
                                     color: STATUS_COLORS[complaint.status] ?? "#6366f1",
                                     border: `1px solid ${STATUS_COLORS[complaint.status] ?? "#6366f1"}44`,
@@ -493,7 +499,7 @@ export default function TrackPage() {
                                     ● {complaint.status}
                                 </span>
                                 <span style={{
-                                    padding: "0.35rem 0.9rem", borderRadius: "99px", fontSize: "0.8rem", fontWeight: "700",
+                                    padding: "0.3rem 0.75rem", borderRadius: "99px", fontSize: "0.78rem", fontWeight: "700",
                                     background: `${PRIORITY_COLORS[complaint.priority] ?? "#f59e0b"}22`,
                                     color: PRIORITY_COLORS[complaint.priority] ?? "#f59e0b",
                                     border: `1px solid ${PRIORITY_COLORS[complaint.priority] ?? "#f59e0b"}44`,
@@ -623,7 +629,7 @@ export default function TrackPage() {
                     </div>
 
                     {/* Timeline */}
-                    <div className="glass" style={{ padding: "2rem", borderRadius: "1.5rem" }}>
+                    <div className="glass" style={{ padding: "1.25rem 1.15rem", borderRadius: "1rem", boxSizing: "border-box", width: "100%", overflow: "hidden" }}>
                         <h3 style={{ marginBottom: "1.75rem" }}>{t("track_timeline")}</h3>
                         <div style={{ position: "relative" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: "0" }}>
@@ -753,11 +759,14 @@ export default function TrackPage() {
                         if (atrData) {
                             return (
                                 <div className="glass animate-fade-in" style={{
-                                    padding: "2rem",
-                                    borderRadius: "1.5rem",
+                                    padding: "1.25rem 1.15rem",
+                                    borderRadius: "1rem",
                                     border: "1.5px solid rgba(16, 185, 129, 0.4)",
                                     background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.04))",
                                     boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+                                    boxSizing: "border-box",
+                                    width: "100%",
+                                    overflow: "hidden",
                                 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
                                         <div>
@@ -926,7 +935,7 @@ export default function TrackPage() {
 
                         // Fallback to slider if legacy complaint without ATR
                         return (
-                            <div className="glass animate-fade-in" style={{ padding: "2rem", borderRadius: "1.5rem" }}>
+                            <div className="glass animate-fade-in" style={{ padding: "1.25rem 1.15rem", borderRadius: "1rem", boxSizing: "border-box", width: "100%", overflow: "hidden" }}>
                                 <BeforeAfterSlider
                                     complaintCategory={complaint.category}
                                     title="📸 Resolution Evidence"
