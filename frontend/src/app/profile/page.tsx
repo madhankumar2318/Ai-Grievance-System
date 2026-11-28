@@ -454,26 +454,6 @@ export default function ProfilePage() {
                                                 {profileData.workingPlace || `${profileData.district} City Corporation`}
                                             </div>
                                         </div>
-
-                                        {/* 7. Civic Verification Tier */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                🛡️ {t("profile_civic_tier")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
-                                                {t("profile_civic_tier_val")}
-                                            </div>
-                                        </div>
-
-                                        {/* 8. Account Status */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                🔐 {t("profile_account_status")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
-                                                {t("profile_active_citizen")}
-                                            </div>
-                                        </div>
                                     </>
                                 )}
                             </div>
