@@ -354,38 +354,53 @@ export default function TrackPage() {
     const progress = timeline.length > 0 ? Math.round((doneCount / timeline.length) * 100) : 0;
 
     return (
-        <main className="container section animate-fade-in">
+        <main className="container section animate-fade-in" style={{ maxWidth: "100%", overflowX: "hidden" }}>
 
             {/* ── Header ── */}
-            <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+            <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
                 <div style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    width: "72px", height: "72px", borderRadius: "20px",
+                    width: "68px", height: "68px", borderRadius: "18px",
                     background: "var(--grad-primary)",
-                    fontSize: "2rem", marginBottom: "1.25rem",
+                    fontSize: "1.85rem", marginBottom: "1rem",
                     boxShadow: "0 8px 32px var(--primary-glow)",
                     animation: "float 5s ease-in-out infinite",
                 }}>🔍</div>
-                <h1 style={{ fontSize: "clamp(2rem, 5vw, 3rem)", marginBottom: "0.75rem" }}>
+                <h1 style={{ fontSize: "clamp(1.85rem, 5vw, 3rem)", marginBottom: "0.75rem" }}>
                     {t("track_title").split(" ").slice(0, -1).join(" ")}{" "}
                     <span className="gradient-text">{t("track_title").split(" ").slice(-1)}</span>
                 </h1>
-                <p style={{ color: "var(--text-muted)", fontSize: "1.1rem" }}>
+                <p style={{ color: "var(--text-muted)", fontSize: "1rem", maxWidth: "480px", margin: "0 auto" }}>
                     {t("track_subtitle")}
                 </p>
             </div>
 
             {/* ── Search Box ── */}
-            <div style={{ maxWidth: "580px", margin: "0 auto 3rem" }}>
-                <form onSubmit={handleSearch} style={{ display: "flex", gap: "0.75rem" }}>
+            <div style={{ maxWidth: "580px", margin: "0 auto 3rem", width: "100%", boxSizing: "border-box" }}>
+                <form
+                    onSubmit={handleSearch}
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        width: "100%",
+                        boxSizing: "border-box",
+                    }}
+                >
                     <input
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         placeholder={t("track_placeholder")}
                         style={{
-                            flex: 1, fontFamily: "monospace", fontSize: "1.05rem",
-                            letterSpacing: "0.08em", textTransform: "uppercase", height: "52px",
+                            flex: "1 1 0%",
+                            minWidth: 0,
+                            fontFamily: "monospace",
+                            fontSize: "0.95rem",
+                            letterSpacing: "0.05em",
+                            textTransform: "uppercase",
+                            height: "50px",
+                            boxSizing: "border-box",
                         }}
                     />
                     <button
@@ -393,9 +408,16 @@ export default function TrackPage() {
                         className="btn btn-primary"
                         type="submit"
                         style={{
-                            flexShrink: 0, padding: "0 1.75rem", height: "52px",
-                            fontSize: "1rem", borderRadius: "0.75rem",
-                            opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer",
+                            flexShrink: 0,
+                            padding: "0 1.25rem",
+                            height: "50px",
+                            fontSize: "0.92rem",
+                            fontWeight: "700",
+                            borderRadius: "0.75rem",
+                            whiteSpace: "nowrap",
+                            opacity: loading ? 0.7 : 1,
+                            cursor: loading ? "not-allowed" : "pointer",
+                            boxSizing: "border-box",
                         }}
                     >
                         {loading ? "⏳" : t("track_btn")}
