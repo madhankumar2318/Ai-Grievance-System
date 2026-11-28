@@ -615,10 +615,11 @@ function NavbarContent() {
                                             </div>
                                         </div>
 
-                                        {/* All Navigation Links */}
+                                        {/* Navigation Links */}
                                         <div style={{ padding: "0.35rem 0", borderBottom: "1px solid var(--border)" }}>
                                             {user.role === "user" && (
                                                 <>
+                                                    {/* My Profile - Visible on Desktop & Mobile */}
                                                     <Link
                                                         href="/profile"
                                                         onClick={() => setShowUserMenu(false)}
@@ -635,11 +636,13 @@ function NavbarContent() {
                                                         <span>{t("nav_my_profile")}</span>
                                                     </Link>
 
+                                                    {/* Mobile-only Navigation Options */}
                                                     <Link
                                                         href="/"
+                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/" ? "700" : "600",
                                                             color: pathname === "/" ? "var(--primary)" : "var(--text-main)",
@@ -653,9 +656,10 @@ function NavbarContent() {
 
                                                     <Link
                                                         href="/track"
+                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/track" ? "700" : "600",
                                                             color: pathname === "/track" ? "var(--primary)" : "var(--text-main)",
@@ -669,9 +673,10 @@ function NavbarContent() {
 
                                                     <Link
                                                         href="/my-grievances"
+                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/my-grievances" ? "700" : "600",
                                                             color: pathname === "/my-grievances" ? "var(--primary)" : "var(--text-main)",
@@ -705,9 +710,10 @@ function NavbarContent() {
 
                                                     <Link
                                                         href="/admin"
+                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/admin" ? "700" : "600",
                                                             color: pathname === "/admin" ? "var(--primary)" : "var(--text-main)",
@@ -721,9 +727,10 @@ function NavbarContent() {
                                                     {isDistrictHead && (
                                                         <Link
                                                             href="/admin/officers"
+                                                            className="mobile-only-control"
                                                             onClick={() => setShowUserMenu(false)}
                                                             style={{
-                                                                display: "flex", alignItems: "center", gap: "0.6rem",
+                                                                alignItems: "center", gap: "0.6rem",
                                                                 padding: "0.6rem 1rem", textDecoration: "none",
                                                                 fontSize: "0.85rem", fontWeight: pathname === "/admin/officers" ? "700" : "600",
                                                                 color: pathname === "/admin/officers" ? "var(--primary)" : "var(--text-main)",
@@ -758,9 +765,10 @@ function NavbarContent() {
 
                                                     <Link
                                                         href="/chief"
+                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/chief" ? "700" : "600",
                                                             color: pathname === "/chief" ? "var(--primary)" : "var(--text-main)",
