@@ -25,12 +25,12 @@ function getBotReply(rawInput: string): string {
 
     // 2. Strict Off-Topic Guardrail (Domain Boundary Shield)
     if (OFF_TOPIC_REGEX.test(text)) {
-        return "⛔ **Civic Portal Notice:**\nI am the dedicated Civic Grievance Assistant for this portal. I can only answer questions related to:\n• Filing civic grievances (text, voice, photo)\n• Tracking complaints & resolution deadlines (SLAs)\n• Account settings & password management\n• Civic department issues (Water, Roads, Garbage, Streetlights)\n\nPlease ask any question related to our civic portal!";
+        return "⛔ **Civic Portal Notice:**\nI am the dedicated Civic Guide for this portal. I can only answer questions related to:\n• Filing civic grievances (text, voice, photo)\n• Tracking complaints & resolution deadlines (SLAs)\n• Account settings & password management\n• Civic department issues (Water, Roads, Garbage, Streetlights)\n\nPlease ask any question related to our civic portal!";
     }
 
     // 3. Greetings
     if (/^(hi|hello|hey|namaste|vanakkam|good morning|good afternoon|good evening|yo)\b/i.test(text)) {
-        return "👋 **Hello & Welcome!**\nI'm your official Civic Grievance Assistant. I can help you:\n\n• 📝 **File a complaint** using text, voice, or photos\n• 🔍 **Track your grievance** with your GRV-ID\n• ⏱️ **Check resolution deadlines** (24h to 14 days)\n• 🔑 **Change your password** or update your profile\n• 🆘 **Find official emergency helplines**\n\nHow can I help you today? Please type your question below!";
+        return "👋 **Hello & Welcome!**\nI'm your official Civic Guide. I can help you:\n\n• 📝 **File a complaint** using text, voice, or photos\n• 🔍 **Track your grievance** with your GRV-ID\n• ⏱️ **Check resolution deadlines** (24h to 14 days)\n• 🔑 **Change your password** or update your profile\n• 🆘 **Find official emergency helplines**\n\nHow can I help you today? Please type your question below!";
     }
 
     // 4. Filing Complaints & Voice / Photo Features
@@ -197,7 +197,7 @@ export default function ChatbotAssistant() {
                 }}
                 onMouseEnter={(e) => { if (!isOpen) { e.currentTarget.style.transform = "scale(1.12)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(99,102,241,0.7), 0 0 0 6px rgba(99,102,241,0.2)"; } }}
                 onMouseLeave={(e) => { if (!isOpen) { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(99,102,241,0.6), 0 0 0 4px rgba(99,102,241,0.15)"; } }}
-                title="AI Assistant"
+                title="Smart Civic Guide"
             >
                 {isOpen ? "✕" : "🤖"}
                 {hasNew && !isOpen && (
@@ -231,7 +231,7 @@ export default function ChatbotAssistant() {
                             <div style={{ fontWeight: "700", color: "white", fontSize: "0.95rem" }}>{t("chat_title")}</div>
                             <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.85)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
                                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#4ade80", display: "inline-block", boxShadow: "0 0 6px #4ade80", animation: "chatPulse 2s ease-out infinite" }} />
-                                Online · Powered by AI
+                                Online · Instant Answers
                             </div>
                         </div>
                         <button
