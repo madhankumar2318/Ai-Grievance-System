@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useLang } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
 
 interface Message {
     role: "user" | "bot";
@@ -117,6 +119,8 @@ function getBotReply(rawInput: string): string {
 
 export default function ChatbotAssistant() {
     const { t } = useLang();
+    const { user } = useAuth();
+    const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
@@ -142,6 +146,19 @@ export default function ChatbotAssistant() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, isTyping]);
+
+    // The chatbot is strictly a public civic service for citizens.
+    // Completely hide for:
+    // 1. Logged in Field Officers (authority) and District Collectors/Chiefs (chief)
+    // 2. All administrative routes (/admin, /admin/officers, /chief)
+    // 3. Login and authentication pages (/login, /admin-login, /secure-admin-access)
+    const isOfficerOrChief = user?.role === "authority" || user?.role === "chief";
+    const isAdminRoute = pathname?.startsWith("/admin") || pathname?.startsWith("/chief");
+    const isLoginRoute = pathname === "/login" || pathname === "/admin-login" || pathname === "/secure-admin-access";
+
+    if (isOfficerOrChief || isAdminRoute || isLoginRoute) {
+        return null;
+    }
 
     const handleSend = (queryText?: string) => {
         const text = (typeof queryText === "string" ? queryText : input).trim();
