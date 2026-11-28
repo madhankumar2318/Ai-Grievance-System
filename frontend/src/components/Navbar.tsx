@@ -620,6 +620,22 @@ function NavbarContent() {
                                             {user.role === "user" && (
                                                 <>
                                                     <Link
+                                                        href="/profile"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/profile" ? "700" : "600",
+                                                            color: pathname === "/profile" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>👤</span>
+                                                        <span>{t("nav_my_profile")}</span>
+                                                    </Link>
+
+                                                    <Link
                                                         href="/"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
@@ -666,7 +682,11 @@ function NavbarContent() {
                                                         <span>📋</span>
                                                         <span>{t("nav_my_grievances")}</span>
                                                     </Link>
+                                                </>
+                                            )}
 
+                                            {user.role === "authority" && (
+                                                <>
                                                     <Link
                                                         href="/profile"
                                                         onClick={() => setShowUserMenu(false)}
@@ -682,11 +702,7 @@ function NavbarContent() {
                                                         <span>👤</span>
                                                         <span>{t("nav_my_profile")}</span>
                                                     </Link>
-                                                </>
-                                            )}
 
-                                            {user.role === "authority" && (
-                                                <>
                                                     <Link
                                                         href="/admin"
                                                         onClick={() => setShowUserMenu(false)}
@@ -719,6 +735,11 @@ function NavbarContent() {
                                                             <span>{t("nav_district_officers")}</span>
                                                         </Link>
                                                     )}
+                                                </>
+                                            )}
+
+                                            {user.role === "chief" && (
+                                                <>
                                                     <Link
                                                         href="/profile"
                                                         onClick={() => setShowUserMenu(false)}
@@ -734,11 +755,7 @@ function NavbarContent() {
                                                         <span>👤</span>
                                                         <span>{t("nav_my_profile")}</span>
                                                     </Link>
-                                                </>
-                                            )}
 
-                                            {user.role === "chief" && (
-                                                <>
                                                     <Link
                                                         href="/chief"
                                                         onClick={() => setShowUserMenu(false)}
@@ -753,21 +770,6 @@ function NavbarContent() {
                                                     >
                                                         <span>⭐</span>
                                                         <span>{t("nav_chief")}</span>
-                                                    </Link>
-                                                    <Link
-                                                        href="/profile"
-                                                        onClick={() => setShowUserMenu(false)}
-                                                        style={{
-                                                            display: "flex", alignItems: "center", gap: "0.6rem",
-                                                            padding: "0.6rem 1rem", textDecoration: "none",
-                                                            fontSize: "0.85rem", fontWeight: pathname === "/profile" ? "700" : "600",
-                                                            color: pathname === "/profile" ? "var(--primary)" : "var(--text-main)",
-                                                            background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
-                                                            transition: "background 0.15s",
-                                                        }}
-                                                    >
-                                                        <span>👤</span>
-                                                        <span>{t("nav_my_profile")}</span>
                                                     </Link>
                                                 </>
                                             )}
