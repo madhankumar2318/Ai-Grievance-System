@@ -232,14 +232,80 @@ export default function MyGrievancesPage() {
                                 {filteredComplaints.map(c => {
                                     const s = STATUS_STYLES[c.status] || STATUS_STYLES.Pending;
                                     return (
-                                        <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.875rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)", transition: "transform 0.15s ease", gap: "0.75rem" }}>
-                                            <div style={{ minWidth: 0 }}>
-                                                <div style={{ fontWeight: "700", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.subject}</div>
-                                                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "monospace", marginTop: "0.2rem" }}>{c.id} · {c.date}</div>
+                                        <div
+                                            key={c.id}
+                                            style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                padding: "1rem 1.15rem",
+                                                borderRadius: "0.85rem",
+                                                background: "var(--bg-main)",
+                                                border: "1px solid var(--border)",
+                                                transition: "all 0.2s ease",
+                                                gap: "0.65rem",
+                                            }}
+                                        >
+                                            {/* Top Row: Subject & Status */}
+                                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "0.75rem" }}>
+                                                <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "var(--text-main)", lineHeight: "1.4" }}>
+                                                    {c.subject}
+                                                </div>
+                                                <span
+                                                    style={{
+                                                        padding: "0.25rem 0.65rem",
+                                                        borderRadius: "99px",
+                                                        background: s.bg,
+                                                        color: s.color,
+                                                        fontSize: "0.72rem",
+                                                        fontWeight: "800",
+                                                        flexShrink: 0,
+                                                        border: `1px solid ${s.color}30`,
+                                                    }}
+                                                >
+                                                    {c.status}
+                                                </span>
                                             </div>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
-                                                <span style={{ padding: "0.25rem 0.6rem", borderRadius: "99px", background: s.bg, color: s.color, fontSize: "0.7rem", fontWeight: "700" }}>{c.status}</span>
-                                                <Link href={`/track?id=${c.id}`} style={{ fontSize: "0.75rem", color: "#ec4899", fontWeight: "700", textDecoration: "none" }}>{t("profile_track_btn")}</Link>
+
+                                            {/* Bottom Row: Grievance ID, Date on the same line, and Track button */}
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "space-between",
+                                                    flexWrap: "wrap",
+                                                    gap: "0.5rem",
+                                                    paddingTop: "0.5rem",
+                                                    borderTop: "1px solid rgba(255, 255, 255, 0.05)",
+                                                    fontSize: "0.75rem",
+                                                }}
+                                            >
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--text-muted)", flexWrap: "wrap" }}>
+                                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", whiteSpace: "nowrap" }}>
+                                                        <span>🆔</span>
+                                                        <span style={{ fontFamily: "monospace", color: "var(--text-main)", fontWeight: "700" }}>{c.id}</span>
+                                                    </span>
+                                                    <span style={{ opacity: 0.5 }}>•</span>
+                                                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", whiteSpace: "nowrap" }}>
+                                                        <span>📅</span>
+                                                        <span>{c.date}</span>
+                                                    </span>
+                                                </div>
+
+                                                <Link
+                                                    href={`/track?id=${c.id}`}
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "0.25rem",
+                                                        fontSize: "0.78rem",
+                                                        color: "#ec4899",
+                                                        fontWeight: "700",
+                                                        textDecoration: "none",
+                                                        transition: "opacity 0.2s ease",
+                                                    }}
+                                                >
+                                                    <span>{t("profile_track_btn")}</span>
+                                                </Link>
                                             </div>
                                         </div>
                                     );
