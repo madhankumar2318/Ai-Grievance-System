@@ -429,6 +429,7 @@ export default function LoginPage() {
                     role: res.user.role as UserRole,
                     state: res.user.state,
                     district: res.user.district,
+                    pincode: res.user.pincode,
                     authorityRole: res.user.authorityRole,
                     serviceId: res.user.serviceId,
                     workingPlace: res.user.workingPlace,

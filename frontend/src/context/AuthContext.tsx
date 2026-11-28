@@ -12,6 +12,7 @@ export interface AuthUser {
     role: UserRole;
     state?: string;
     district?: string;
+    pincode?: string;
     authorityRole?: string;
     serviceId?: string;
     workingPlace?: string;

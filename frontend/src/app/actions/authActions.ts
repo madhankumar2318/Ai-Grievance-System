@@ -42,7 +42,7 @@ function base64urlEncodeBytes(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64url");
 }
 
-export async function signJWT(payload: { email: string; username: string; role: string; state?: string; district?: string }): Promise<string> {
+export async function signJWT(payload: { email: string; username: string; role: string; state?: string; district?: string; pincode?: string }): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const encodedHeader = base64urlEncode(JSON.stringify(header));
   const now = Math.floor(Date.now() / 1000);
@@ -76,6 +76,7 @@ async function setAuthCookie(user: {
   role: string;
   state?: string;
   district?: string;
+  pincode?: string;
   authorityRole?: string;
   serviceId?: string;
   workingPlace?: string;
@@ -125,6 +126,7 @@ export async function registerUserServerAction(params: RegisterUserParams): Prom
     role: string;
     state?: string;
     district?: string;
+    pincode?: string;
     authorityRole?: string;
     serviceId?: string;
     workingPlace?: string;
@@ -358,6 +360,7 @@ export async function loginUserServerAction(credentials: {
     role: string;
     state?: string;
     district?: string;
+    pincode?: string;
     authorityRole?: string;
     serviceId?: string;
     workingPlace?: string;
@@ -388,6 +391,7 @@ export async function loginUserServerAction(credentials: {
     role: string;
     state?: string;
     district?: string;
+    pincode?: string;
     authorityRole?: string;
     serviceId?: string;
     workingPlace?: string;
@@ -496,6 +500,7 @@ export async function loginUserServerAction(credentials: {
             role: user.role,
             state: user.state || "Tamil Nadu",
             district: user.district || (role === "chief" ? "All 38 Districts" : "Tiruchirappalli"),
+            pincode: user.pincode || undefined,
             authorityRole: user.authority_role || (role === "authority" ? "Public Grievance Redressal Officer" : undefined),
             serviceId: user.service_id || (role === "authority" ? "TN-AUTH-2024-8841" : undefined),
             workingPlace: user.working_place || (role === "authority" ? `${user.district || "Tiruchirappalli"} Municipal Administration Office` : undefined),
@@ -541,6 +546,7 @@ export async function getVerifiedSessionServerAction(): Promise<{
     role: "user" | "authority" | "chief";
     state?: string;
     district?: string;
+    pincode?: string;
     authorityRole?: string;
     serviceId?: string;
     workingPlace?: string;
@@ -591,6 +597,7 @@ export async function getVerifiedSessionServerAction(): Promise<{
         role: payload.role,
         state: payload.state || "Tamil Nadu",
         district: payload.district || (payload.role === "chief" ? "All 38 Districts" : undefined),
+        pincode: payload.pincode || undefined,
         authorityRole: payload.authorityRole || undefined,
         serviceId: payload.serviceId || undefined,
         workingPlace: payload.workingPlace || undefined,
@@ -683,6 +690,7 @@ export async function getFullUserProfileServerAction(): Promise<{
             phone: u.phone || session.user.phone,
             state: u.state || session.user.state,
             district: u.district || session.user.district,
+            pincode: u.pincode || session.user.pincode,
             department: u.department || session.user.department,
             authorityRole: u.authority_role || session.user.authorityRole,
             serviceId: u.service_id || session.user.serviceId,
@@ -704,7 +712,9 @@ export async function getFullUserProfileServerAction(): Promise<{
 export async function updateUserProfileServerAction(data: {
   username?: string;
   phone?: string;
+  district?: string;
   workingPlace?: string;
+  pincode?: string;
 }): Promise<{ success: boolean; user?: any; error?: string }> {
   const session = await getVerifiedSessionServerAction();
   if (!session.authenticated || !session.user) {
@@ -717,6 +727,7 @@ export async function updateUserProfileServerAction(data: {
   const safeUsername = typeof data.username === "string" ? data.username.trim().slice(0, 100) : undefined;
   const safePhone = typeof data.phone === "string" ? data.phone.trim().slice(0, 30) : undefined;
   const safeWorkingPlace = typeof data.workingPlace === "string" ? data.workingPlace.trim().slice(0, 160) : undefined;
+  const safePincode = typeof data.pincode === "string" ? data.pincode.replace(/[^0-9\s]/g, "").trim().slice(0, 10) : undefined;
 
   try {
     await fetch(
@@ -733,6 +744,7 @@ export async function updateUserProfileServerAction(data: {
           ...(safeUsername && { username: safeUsername }),
           ...(safePhone && { phone: safePhone }),
           ...(safeWorkingPlace && { working_place: safeWorkingPlace }),
+          ...(safePincode && { pincode: safePincode }),
         }),
       }
     );
@@ -745,6 +757,7 @@ export async function updateUserProfileServerAction(data: {
     ...(safeUsername && { username: safeUsername }),
     ...(safePhone && { phone: safePhone }),
     ...(safeWorkingPlace && { workingPlace: safeWorkingPlace }),
+    ...(safePincode && { pincode: safePincode }),
   };
   await setAuthCookie(updatedUser);
   return { success: true, user: updatedUser };
