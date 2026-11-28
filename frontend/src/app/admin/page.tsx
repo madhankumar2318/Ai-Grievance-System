@@ -1716,12 +1716,13 @@ export default function AdminDashboard() {
                                                                                     </div>
 
                                                                                     {freeCandidates.length > 0 ? (
-                                                                                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                                                                                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                                                                                             <select
                                                                                                 value={selectedEmail}
                                                                                                 onChange={e => setSelectedAssignOfficer(prev => ({ ...prev, [c.id]: e.target.value }))}
                                                                                                 style={{
-                                                                                                    flex: 1,
+                                                                                                    flex: "1 1 200px",
+                                                                                                    minWidth: "160px",
                                                                                                     padding: "0.45rem 0.65rem",
                                                                                                     borderRadius: "0.5rem",
                                                                                                     background: "#0f172a",
@@ -1742,6 +1743,7 @@ export default function AdminDashboard() {
                                                                                                 disabled={assigningComplaintId === c.id || !selectedEmail}
                                                                                                 onClick={() => handleAssignOfficer(c.id, selectedEmail)}
                                                                                                 style={{
+                                                                                                    flex: "0 0 auto",
                                                                                                     padding: "0.45rem 0.85rem",
                                                                                                     borderRadius: "0.5rem",
                                                                                                     background: "linear-gradient(135deg, #10b981, #059669)",

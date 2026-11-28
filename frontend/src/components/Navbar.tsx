@@ -57,14 +57,60 @@ export default function Navbar() {
         }
 
         if (user?.role === "authority") {
+            // Check session/local storage for assigned grievances to this officer
+            let myClaimCount = 0;
+            let recentClaimSubject = "";
+            let assignedByCollector = false;
+            let assignedGrievanceId = "";
+
+            if (typeof window !== "undefined") {
+                try {
+                    const cachedComplaints = JSON.parse(sessionStorage.getItem("cached_admin_complaints") || "[]");
+                    if (Array.isArray(cachedComplaints)) {
+                        for (const c of cachedComplaints) {
+                            if (c.status === "In Progress" && c.description && c.description.includes("[CLAIMED_BY:")) {
+                                const claimMatch = c.description.match(/\[CLAIMED_BY:([\s\S]*?)\]/);
+                                if (claimMatch) {
+                                    try {
+                                        const parsed = JSON.parse(claimMatch[1]);
+                                        if (parsed?.officerEmail?.toLowerCase() === user.email?.toLowerCase()) {
+                                            myClaimCount++;
+                                            if (!recentClaimSubject) {
+                                                recentClaimSubject = c.subject || "Assigned Grievance";
+                                                assignedGrievanceId = c.id;
+                                                assignedByCollector = Boolean(parsed?.assignedBy);
+                                            }
+                                        }
+                                    } catch {}
+                                }
+                            }
+                        }
+                    }
+                } catch {}
+            }
+
+            if (myClaimCount > 0) {
+                notifs.push({
+                    id: "auth-assignment",
+                    title: assignedByCollector ? "🏛️ Collector Mandate Assignment" : "📌 Active Grievance In Progress",
+                    message: assignedByCollector
+                        ? `District Collector assigned #${assignedGrievanceId} ("${recentClaimSubject}") to you. Resolve promptly.`
+                        : `You have #${assignedGrievanceId} ("${recentClaimSubject}") currently locked in your active queue.`,
+                    time: "Active",
+                    icon: assignedByCollector ? "🏛️" : "⚡",
+                    link: "/admin",
+                    unread: true,
+                });
+            }
+
             notifs.push({
                 id: "auth-district",
                 title: "🛡️ District Queue Active",
-                message: `Assigned to ${user.district || "Tiruppur"} District queue. New complaints will appear automatically.`,
+                message: `Assigned to ${user.district || "Tiruchirappalli"} District queue. New complaints will appear automatically.`,
                 time: "Live",
                 icon: "🏛️",
                 link: "/admin",
-                unread: true,
+                unread: myClaimCount === 0,
             });
             notifs.push({
                 id: "auth-triage",

@@ -103,10 +103,22 @@ function buildTimeline(c: Record<string, string>) {
         ];
     }
     if (c.status === "In Progress") {
+        const claimMatch = (c.description || "").match(/\[CLAIMED_BY:([\s\S]*?)\]/);
+        let assignedNote = "Assigned to department field officer.";
+        if (claimMatch) {
+            try {
+                const claim = JSON.parse(claimMatch[1]);
+                if (claim?.assignedBy) {
+                    assignedNote = `Assigned by ${claim.assignedBy} to ${claim.officerName} (${claim.officerRole || "Field Officer"}).`;
+                } else if (claim?.officerName) {
+                    assignedNote = `Claimed by ${claim.officerName} (${claim.officerRole || "Field Officer"}).`;
+                }
+            } catch {}
+        }
         return [
             ...base,
-            { stage: "Assigned", time: createdAt, done: true, note: "Assigned to field officer." },
-            { stage: "In Progress", time: updatedAt, done: true, note: "Field team deployed. Work in progress." },
+            { stage: "Assigned", time: createdAt, done: true, note: assignedNote },
+            { stage: "In Progress", time: updatedAt, done: true, note: "Field team deployed. Work actively in progress." },
             { stage: "Resolved", time: "", done: false, note: "" },
         ];
     }
@@ -487,6 +499,20 @@ export default function TrackPage() {
                             <span>📍 {complaint.location}</span>
                             <span>📅 {complaint.date}</span>
                             <span>👤 {complaint.user}</span>
+                            {(() => {
+                                const claimMatch = (complaint.description || "").match(/\[CLAIMED_BY:([\s\S]*?)\]/);
+                                if (claimMatch) {
+                                    try {
+                                        const cl = JSON.parse(claimMatch[1]);
+                                        return (
+                                            <span style={{ color: "#34d399", fontWeight: "700" }}>
+                                                👮 Officer: {cl.officerName} ({cl.officerRole || "Assigned Officer"})
+                                            </span>
+                                        );
+                                    } catch {}
+                                }
+                                return null;
+                            })()}
                         </div>
 
                         {/* Progress bar */}
