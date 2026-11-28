@@ -264,9 +264,10 @@ function ProfileContent() {
                                     borderRadius: "0.6rem",
                                     fontSize: "0.82rem",
                                     fontWeight: "700",
-                                    background: "rgba(255, 255, 255, 0.05)",
-                                    color: "var(--text-main)",
-                                    border: "1px solid var(--border)",
+                                    background: "rgba(245, 158, 11, 0.12)",
+                                    color: "#fbbf24",
+                                    border: "1px solid rgba(245, 158, 11, 0.35)",
+                                    boxShadow: "0 2px 10px rgba(245, 158, 11, 0.12)",
                                     cursor: "pointer",
                                     transition: "all 0.2s ease",
                                 }}
@@ -682,10 +683,33 @@ function ProfileContent() {
                                         </div>
 
                                         <div>
-                                            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                <span>📧 {t("profile_email")}</span>
-                                                <span style={{ fontSize: "0.68rem", color: "#fbbf24" }}>🔒 {lang === "ta" ? "சரிபார்க்கப்பட்டது & பூட்டப்பட்டது" : "Verified & Locked"}</span>
-                                            </label>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
+                                                <label style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", margin: 0 }}>
+                                                    <span>📧 {t("profile_email")}</span>
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowEditModal(false);
+                                                        handleOpenChangePw();
+                                                    }}
+                                                    style={{
+                                                        background: "rgba(245, 158, 11, 0.12)",
+                                                        border: "1px solid rgba(245, 158, 11, 0.35)",
+                                                        borderRadius: "0.4rem",
+                                                        color: "#fbbf24",
+                                                        fontSize: "0.72rem",
+                                                        fontWeight: "700",
+                                                        cursor: "pointer",
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "0.25rem",
+                                                        padding: "0.2rem 0.55rem",
+                                                    }}
+                                                >
+                                                    🔑 {t("profile_change_pw")}
+                                                </button>
+                                            </div>
                                             <input
                                                 type="text"
                                                 disabled
