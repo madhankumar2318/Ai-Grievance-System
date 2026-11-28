@@ -4,7 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { getUserComplaintsServerAction } from "@/app/actions/complaintActions";
 import { getFullUserProfileServerAction, updateUserProfileServerAction } from "@/app/actions/authActions";
 import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
@@ -40,9 +41,23 @@ function getDepartmentForRole(roleStr: string): string {
     return "District Administration";
 }
 
-export default function ProfilePage() {
+function ProfileContent() {
     const { user, login } = useAuth();
     const { lang, t } = useLang();
+    const searchParams = useSearchParams();
+
+    const tabParam = searchParams?.get("tab");
+    const [activeTab, setActiveTab] = useState<"profile" | "grievances">(tabParam === "profile" ? "profile" : "grievances");
+    const [statusFilter, setStatusFilter] = useState<string>("All");
+
+    useEffect(() => {
+        const current = searchParams?.get("tab");
+        if (current === "profile") {
+            setActiveTab("profile");
+        } else if (current === "grievances") {
+            setActiveTab("grievances");
+        }
+    }, [searchParams]);
 
     const [profileData, setProfileData] = useState(() => {
         const initRole = user?.authorityRole || (user?.role === "authority" ? "Environment Protection Officer" : user?.role === "chief" ? "Chief Commissioner" : "Verified Citizen Resident");
@@ -59,15 +74,6 @@ export default function ProfilePage() {
             phone: user?.phone || "+91 94432 00000",
             department: initDept,
         };
-    });
-
-    const [joinedDate] = useState(() => {
-        if (typeof window === "undefined") return "Active Officer";
-        try {
-            const users = JSON.parse(localStorage.getItem("gs_registered_users") || "[]");
-            const found = users.find((u: { email: string }) => (u.email || "").toLowerCase() === (user?.email || "").toLowerCase());
-            return found ? new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "Active Member";
-        } catch { return "Active Member"; }
     });
 
     // Complaints lists & stats
@@ -119,7 +125,7 @@ export default function ProfilePage() {
             }
         });
 
-        // 2. Fetch complaints data depending on role (with instant sessionStorage cache)
+        // 2. Fetch complaints data (with instant sessionStorage cache)
         if (user.role === "user") {
             const cacheKey = `gs_profile_complaints_${user.email.toLowerCase()}`;
             let hasCache = false;
@@ -160,10 +166,15 @@ export default function ProfilePage() {
     }, [user?.email, user?.role, user?.district]);
 
     if (!user) return null;
-    const cfg = ROLE_CONFIG[user.role];
+    const cfg = ROLE_CONFIG[user.role] || ROLE_CONFIG.user;
 
     const resolved = complaints.filter(c => c.status === "Resolved").length;
     const pending = complaints.filter(c => c.status === "Pending").length;
+    const inProgress = complaints.filter(c => c.status === "In Progress").length;
+
+    const filteredComplaints = statusFilter === "All"
+        ? complaints
+        : complaints.filter(c => c.status === statusFilter);
 
     const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
         Resolved: { bg: "#10b98118", color: "#10b981" },
@@ -214,287 +225,527 @@ export default function ProfilePage() {
             <main style={{ minHeight: "100vh", padding: "2rem 1rem" }}>
                 <div className="container" style={{ maxWidth: "780px", margin: "0 auto" }}>
 
-                    {/* Back button */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-                        <Link href={user.role === "user" ? "/" : user.role === "authority" ? "/admin" : "/chief"}
+                    {/* Top Row: Back button + Dynamic Action Button */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                        <Link
+                            href={user.role === "user" ? "/" : user.role === "authority" ? "/admin" : "/chief"}
                             style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: "0.875rem", color: "var(--text-muted)", textDecoration: "none", fontWeight: "600" }}
                         >
                             {user.role === "authority" ? t("profile_back_authority") : user.role === "chief" ? t("profile_back_chief") : t("profile_back_citizen")}
                         </Link>
 
-                        <button
-                            onClick={handleOpenEdit}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.4rem",
-                                padding: "0.45rem 1rem",
-                                borderRadius: "0.6rem",
-                                fontSize: "0.82rem",
-                                fontWeight: "700",
-                                background: `${cfg.color}15`,
-                                color: cfg.color,
-                                border: `1px solid ${cfg.color}35`,
-                                cursor: "pointer",
-                                transition: "all 0.2s ease",
-                            }}
-                        >
-                            <span>{t("profile_edit_btn")}</span>
-                        </button>
+                        {user.role === "user" && activeTab === "grievances" ? (
+                            <Link
+                                href="/"
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.4rem",
+                                    padding: "0.45rem 1rem",
+                                    borderRadius: "0.6rem",
+                                    fontSize: "0.82rem",
+                                    fontWeight: "700",
+                                    background: "linear-gradient(135deg, #ec4899, #f43f5e)",
+                                    color: "white",
+                                    textDecoration: "none",
+                                    boxShadow: "0 4px 12px rgba(236,72,153,0.3)",
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                <span>+ {t("btn_new_complaint")}</span>
+                            </Link>
+                        ) : (
+                            <button
+                                onClick={handleOpenEdit}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.4rem",
+                                    padding: "0.45rem 1rem",
+                                    borderRadius: "0.6rem",
+                                    fontSize: "0.82rem",
+                                    fontWeight: "700",
+                                    background: `${cfg.color}15`,
+                                    color: cfg.color,
+                                    border: `1px solid ${cfg.color}35`,
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                <span>{t("profile_edit_btn")}</span>
+                            </button>
+                        )}
                     </div>
 
-                    {/* ── Main Profile Card ── */}
-                    <div className="glass animate-slide-up" style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-lg)", marginBottom: "1.5rem" }}>
-
-                        {/* Banner */}
-                        <div style={{ height: "130px", background: cfg.gradient, position: "relative" }}>
-                            <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
-                            
-                        </div>
-
-                        {/* Avatar + Primary Identification */}
-                        <div style={{ padding: "0 1.25rem 1.75rem", position: "relative" }}>
-                            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
-                                <div style={{
-                                    width: "88px",
-                                    height: "88px",
-                                    minWidth: "88px",
-                                    minHeight: "88px",
-                                    maxWidth: "88px",
-                                    maxHeight: "88px",
-                                    aspectRatio: "1 / 1",
-                                    flexShrink: 0,
-                                    borderRadius: "50%",
-                                    background: cfg.gradient,
-                                    border: "4px solid var(--bg-card)",
-                                    marginTop: "-44px",
+                    {/* Citizen Mode: Dual-Tab Pill Switcher */}
+                    {user.role === "user" && (
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            background: "var(--bg-card)",
+                            padding: "0.4rem",
+                            borderRadius: "0.85rem",
+                            border: "1px solid var(--border)",
+                            marginBottom: "1.5rem",
+                        }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab("profile");
+                                    if (typeof window !== "undefined") {
+                                        window.history.replaceState(null, "", "/profile?tab=profile");
+                                    }
+                                }}
+                                style={{
+                                    flex: 1,
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    fontSize: "1.75rem",
-                                    fontWeight: "900",
-                                    color: "white",
-                                    boxShadow: `0 8px 24px ${cfg.color}44`,
-                                    padding: 0,
-                                    boxSizing: "border-box",
+                                    gap: "0.5rem",
+                                    padding: "0.75rem 1rem",
+                                    borderRadius: "0.6rem",
+                                    fontSize: "0.88rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    border: activeTab === "profile" ? "1px solid rgba(99,102,241,0.5)" : "1px solid transparent",
+                                    background: activeTab === "profile" ? "linear-gradient(135deg, #6366f1, #8b5cf6)" : "transparent",
+                                    color: activeTab === "profile" ? "#ffffff" : "var(--text-muted)",
+                                    boxShadow: activeTab === "profile" ? "0 4px 14px rgba(99,102,241,0.3)" : "none",
+                                }}
+                            >
+                                <span>👤</span>
+                                <span>{t("tab_profile")}</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab("grievances");
+                                    if (typeof window !== "undefined") {
+                                        window.history.replaceState(null, "", "/profile?tab=grievances");
+                                    }
+                                }}
+                                style={{
+                                    flex: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "0.5rem",
+                                    padding: "0.75rem 1rem",
+                                    borderRadius: "0.6rem",
+                                    fontSize: "0.88rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    border: activeTab === "grievances" ? "1px solid rgba(236,72,153,0.5)" : "1px solid transparent",
+                                    background: activeTab === "grievances" ? "linear-gradient(135deg, #ec4899, #f43f5e)" : "transparent",
+                                    color: activeTab === "grievances" ? "#ffffff" : "var(--text-muted)",
+                                    boxShadow: activeTab === "grievances" ? "0 4px 14px rgba(236,72,153,0.3)" : "none",
+                                }}
+                            >
+                                <span>📋</span>
+                                <span>{t("tab_grievances")}</span>
+                                <span style={{
+                                    fontSize: "0.72rem",
+                                    padding: "0.15rem 0.55rem",
+                                    borderRadius: "99px",
+                                    background: activeTab === "grievances" ? "rgba(255,255,255,0.25)" : "var(--bg-main)",
+                                    color: activeTab === "grievances" ? "#ffffff" : "var(--text-muted)",
+                                    fontWeight: "800",
                                 }}>
-                                    {getInitials(profileData.username)}
-                                </div>
-                                <div style={{ display: "flex", gap: "0.4rem", paddingBottom: "0.2rem", flexWrap: "wrap" }}>
-                                    <span style={{ padding: "0.3rem 0.75rem", borderRadius: "99px", background: `${cfg.color}18`, color: cfg.color, fontSize: "0.72rem", fontWeight: "800", border: `1px solid ${cfg.color}35`, display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
-                                        {cfg.icon} {t(cfg.labelKey)}
-                                    </span>
-                                    {user.role === "authority" && (
-                                        <span style={{ padding: "0.3rem 0.75rem", borderRadius: "99px", background: "rgba(16,185,129,0.15)", color: "#10b981", fontSize: "0.72rem", fontWeight: "800", border: "1px solid rgba(16,185,129,0.3)" }}>
-                                            {t("role_verified")}
+                                    {complaints.length}
+                                </span>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── Tab 1: Profile Details (or Authority/Chief Profile) ── */}
+                    {(user.role !== "user" || activeTab === "profile") && (
+                        <div className="glass animate-slide-up" style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", boxShadow: "var(--shadow-lg)", marginBottom: "1.5rem" }}>
+
+                            {/* Banner */}
+                            <div style={{ height: "130px", background: cfg.gradient, position: "relative" }}>
+                                <div style={{ position: "absolute", inset: 0, background: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+                            </div>
+
+                            {/* Avatar + Primary Identification */}
+                            <div style={{ padding: "0 1.25rem 1.75rem", position: "relative" }}>
+                                <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
+                                    <div style={{
+                                        width: "88px",
+                                        height: "88px",
+                                        minWidth: "88px",
+                                        minHeight: "88px",
+                                        maxWidth: "88px",
+                                        maxHeight: "88px",
+                                        aspectRatio: "1 / 1",
+                                        flexShrink: 0,
+                                        borderRadius: "50%",
+                                        background: cfg.gradient,
+                                        border: "4px solid var(--bg-card)",
+                                        marginTop: "-44px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "1.75rem",
+                                        fontWeight: "900",
+                                        color: "white",
+                                        boxShadow: `0 8px 24px ${cfg.color}44`,
+                                        padding: 0,
+                                        boxSizing: "border-box",
+                                    }}>
+                                        {getInitials(profileData.username)}
+                                    </div>
+                                    <div style={{ display: "flex", gap: "0.4rem", paddingBottom: "0.2rem", flexWrap: "wrap" }}>
+                                        <span style={{ padding: "0.3rem 0.75rem", borderRadius: "99px", background: `${cfg.color}18`, color: cfg.color, fontSize: "0.72rem", fontWeight: "800", border: `1px solid ${cfg.color}35`, display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                            {cfg.icon} {t(cfg.labelKey)}
                                         </span>
+                                        {user.role === "authority" && (
+                                            <span style={{ padding: "0.3rem 0.75rem", borderRadius: "99px", background: "rgba(16,185,129,0.15)", color: "#10b981", fontSize: "0.72rem", fontWeight: "800", border: "1px solid rgba(16,185,129,0.3)" }}>
+                                                {t("role_verified")}
+                                            </span>
+                                        )}
+                                        {user.role === "user" && (
+                                            <span style={{ padding: "0.3rem 0.75rem", borderRadius: "99px", background: "rgba(16,185,129,0.15)", color: "#10b981", fontSize: "0.72rem", fontWeight: "800", border: "1px solid rgba(16,185,129,0.3)" }}>
+                                                🛡️ Verified Resident
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Name & Title */}
+                                <div style={{ marginBottom: "0.35rem" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                                        <h1 style={{ fontWeight: "800", fontSize: "1.5rem", margin: 0 }}>
+                                            {profileData.username || (user.role === "user" ? "Citizen" : "Authority Officer")}
+                                        </h1>
+                                        <button onClick={handleOpenEdit} title="Edit details" style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "0.9rem", color: "var(--text-muted)" }}>
+                                            ✏️
+                                        </button>
+                                    </div>
+                                    <div style={{ fontSize: "0.9rem", color: cfg.color, fontWeight: "700", marginTop: "0.2rem" }}>
+                                        {user.role === "user" ? t("profile_resident_title") : profileData.authorityRole}
+                                    </div>
+                                </div>
+
+                                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "0 0 1.5rem" }}>
+                                    {profileData.email}
+                                </p>
+
+                                {/* ── Profile Details Grid ── */}
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.85rem" }}>
+                                    {user.role === "authority" ? (
+                                        <>
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_role")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {profileData.authorityRole}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_location")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#f97316" }}>
+                                                    {profileData.district}, {profileData.state}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_assigned_office")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {profileData.workingPlace}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_service_id")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", fontFamily: "monospace", color: "#6366f1" }}>
+                                                    {profileData.serviceId}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_email")}
+                                                </div>
+                                                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                    {profileData.email}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_phone")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {profileData.phone}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_department")}
+                                                </div>
+                                                <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {profileData.department}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    {t("profile_duty_status")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
+                                                    {t("profile_duty_status_val")}
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {/* 1. Official Role */}
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    🎭 {t("profile_role")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: cfg.color }}>
+                                                    {t("profile_citizen_role")}
+                                                </div>
+                                            </div>
+
+                                            {/* 2. Residence Location */}
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    📍 {t("profile_location")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {profileData.district}, {profileData.state}
+                                                </div>
+                                            </div>
+
+                                            {/* 3. Registered Email (Locked) */}
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                                                    <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                        📧 {t("profile_email")}
+                                                    </span>
+                                                    <span style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: "700" }}>🔒 {lang === "ta" ? "சரிபார்க்கப்பட்டது" : "Verified"}</span>
+                                                </div>
+                                                <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                    {profileData.email}
+                                                </div>
+                                            </div>
+
+                                            {/* 4. Registered Contact Phone */}
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    📞 {t("profile_phone")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {profileData.phone || "+91 94432 00000"}
+                                                </div>
+                                            </div>
+
+                                            {/* 5. Citizen Portal ID (Locked) */}
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                                                    <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                        🪪 {t("profile_citizen_id")}
+                                                    </span>
+                                                    <span style={{ fontSize: "0.65rem", color: "#6366f1", fontWeight: "700" }}>🔒 {lang === "ta" ? "அமைப்பு எண்" : "System Issued"}</span>
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", fontFamily: "monospace", color: "#6366f1" }}>
+                                                    {profileData.serviceId || "CTZ-TN-2026"}
+                                                </div>
+                                            </div>
+
+                                            {/* 6. Local Civic Body / Municipal Corporation */}
+                                            <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                    🏛️ {t("profile_civic_body")}
+                                                </div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {profileData.workingPlace || `${profileData.district} City Corporation`}
+                                                </div>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
-                            </div>
 
-                            {/* Name & Title */}
-                            <div style={{ marginBottom: "0.35rem" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                                    <h1 style={{ fontWeight: "800", fontSize: "1.5rem", margin: 0 }}>
-                                        {profileData.username || (user.role === "user" ? "Citizen" : "Authority Officer")}
-                                    </h1>
-                                    <button onClick={handleOpenEdit} title="Edit details" style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "0.9rem", color: "var(--text-muted)" }}>
-                                        ✏️
-                                    </button>
-                                </div>
-                                <div style={{ fontSize: "0.9rem", color: cfg.color, fontWeight: "700", marginTop: "0.2rem" }}>
-                                    {user.role === "user" ? t("profile_resident_title") : profileData.authorityRole}
-                                </div>
-                            </div>
-
-                            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "0 0 1.5rem" }}>
-                                {profileData.email}
-                            </p>
-
-                            {/* ── Official Authority Profile Grid ── */}
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.85rem" }}>
-                                {user.role === "authority" ? (
-                                    <>
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_role")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.authorityRole}
+                                {/* Citizen Profile Action Bar */}
+                                {user.role === "user" && (
+                                    <div style={{
+                                        marginTop: "1.25rem",
+                                        padding: "1rem",
+                                        borderRadius: "0.75rem",
+                                        background: "rgba(99,102,241,0.06)",
+                                        border: "1px solid rgba(99,102,241,0.18)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        flexWrap: "wrap",
+                                        gap: "0.75rem",
+                                    }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                                            <span style={{ fontSize: "1.25rem" }}>🛡️</span>
+                                            <div>
+                                                <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                    {lang === "ta" ? "சரிபார்க்கப்பட்ட குடிமக்கள் சுயவிவரம்" : "Civic Verified Citizen Profile"}
+                                                </div>
+                                                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                                    {lang === "ta" ? "உங்கள் பெயர், தொடர்பு எண் மற்றும் மாவட்ட விவரங்களைத் திருத்தலாம்" : "You can update your personal contact info, district, and civic address"}
+                                                </div>
                                             </div>
                                         </div>
-
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_location")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#f97316" }}>
-                                                {profileData.district}, {profileData.state}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_assigned_office")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.workingPlace}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_service_id")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", fontFamily: "monospace", color: "#6366f1" }}>
-                                                {profileData.serviceId}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_email")}
-                                            </div>
-                                            <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                {profileData.email}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_phone")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.phone}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_department")}
-                                            </div>
-                                            <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.department}
-                                            </div>
-                                        </div>
-
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_duty_status")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
-                                                {t("profile_duty_status_val")}
-                                            </div>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        {/* 1. Official Role */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                🎭 {t("profile_role")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: cfg.color }}>
-                                                {t("profile_citizen_role")}
-                                            </div>
-                                        </div>
-
-                                        {/* 2. Residence Location */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                📍 {t("profile_location")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.district}, {profileData.state}
-                                            </div>
-                                        </div>
-
-                                        {/* 3. Registered Email (Locked) */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
-                                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                                                    📧 {t("profile_email")}
-                                                </span>
-                                                <span style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: "700" }}>🔒 {lang === "ta" ? "சரிபார்க்கப்பட்டது" : "Verified"}</span>
-                                            </div>
-                                            <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                {profileData.email}
-                                            </div>
-                                        </div>
-
-                                        {/* 4. Registered Contact Phone */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                📞 {t("profile_phone")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.phone || "+91 94432 00000"}
-                                            </div>
-                                        </div>
-
-                                        {/* 5. Citizen Portal ID (Locked) */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
-                                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                                                    🪪 {t("profile_citizen_id")}
-                                                </span>
-                                                <span style={{ fontSize: "0.65rem", color: "#6366f1", fontWeight: "700" }}>🔒 {lang === "ta" ? "அமைப்பு எண்" : "System Issued"}</span>
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", fontFamily: "monospace", color: "#6366f1" }}>
-                                                {profileData.serviceId || "CTZ-TN-2026"}
-                                            </div>
-                                        </div>
-
-                                        {/* 6. Local Civic Body / Municipal Corporation */}
-                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                🏛️ {t("profile_civic_body")}
-                                            </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.workingPlace || `${profileData.district} City Corporation`}
-                                            </div>
-                                        </div>
-                                    </>
+                                        <button
+                                            onClick={handleOpenEdit}
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "0.4rem",
+                                                padding: "0.5rem 1rem",
+                                                borderRadius: "0.5rem",
+                                                fontSize: "0.82rem",
+                                                fontWeight: "700",
+                                                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                                color: "white",
+                                                border: "none",
+                                                cursor: "pointer",
+                                                boxShadow: "0 2px 8px rgba(99,102,241,0.3)",
+                                            }}
+                                        >
+                                            <span>✏️ {t("profile_edit_btn")}</span>
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* ── Citizen View: Stats & Grievance History ── */}
-                    {user.role === "user" && (
-                        <>
+                    {/* ── Tab 2: My Grievances History (Citizen View) ── */}
+                    {user.role === "user" && activeTab === "grievances" && (
+                        <div className="animate-slide-up">
+                            {/* Stat Cards */}
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
                                 <StatCard label={t("profile_total_filed")} value={loadingComplaints ? "—" : complaints.length} icon="📋" color="#6366f1" />
                                 <StatCard label={t("profile_resolved")} value={loadingComplaints ? "—" : resolved} icon="✅" color="#10b981" />
                                 <StatCard label={t("profile_pending")} value={loadingComplaints ? "—" : pending} icon="⏳" color="#f59e0b" />
                             </div>
 
-                            <div className="glass animate-slide-up" style={{ borderRadius: "var(--radius-lg)", padding: "1.5rem", boxShadow: "var(--shadow-lg)" }}>
-                                <h2 style={{ fontWeight: "800", fontSize: "1rem", marginBottom: "1rem" }}>{t("profile_recent_complaints")}</h2>
+                            {/* Status Filter Buttons */}
+                            <div style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                                marginBottom: "1rem",
+                                flexWrap: "wrap",
+                            }}>
+                                {[
+                                    { key: "All", label: t("filter_all"), count: complaints.length, icon: "📋" },
+                                    { key: "Pending", label: t("admin_pending"), count: complaints.filter(c => c.status === "Pending").length, icon: "⏳" },
+                                    { key: "In Progress", label: t("admin_in_progress"), count: complaints.filter(c => c.status === "In Progress").length, icon: "⚙️" },
+                                    { key: "Resolved", label: t("admin_resolved"), count: complaints.filter(c => c.status === "Resolved").length, icon: "✅" },
+                                ].map(filter => {
+                                    const isSelected = statusFilter === filter.key;
+                                    return (
+                                        <button
+                                            key={filter.key}
+                                            type="button"
+                                            onClick={() => setStatusFilter(filter.key)}
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "0.4rem",
+                                                padding: "0.4rem 0.85rem",
+                                                borderRadius: "99px",
+                                                fontSize: "0.78rem",
+                                                fontWeight: "700",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease",
+                                                border: isSelected ? "1px solid var(--primary)" : "1px solid var(--border)",
+                                                background: isSelected ? "var(--primary)" : "var(--bg-card)",
+                                                color: isSelected ? "#ffffff" : "var(--text-muted)",
+                                            }}
+                                        >
+                                            <span>{filter.icon}</span>
+                                            <span>{filter.label}</span>
+                                            <span style={{
+                                                padding: "0.1rem 0.4rem",
+                                                borderRadius: "99px",
+                                                fontSize: "0.68rem",
+                                                background: isSelected ? "rgba(255,255,255,0.25)" : "var(--bg-main)",
+                                                color: isSelected ? "#ffffff" : "var(--text-muted)",
+                                                fontWeight: "800",
+                                            }}>
+                                                {filter.count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Complaints List Container */}
+                            <div className="glass" style={{ borderRadius: "var(--radius-lg)", padding: "1.5rem", boxShadow: "var(--shadow-lg)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                                    <h2 style={{ fontWeight: "800", fontSize: "1rem", margin: 0 }}>
+                                        {t("profile_recent_complaints")}
+                                    </h2>
+                                    <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontWeight: "600" }}>
+                                        {filteredComplaints.length} {lang === "ta" ? "புகார்கள்" : "grievances"}
+                                    </span>
+                                </div>
+
                                 {loadingComplaints ? (
-                                    <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
-                                        <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>⏳</div>
+                                    <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-muted)" }}>
+                                        <div style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>⏳</div>
                                         <p style={{ fontSize: "0.875rem" }}>{t("profile_loading_complaints")}</p>
                                     </div>
-                                ) : complaints.length === 0 ? (
-                                    <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
+                                ) : filteredComplaints.length === 0 ? (
+                                    <div style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-muted)" }}>
                                         <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>📭</div>
-                                        <p style={{ fontSize: "0.875rem" }}>{t("profile_no_complaints")}</p>
-                                        <Link href="/" style={{ color: cfg.color, fontWeight: "700", fontSize: "0.875rem" }}>{t("profile_file_first")}</Link>
+                                        <p style={{ fontSize: "0.9rem", fontWeight: "600", marginBottom: "0.75rem" }}>
+                                            {statusFilter === "All" ? t("profile_no_complaints") : (lang === "ta" ? "இந்த நிலையில் புகார்கள் எதுவும் இல்லை" : `No grievances found under ${statusFilter} status.`)}
+                                        </p>
+                                        <Link
+                                            href="/"
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "0.4rem",
+                                                padding: "0.5rem 1.1rem",
+                                                borderRadius: "0.5rem",
+                                                background: "linear-gradient(135deg, #ec4899, #f43f5e)",
+                                                color: "white",
+                                                fontWeight: "700",
+                                                fontSize: "0.82rem",
+                                                textDecoration: "none",
+                                            }}
+                                        >
+                                            + {t("profile_file_first")}
+                                        </Link>
                                     </div>
                                 ) : (
                                     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                        {complaints.map(c => {
+                                        {filteredComplaints.map(c => {
                                             const s = STATUS_STYLES[c.status] || STATUS_STYLES.Pending;
                                             return (
-                                                <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.875rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                                    <div>
-                                                        <div style={{ fontWeight: "700", fontSize: "0.9rem" }}>{c.subject}</div>
+                                                <div key={c.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.875rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)", transition: "transform 0.15s ease", gap: "0.75rem" }}>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{ fontWeight: "700", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.subject}</div>
                                                         <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontFamily: "monospace", marginTop: "0.2rem" }}>{c.id} · {c.date}</div>
                                                     </div>
-                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
                                                         <span style={{ padding: "0.25rem 0.6rem", borderRadius: "99px", background: s.bg, color: s.color, fontSize: "0.7rem", fontWeight: "700" }}>{c.status}</span>
-                                                        <Link href={`/track?id=${c.id}`} style={{ fontSize: "0.75rem", color: cfg.color, fontWeight: "700", textDecoration: "none" }}>{t("profile_track_btn")}</Link>
+                                                        <Link href={`/track?id=${c.id}`} style={{ fontSize: "0.75rem", color: "#ec4899", fontWeight: "700", textDecoration: "none" }}>{t("profile_track_btn")}</Link>
                                                     </div>
                                                 </div>
                                             );
@@ -502,7 +753,7 @@ export default function ProfilePage() {
                                     </div>
                                 )}
                             </div>
-                        </>
+                        </div>
                     )}
                 </div>
 
@@ -734,5 +985,17 @@ export default function ProfilePage() {
                 )}
             </main>
         </ProtectedRoute>
+    );
+}
+
+export default function ProfilePage() {
+    return (
+        <Suspense fallback={
+            <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ fontSize: "1.5rem" }}>⏳</div>
+            </main>
+        }>
+            <ProfileContent />
+        </Suspense>
     );
 }

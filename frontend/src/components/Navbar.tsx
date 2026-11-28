@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLang, LANGUAGE_NAMES, Language } from "@/context/LanguageContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { getOfficerNotificationsServerAction } from "@/app/actions/complaintActions";
 
 const ROLE_BADGE = {
@@ -18,9 +18,11 @@ function getInitials(username: string) {
     return username.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-export default function Navbar() {
+function NavbarContent() {
     const pathname = usePathname();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const currentTab = searchParams?.get("tab");
     const { user, isLoggedIn, logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
     const { lang, setLang, t } = useLang();
@@ -267,7 +269,7 @@ export default function Navbar() {
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
-                                <NavLink href="/profile" active={isActive("/profile")}>📋 {t("nav_my_grievances")}</NavLink>
+                                <NavLink href="/profile?tab=grievances" active={pathname === "/profile" && currentTab !== "profile"}>📋 {t("nav_my_grievances")}</NavLink>
                             </>)}
                             {user?.role === "authority" && (
                                 <>
@@ -625,17 +627,19 @@ export default function Navbar() {
 
                                         {/* My Profile link */}
                                         <Link
-                                            href="/profile"
+                                            href="/profile?tab=profile"
                                             onClick={() => setShowUserMenu(false)}
                                             style={{
                                                 display: "flex", alignItems: "center", gap: "0.5rem",
                                                 padding: "0.65rem 1rem", textDecoration: "none",
-                                                fontSize: "0.85rem", fontWeight: "600", color: "var(--text-main)",
+                                                fontSize: "0.85rem", fontWeight: "600",
+                                                color: (pathname === "/profile" && currentTab === "profile") ? "var(--primary)" : "var(--text-main)",
+                                                background: (pathname === "/profile" && currentTab === "profile") ? "rgba(99,102,241,0.12)" : "transparent",
                                                 borderBottom: "1px solid var(--border)",
                                                 transition: "background 0.15s",
                                             }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-main)"; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = (pathname === "/profile" && currentTab === "profile") ? "rgba(99,102,241,0.18)" : "var(--bg-main)"; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = (pathname === "/profile" && currentTab === "profile") ? "rgba(99,102,241,0.12)" : "transparent"; }}
                                         >
                                             👤 {t("nav_my_profile")}
                                         </Link>
@@ -706,11 +710,18 @@ export default function Navbar() {
                                 🔍 {t("nav_track")}
                             </Link>
                             <Link
-                                href="/profile"
-                                className={`mobile-menu-drawer-item${isActive("/profile") ? " mobile-menu-drawer-item--active" : ""}`}
+                                href="/profile?tab=grievances"
+                                className={`mobile-menu-drawer-item${(pathname === "/profile" && currentTab !== "profile") ? " mobile-menu-drawer-item--active" : ""}`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 📋 {t("nav_my_grievances")}
+                            </Link>
+                            <Link
+                                href="/profile?tab=profile"
+                                className={`mobile-menu-drawer-item${(pathname === "/profile" && currentTab === "profile") ? " mobile-menu-drawer-item--active" : ""}`}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                👤 {t("nav_my_profile")}
                             </Link>
                         </>
                     )}
@@ -772,5 +783,13 @@ function NavLink({ href, active, children }: { href: string; active: boolean; ch
         >
             {children}
         </Link>
+    );
+}
+
+export default function Navbar() {
+    return (
+        <Suspense fallback={<nav style={{ height: "64px" }} />}>
+            <NavbarContent />
+        </Suspense>
     );
 }
