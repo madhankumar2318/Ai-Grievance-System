@@ -419,53 +419,6 @@ function ProfileContent() {
                                     </>
                                 )}
                             </div>
-
-                            {/* Citizen Profile Quick Actions */}
-                            {user.role === "user" && (
-                                <div style={{
-                                    marginTop: "1.25rem",
-                                    padding: "1rem",
-                                    borderRadius: "0.75rem",
-                                    background: "rgba(99,102,241,0.06)",
-                                    border: "1px solid rgba(99,102,241,0.18)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    flexWrap: "wrap",
-                                    gap: "0.75rem",
-                                }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                                        <span style={{ fontSize: "1.25rem" }}>🛡️</span>
-                                        <div>
-                                            <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {lang === "ta" ? "சரிபார்க்கப்பட்ட குடிமக்கள் சுயவிவரம்" : "Civic Verified Citizen Profile"}
-                                            </div>
-                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                                                {lang === "ta" ? "உங்கள் பெயர், தொடர்பு எண் மற்றும் மாவட்ட விவரங்களைத் திருத்தலாம்" : "You can update your personal contact info, district, and civic address"}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={handleOpenEdit}
-                                        style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "0.4rem",
-                                            padding: "0.5rem 1rem",
-                                            borderRadius: "0.5rem",
-                                            fontSize: "0.82rem",
-                                            fontWeight: "700",
-                                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                                            color: "white",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            boxShadow: "0 2px 8px rgba(99,102,241,0.3)",
-                                        }}
-                                    >
-                                        <span>✏️ {t("profile_edit_btn")}</span>
-                                    </button>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
