@@ -267,7 +267,7 @@ export default function Navbar() {
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
-                                <NavLink href="/profile" active={isActive("/profile")}>📋 {t("nav_my_grievances")}</NavLink>
+                                <NavLink href="/profile" active={isActive("/profile")}>👤 {t("nav_my_profile")}</NavLink>
                             </>)}
                             {user?.role === "authority" && (
                                 <>
@@ -623,7 +623,7 @@ export default function Navbar() {
                                             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>{user.email}</div>
                                         </div>
 
-                                        {/* My Grievances & Profile link */}
+                                        {/* My Profile link */}
                                         <Link
                                             href="/profile"
                                             onClick={() => setShowUserMenu(false)}
@@ -637,7 +637,7 @@ export default function Navbar() {
                                             onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-main)"; }}
                                             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                                         >
-                                            📋 {user.role === "user" ? t("nav_my_grievances") : t("nav_my_profile")}
+                                            👤 {t("nav_my_profile")}
                                         </Link>
                                         {/* Logout */}
                                         <button
@@ -710,7 +710,7 @@ export default function Navbar() {
                                 className={`mobile-menu-drawer-item${isActive("/profile") ? " mobile-menu-drawer-item--active" : ""}`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                📋 {user.role === "user" ? t("nav_my_grievances") : t("nav_my_profile")}
+                                👤 {t("nav_my_profile")}
                             </Link>
                         </>
                     )}
