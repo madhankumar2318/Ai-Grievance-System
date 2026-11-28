@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
@@ -178,10 +178,15 @@ export default function TrackPage() {
     const [errorMsg, setErrorMsg] = useState("");
     const [viewingModalPhoto, setViewingModalPhoto] = useState<{ url: string; title: string } | null>(null);
 
-    /* ── Search handler ─────────────────────────────────────────────────── */
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const id = query.trim().toUpperCase();
+    /* ── Search Executor ─────────────────────────────────────────────────── */
+    const executeSearch = useCallback(async (targetId: string) => {
+        let id = (targetId || "").trim().toUpperCase().replace(/\s+/g, "").replace(/[–—]/g, "-");
+        if (/^\d+$/.test(id)) {
+            id = `GRV-${id}`;
+        }
+        if (/^GRV\d+$/.test(id)) {
+            id = id.replace(/^GRV/, "GRV-");
+        }
         if (!id) return;
 
         setLoading(true);
@@ -245,7 +250,10 @@ export default function TrackPage() {
                         localStorage.getItem("grievance_my_complaints") || "[]"
                     );
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const found = localList.find((c: any) => c.id === id);
+                    const found = localList.find((c: any) => {
+                        const cleanC = (c.id || "").trim().toUpperCase().replace(/\s+/g, "").replace(/[–—]/g, "-");
+                        return cleanC === id || cleanC.endsWith(id) || id.endsWith(cleanC);
+                    });
                     if (found) {
                         setComplaint({
                             id: found.id,
@@ -276,13 +284,69 @@ export default function TrackPage() {
 
             // Nothing found anywhere
             setComplaint(null);
-        } catch {
-            setComplaint(null);
-            setErrorMsg("Something went wrong. Please try again.");
+            if (result.error && !result.error.toLowerCase().includes("not found")) {
+                setErrorMsg(result.error);
+            }
+        } catch (err) {
+            console.error("Tracking lookup error:", err);
+            // Local storage fallback even if server action threw
+            if (typeof window !== "undefined") {
+                try {
+                    const localList = JSON.parse(localStorage.getItem("grievance_my_complaints") || "[]");
+                    const found = localList.find((c: any) => {
+                        const cleanC = (c.id || "").trim().toUpperCase().replace(/\s+/g, "").replace(/[–—]/g, "-");
+                        return cleanC === id;
+                    });
+                    if (found) {
+                        setComplaint({
+                            id: found.id,
+                            subject: found.subject,
+                            description: found.description,
+                            category: found.category,
+                            priority: found.priority,
+                            status: found.status || "Pending",
+                            location: found.location || "",
+                            date: found.createdAt ? new Date(found.createdAt).toLocaleDateString("en-IN") : new Date().toLocaleDateString("en-IN"),
+                            user: maskEmail(found.userEmail || found.user_email || ""),
+                            ai_reasoning: found.aiReasoning || "",
+                            timeline: buildTimeline({
+                                created_at: found.createdAt || new Date().toISOString(),
+                                updated_at: found.updatedAt || found.createdAt,
+                                status: found.status,
+                                category: found.category,
+                                priority: found.priority,
+                                ai_reasoning: found.aiReasoning || "",
+                                description: found.description || "",
+                            }),
+                        });
+                        return;
+                    }
+                } catch {}
+            }
+            setErrorMsg("Unable to reach the tracking service. Please check your connection and try again.");
         } finally {
             setLoading(false);
             setSearched(true);
         }
+    }, []);
+
+    /* ── Auto-track from URL param (?id=GRV-XXXXX) ───────────────────────── */
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const idFromUrl = params.get("id");
+            if (idFromUrl) {
+                const trimmed = idFromUrl.trim();
+                setQuery(trimmed);
+                executeSearch(trimmed);
+            }
+        }
+    }, [executeSearch]);
+
+    /* ── Search form submit handler ──────────────────────────────────────── */
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        executeSearch(query);
     };
 
     const timeline = complaint?.timeline ?? [];

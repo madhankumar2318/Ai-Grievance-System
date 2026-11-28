@@ -1027,91 +1027,129 @@ export async function getComplaintByIdServerAction(id: string): Promise<{
   error?: string;
   rateLimited?: boolean;
 }> {
-  // 1. Sanitise input
-  const cleanId = (id || "").trim().toUpperCase();
-  if (!cleanId || cleanId.length > 60) {
-    return { success: false, error: "Invalid complaint ID format." };
-  }
-
-  // 2. Anti-scraping rate limit: max 20 tracking lookups per minute per IP
-  const ip = await getClientIp();
-  const rateResult = checkRateLimit(ip, "track_complaint", 20, 60000);
-  if (!rateResult.success) {
-    return {
-      success: false,
-      rateLimited: true,
-      error: `Too many tracking requests. Please wait ${rateResult.retryAfterSeconds}s before searching again.`,
-    };
-  }
-
-  // 3. Determine if caller holds an elevated role (unmasked access)
-  const session = await getVerifiedSessionServerAction();
-  const isElevated =
-    session.authenticated &&
-    session.user &&
-    (session.user.role === "authority" || session.user.role === "chief");
-
-  // 4. Try Java Spring Boot REST API first (forwards auth token for role-aware masking at backend too)
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
-    const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
+    // 1. Sanitise and robustly normalize complaint ID (handles spaces like "GRV - 10008", dashes, digits)
+    let cleanId = (id || "").trim().toUpperCase().replace(/\s+/g, "").replace(/[–—]/g, "-");
+    if (/^\d+$/.test(cleanId)) {
+      cleanId = `GRV-${cleanId}`;
+    }
+    if (/^GRV\d+$/.test(cleanId)) {
+      cleanId = cleanId.replace(/^GRV/, "GRV-");
+    }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch(
-      `${SPRING_BOOT_URL}/api/complaints/${encodeURIComponent(cleanId)}`,
-      { method: "GET", headers: reqHeaders, signal: controller.signal, cache: "no-store" }
-    );
-    clearTimeout(timeoutId);
+    if (!cleanId || cleanId.length > 60) {
+      return { success: false, error: "Invalid complaint ID format." };
+    }
 
-    if (res.ok) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data: any = await res.json();
-      if (data && data.id) {
-        const rawEmail = data.userEmail ?? data.user_email ?? "";
-        return {
-          success: true,
-          complaint: {
-            id: data.id,
-            subject: data.subject ?? "",
-            description: data.description ?? "",
-            category: data.category ?? "Other",
-            priority: data.priority ?? "Medium",
-            status: data.status ?? "Pending",
-            // ── Server-side PII masking ─────────────────────────────────────
-            user_email: isElevated ? rawEmail : maskEmailServerSide(rawEmail),
-            location: data.location ?? "",
-            attachment_count: data.attachmentCount ?? data.attachment_count ?? 0,
-            created_at: data.createdAt ?? data.created_at ?? new Date().toISOString(),
-            updated_at: data.updatedAt ?? data.updated_at ?? data.createdAt ?? data.created_at,
-            ai_reasoning: data.aiReasoning ?? data.ai_reasoning ?? "",
-          },
-        };
+    // 2. Anti-scraping rate limit: max 30 tracking lookups per minute per IP
+    const ip = await getClientIp();
+    const rateResult = checkRateLimit(ip, "track_complaint", 30, 60000);
+    if (!rateResult.success) {
+      return {
+        success: false,
+        rateLimited: true,
+        error: `Too many tracking requests. Please wait ${rateResult.retryAfterSeconds}s before searching again.`,
+      };
+    }
+
+    // 3. Determine if caller holds an elevated role (unmasked access)
+    let isElevated = false;
+    try {
+      const session = await getVerifiedSessionServerAction();
+      isElevated = Boolean(
+        session.authenticated &&
+        session.user &&
+        (session.user.role === "authority" || session.user.role === "chief")
+      );
+    } catch {
+      // Unauthenticated citizen fallback
+      isElevated = false;
+    }
+
+    // 4. Try Java Spring Boot REST API only if reachable (local dev with Spring Boot active)
+    if (shouldAttemptSpringBoot()) {
+      try {
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_token")?.value;
+        const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 400); // 400ms fast local timeout
+        const res = await fetch(
+          `${SPRING_BOOT_URL}/api/complaints/${encodeURIComponent(cleanId)}`,
+          { method: "GET", headers: reqHeaders, signal: controller.signal, cache: "no-store" }
+        );
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const data: any = await res.json();
+          if (data && data.id) {
+            const rawEmail = data.userEmail ?? data.user_email ?? "";
+            return {
+              success: true,
+              complaint: {
+                id: data.id,
+                subject: data.subject ?? "",
+                description: data.description ?? "",
+                category: data.category ?? "Other",
+                priority: data.priority ?? "Medium",
+                status: data.status ?? "Pending",
+                user_email: isElevated ? rawEmail : maskEmailServerSide(rawEmail),
+                location: data.location ?? "",
+                attachment_count: data.attachmentCount ?? data.attachment_count ?? 0,
+                created_at: data.createdAt ?? data.created_at ?? new Date().toISOString(),
+                updated_at: data.updatedAt ?? data.updated_at ?? data.createdAt ?? data.created_at,
+                ai_reasoning: data.aiReasoning ?? data.ai_reasoning ?? "",
+              },
+            };
+          }
+        }
+      } catch {
+        // Spring Boot offline — fall through to Supabase server-side query
       }
     }
-  } catch {
-    // Spring Boot offline — fall through to Supabase server-side query
-  }
 
-  // 5. Supabase server-to-server query (API key stays on the server — never sent to browser)
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(cleanId)}&select=*`,
-      {
-        method: "GET",
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
+    // 5. Supabase server-to-server query (API key stays on the server — never sent to browser)
+    try {
+      let res = await fetch(
+        `${SUPABASE_URL}/rest/v1/complaints?id=eq.${encodeURIComponent(cleanId)}&select=*`,
+        {
+          method: "GET",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        }
+      );
+
+      let list: any[] = [];
+      if (res.ok) {
+        list = await res.json();
       }
-    );
 
-    if (res.ok) {
-      const list = await res.json();
+      // If not matched by exact ID, fallback to case-insensitive match
+      if (!Array.isArray(list) || list.length === 0) {
+        res = await fetch(
+          `${SUPABASE_URL}/rest/v1/complaints?id=ilike.${encodeURIComponent(cleanId)}&select=*`,
+          {
+            method: "GET",
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              "Content-Type": "application/json",
+            },
+            cache: "no-store",
+          }
+        );
+        if (res.ok) {
+          list = await res.json();
+        }
+      }
+
       if (Array.isArray(list) && list.length > 0) {
         const item = list[0];
         const rawEmail = item.user_email ?? "";
@@ -1124,7 +1162,6 @@ export async function getComplaintByIdServerAction(id: string): Promise<{
             category: item.category ?? "Other",
             priority: item.priority ?? "Medium",
             status: item.status ?? "Pending",
-            // ── Server-side PII masking ─────────────────────────────────────
             user_email: isElevated ? rawEmail : maskEmailServerSide(rawEmail),
             location: item.location ?? "",
             attachment_count: item.attachment_count ?? 0,
@@ -1134,12 +1171,15 @@ export async function getComplaintByIdServerAction(id: string): Promise<{
           },
         };
       }
+    } catch (err) {
+      console.error("Server-side Supabase complaint lookup error:", err);
     }
-  } catch (err) {
-    console.error("Server-side Supabase complaint lookup error:", err);
-  }
 
-  return { success: false, error: "Complaint not found. Please check the ID and try again." };
+    return { success: false, error: "Complaint not found. Please check the ID and try again." };
+  } catch (err) {
+    console.error("Unhandled error in getComplaintByIdServerAction:", err);
+    return { success: false, error: "Unable to retrieve complaint. Please verify the ID and try again." };
+  }
 }
 
 /**
