@@ -30,7 +30,7 @@ function getBotReply(rawInput: string): string {
 
     // 3. Greetings
     if (/^(hi|hello|hey|namaste|vanakkam|good morning|good afternoon|good evening|yo)\b/i.test(text)) {
-        return "👋 **Hello & Welcome!**\nI'm your official Civic Grievance Assistant. I can help you:\n\n• 📝 **File a complaint** using text, voice, or photos\n• 🔍 **Track your grievance** with your GRV-ID\n• ⏱️ **Check resolution deadlines** (24h to 14 days)\n• 🔑 **Change your password** or update your profile\n• 🆘 **Find official emergency helplines**\n\nHow can I help you today? You can type your question or tap any topic chip above!";
+        return "👋 **Hello & Welcome!**\nI'm your official Civic Grievance Assistant. I can help you:\n\n• 📝 **File a complaint** using text, voice, or photos\n• 🔍 **Track your grievance** with your GRV-ID\n• ⏱️ **Check resolution deadlines** (24h to 14 days)\n• 🔑 **Change your password** or update your profile\n• 🆘 **Find official emergency helplines**\n\nHow can I help you today? Please type your question below!";
     }
 
     // 4. Filing Complaints & Voice / Photo Features
@@ -114,7 +114,7 @@ function getBotReply(rawInput: string): string {
     }
 
     // 20. Comprehensive Helpful Fallback
-    return "🤔 **I'm here to help you with the Civic Grievance Portal!**\n\nHere are the most common things I can assist you with:\n\n• 📝 **Filing a Complaint** (Voice typing, photo analysis, GPS)\n• 🔍 **Tracking Grievances** (Enter your `GRV-ID` to see live progress)\n• ⏱️ **Resolution Deadlines** (SLA limits from 24 hours to 14 days)\n• 🔑 **Account & Password** (Reset password, update phone or district)\n• 🚰 **Civic Issues** (Water, Potholes, Streetlights, Garbage, Hospitals)\n• 🆘 **Emergency Helplines** (1913, 108, 100, 1091)\n\n💡 *Tip: You can also tap any topic chip above for instant help!*";
+    return "🤔 **I'm here to help you with the Civic Grievance Portal!**\n\nHere are the most common things I can assist you with:\n\n• 📝 **Filing a Complaint** (Voice typing, photo analysis, GPS)\n• 🔍 **Tracking Grievances** (Enter your `GRV-ID` to see live progress)\n• ⏱️ **Resolution Deadlines** (SLA limits from 24 hours to 14 days)\n• 🔑 **Account & Password** (Reset password, update phone or district)\n• 🚰 **Civic Issues** (Water, Potholes, Streetlights, Garbage, Hospitals)\n• 🆘 **Emergency Helplines** (1913, 108, 100, 1091)\n\n💬 *Type your question below and I will guide you right away!*";
 }
 
 export default function ChatbotAssistant() {
@@ -184,17 +184,6 @@ export default function ChatbotAssistant() {
             </span>
         ));
     };
-
-    const quickChips = [
-        "📝 How to File",
-        "🔍 Track Status",
-        "⏱️ Time Limits",
-        "🔑 Change Password",
-        "🚰 Water Issue",
-        "🚧 Roads & Potholes",
-        "🗑️ Garbage & Waste",
-        "🆘 Helplines"
-    ];
 
     return (
         <>
@@ -267,7 +256,8 @@ export default function ChatbotAssistant() {
                     <div style={{
                         flex: 1, overflowY: "auto", padding: "1rem",
                         display: "flex", flexDirection: "column", gap: "0.75rem",
-                        maxHeight: "340px",
+                        minHeight: "280px",
+                        maxHeight: "420px",
                         background: "var(--bg-card, #0f172a)",
                     }}>
                         {messages.map((msg, i) => (
@@ -304,19 +294,6 @@ export default function ChatbotAssistant() {
                             </div>
                         )}
                         <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Quick chips */}
-                    <div style={{ padding: "0.5rem 0.85rem", display: "flex", gap: "0.4rem", flexWrap: "wrap", borderTop: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
-                        {quickChips.map((chip) => (
-                            <button key={chip} onClick={() => handleSend(chip)}
-                                style={{ padding: "0.25rem 0.65rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "600", background: "var(--bg-main, #1e293b)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-muted)", transition: "all 0.2s" }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#6366f1"; e.currentTarget.style.color = "#6366f1"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
-                            >
-                                {chip}
-                            </button>
-                        ))}
                     </div>
 
                     {/* Input */}
