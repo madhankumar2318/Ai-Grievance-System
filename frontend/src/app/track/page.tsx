@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useLang } from "@/context/LanguageContext";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
@@ -177,6 +178,22 @@ export default function TrackPage() {
     const [complaint, setComplaint] = useState<Complaint | null>(null);
     const [errorMsg, setErrorMsg] = useState("");
     const [viewingModalPhoto, setViewingModalPhoto] = useState<{ url: string; title: string } | null>(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Prevent background scrolling while viewing photo modal
+    useEffect(() => {
+        if (viewingModalPhoto) {
+            const originalOverflow = document.body.style.overflow;
+            document.body.style.overflow = "hidden";
+            return () => {
+                document.body.style.overflow = originalOverflow;
+            };
+        }
+    }, [viewingModalPhoto]);
 
     /* ── Search Executor ─────────────────────────────────────────────────── */
     const executeSearch = useCallback(async (targetId: string) => {
@@ -354,7 +371,7 @@ export default function TrackPage() {
     const progress = timeline.length > 0 ? Math.round((doneCount / timeline.length) * 100) : 0;
 
     return (
-        <main className="container section animate-fade-in" style={{ maxWidth: "100%", overflowX: "hidden", paddingLeft: "1rem", paddingRight: "1rem", boxSizing: "border-box" }}>
+        <main className="container section" style={{ maxWidth: "100%", overflowX: "hidden", paddingLeft: "1rem", paddingRight: "1rem", boxSizing: "border-box" }}>
 
             {/* ── Header ── */}
             <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
@@ -858,13 +875,13 @@ export default function TrackPage() {
                                                     borderRadius: "0.85rem",
                                                     overflow: "hidden",
                                                     border: "1.5px solid rgba(239, 68, 68, 0.4)",
-                                                    background: "#080b12",
+                                                    background: "var(--bg-card, #111827)",
                                                 }}>
-                                                    <div style={{ position: "relative", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", background: "#000" }}>
+                                                    <div style={{ position: "relative", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)", overflow: "hidden" }}>
                                                         <img
                                                             src={citizenBeforePhoto}
                                                             alt="Citizen Reported Evidence"
-                                                            style={{ maxHeight: "220px", width: "100%", objectFit: "contain", cursor: "pointer" }}
+                                                            style={{ height: "220px", width: "100%", objectFit: "cover", cursor: "pointer", display: "block" }}
                                                             onClick={() => setViewingModalPhoto({ url: citizenBeforePhoto, title: "Citizen Evidence (Before Repair)" })}
                                                         />
                                                         <div style={{
@@ -872,6 +889,7 @@ export default function TrackPage() {
                                                             background: "rgba(239, 68, 68, 0.9)", color: "white",
                                                             padding: "0.2rem 0.65rem", borderRadius: "99px",
                                                             fontSize: "0.7rem", fontWeight: "800",
+                                                            backdropFilter: "blur(4px)",
                                                         }}>
                                                             BEFORE REPAIR
                                                         </div>
@@ -895,14 +913,14 @@ export default function TrackPage() {
                                                     borderRadius: "0.85rem",
                                                     overflow: "hidden",
                                                     border: "1.5px solid rgba(16, 185, 129, 0.5)",
-                                                    background: "#080b12",
+                                                    background: "var(--bg-card, #111827)",
                                                     boxShadow: "0 0 25px rgba(16, 185, 129, 0.2)",
                                                 }}>
-                                                    <div style={{ position: "relative", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", background: "#000" }}>
+                                                    <div style={{ position: "relative", height: "220px", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)", overflow: "hidden" }}>
                                                         <img
                                                             src={atrData.resolutionPhoto}
                                                             alt="Officer Resolution Proof"
-                                                            style={{ maxHeight: "220px", width: "100%", objectFit: "contain", cursor: "pointer" }}
+                                                            style={{ height: "220px", width: "100%", objectFit: "cover", cursor: "pointer", display: "block" }}
                                                             onClick={() => setViewingModalPhoto({ url: atrData.resolutionPhoto, title: "Official Resolution Proof (After Repair)" })}
                                                         />
                                                         <div style={{
@@ -911,6 +929,7 @@ export default function TrackPage() {
                                                             padding: "0.2rem 0.65rem", borderRadius: "99px",
                                                             fontSize: "0.7rem", fontWeight: "800",
                                                             boxShadow: "0 2px 8px rgba(16, 185, 129, 0.4)",
+                                                            backdropFilter: "blur(4px)",
                                                         }}>
                                                             AFTER REPAIR ✓
                                                         </div>
@@ -971,8 +990,8 @@ export default function TrackPage() {
                 </div>
             )}
 
-            {/* ── Photo Evidence Viewer Lightbox Modal (Fixed to Viewport) ── */}
-            {viewingModalPhoto && (
+            {/* ── Photo Evidence Viewer Lightbox Modal (Portal directly to document.body for true viewport centering) ── */}
+            {mounted && viewingModalPhoto && typeof document !== "undefined" && createPortal(
                 <div
                     onClick={() => setViewingModalPhoto(null)}
                     style={{
@@ -984,8 +1003,9 @@ export default function TrackPage() {
                         width: "100vw",
                         height: "100vh",
                         zIndex: 999999,
-                        background: "rgba(0, 0, 0, 0.88)",
-                        backdropFilter: "blur(10px)",
+                        background: "rgba(0, 0, 0, 0.85)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -998,7 +1018,7 @@ export default function TrackPage() {
                         style={{
                             maxWidth: "850px",
                             width: "100%",
-                            maxHeight: "90vh",
+                            maxHeight: "92vh",
                             background: "var(--bg-card, #111827)",
                             border: "1px solid rgba(255, 255, 255, 0.15)",
                             borderRadius: "1.25rem",
@@ -1007,6 +1027,7 @@ export default function TrackPage() {
                             flexDirection: "column",
                             boxShadow: "0 25px 60px rgba(0,0,0,0.85)",
                             position: "relative",
+                            animation: "modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
                         }}
                     >
                         {/* Header */}
@@ -1042,13 +1063,13 @@ export default function TrackPage() {
                             </button>
                         </div>
 
-                        {/* Image body */}
+                        {/* Image body — clean seamless container matching modal card with zero black bars */}
                         <div style={{
-                            padding: "1rem",
+                            padding: "0.75rem",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            background: "#000000",
+                            background: "transparent",
                             overflow: "hidden",
                             flex: 1,
                         }}>
@@ -1056,10 +1077,13 @@ export default function TrackPage() {
                                 src={viewingModalPhoto.url}
                                 alt={viewingModalPhoto.title}
                                 style={{
-                                    maxHeight: "65vh",
+                                    maxHeight: "68vh",
                                     maxWidth: "100%",
+                                    width: "auto",
                                     objectFit: "contain",
-                                    borderRadius: "0.5rem",
+                                    borderRadius: "0.75rem",
+                                    display: "block",
+                                    boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
                                 }}
                             />
                         </div>
@@ -1094,10 +1118,15 @@ export default function TrackPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <style>{`
+                @keyframes modalPop {
+                    0%   { opacity: 0; transform: scale(0.92); }
+                    100% { opacity: 1; transform: scale(1); }
+                }
                 @keyframes glowPulse {
                     0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); opacity: 1; }
                     50%       { box-shadow: 0 0 0 8px rgba(99,102,241,0); opacity: 0.4; }
