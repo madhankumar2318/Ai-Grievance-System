@@ -39,7 +39,32 @@ export interface EmbeddedClaim {
   officerName: string;
   officerEmail: string;
   officerRole?: string;
+  assignedBy?: string;
   claimedAt: string;
+}
+
+/**
+ * Formats an ISO timestamp or date into a human-friendly relative time string.
+ * Examples: "Just now", "5m ago", "2h ago", "1d ago"
+ */
+export function formatRelativeTime(isoStringOrTimestamp: string | number | Date): string {
+  try {
+    const time = new Date(isoStringOrTimestamp).getTime();
+    if (isNaN(time)) return "Recent";
+    const diffMs = Date.now() - time;
+    if (diffMs < 0) return "Just now";
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return "1d ago";
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return new Date(time).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+  } catch {
+    return "Recent";
+  }
 }
 
 /**

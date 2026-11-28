@@ -11,6 +11,7 @@ import {
   findDuplicateComplaint,
   findMatchingAreaComplaints,
   findOfficerActiveClaim,
+  formatRelativeTime,
 } from "./grievanceUtils.ts";
 
 describe("maskEmail (PII Protection)", () => {
@@ -295,5 +296,20 @@ describe("findOfficerActiveClaim (1 Grievance At A Time Rule)", () => {
 
     const raviActive = findOfficerActiveClaim("ravi@gov.in", list);
     assert.equal(raviActive, null);
+  });
+});
+
+describe("formatRelativeTime", () => {
+  it("formats relative times for just now, minutes, hours, and days", () => {
+    const now = Date.now();
+    assert.equal(formatRelativeTime(new Date(now - 10000)), "Just now");
+    assert.equal(formatRelativeTime(new Date(now - 5 * 60 * 1000)), "5m ago");
+    assert.equal(formatRelativeTime(new Date(now - 3 * 3600 * 1000)), "3h ago");
+    assert.equal(formatRelativeTime(new Date(now - 24 * 3600 * 1000)), "1d ago");
+    assert.equal(formatRelativeTime(new Date(now - 5 * 24 * 3600 * 1000)), "5d ago");
+  });
+
+  it("returns fallback for invalid dates safely", () => {
+    assert.equal(formatRelativeTime("not-a-date"), "Recent");
   });
 });

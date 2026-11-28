@@ -350,6 +350,23 @@ export default function AdminDashboard() {
         }
     }, [isDistrictHead]);
 
+    // Auto-expand and switch tab if arriving from notification link (e.g. /admin?id=GRV-19821)
+    useEffect(() => {
+        if (typeof window !== "undefined" && complaints.length > 0) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get("id");
+            if (targetId) {
+                const target = complaints.find(c => c.id === targetId);
+                if (target) {
+                    setExpandedId(targetId);
+                    if (target.status === "In Progress" && filter !== "All" && filter !== "In Progress") {
+                        setFilter("In Progress");
+                    }
+                }
+            }
+        }
+    }, [complaints, filter]);
+
     const [claimingId, setClaimingId] = useState<string | null>(null);
 
     const refreshComplaintsFromServer = async () => {
@@ -428,17 +445,73 @@ export default function AdminDashboard() {
                     assignedBy: user?.username || "District Collector",
                     claimedAt: now,
                 };
-                setComplaints(prev => prev.map(c => {
-                    if (c.id === complaintId) {
-                        const baseDesc = (c.description || "").replace(/\n\n\[CLAIMED_BY:[\s\S]*?\]/g, "").trim();
-                        return {
-                            ...c,
-                            status: "In Progress",
-                            description: `${baseDesc}\n\n[CLAIMED_BY:${JSON.stringify(claimData)}]`,
-                        };
+                let targetSubject = "";
+                setComplaints(prev => {
+                    const next = prev.map(c => {
+                        if (c.id === complaintId) {
+                            targetSubject = c.subject;
+                            const baseDesc = (c.description || "").replace(/\n\n\[CLAIMED_BY:[\s\S]*?\]/g, "").trim();
+                            return {
+                                ...c,
+                                status: "In Progress",
+                                description: `${baseDesc}\n\n[CLAIMED_BY:${JSON.stringify(claimData)}]`,
+                            };
+                        }
+                        return c;
+                    });
+                    try {
+                        sessionStorage.setItem("cached_admin_complaints", JSON.stringify(next));
+                        localStorage.setItem("cached_admin_complaints", JSON.stringify(next));
+                    } catch {}
+                    return next;
+                });
+
+                // Write directly to target officer's notification inbox in localStorage
+                try {
+                    const officerKey = `officer_notifications_${target.email.toLowerCase().trim()}`;
+                    const existing = JSON.parse(localStorage.getItem(officerKey) || "[]");
+                    const newAlert = {
+                        id: `assign-${complaintId}`,
+                        complaintId,
+                        title: `🏛️ Mandate Assigned: #${complaintId}`,
+                        message: `${user?.username || "District Collector"} assigned #${complaintId} ("${targetSubject || "Civic Grievance"}") to you. Resolve promptly.`,
+                        time: "Just now",
+                        icon: "🏛️",
+                        link: `/admin?id=${complaintId}`,
+                        unread: true,
+                        assignedBy: user?.username || "District Collector",
+                        claimedAt: now,
+                    };
+                    const updated = [newAlert, ...existing.filter((item: any) => item.id !== newAlert.id)];
+                    localStorage.setItem(officerKey, JSON.stringify(updated));
+                    localStorage.setItem("last_officer_assignment", JSON.stringify({
+                        officerEmail: target.email.toLowerCase().trim(),
+                        complaintId,
+                        assignedBy: user?.username || "District Collector",
+                        timestamp: Date.now(),
+                    }));
+                } catch {}
+
+                // Broadcast global cross-tab and in-window realtime events
+                window.dispatchEvent(new CustomEvent("officer_assigned_notification", {
+                    detail: {
+                        officerEmail: target.email.toLowerCase().trim(),
+                        complaintId,
+                        assignedBy: user?.username || "District Collector",
                     }
-                    return c;
                 }));
+                window.dispatchEvent(new CustomEvent("complaints_updated"));
+
+                // Trigger browser push/desktop notification if permitted
+                if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                    try {
+                        new Notification("🏛️ District Collector Assignment", {
+                            body: `Assigned grievance #${complaintId} to ${target.username || target.email}.`,
+                            icon: "/favicon.ico",
+                        });
+                    } catch {}
+                }
+
                 setAssignSuccessId(complaintId);
                 setTimeout(() => setAssignSuccessId(null), 3500);
             } else {
@@ -462,8 +535,16 @@ export default function AdminDashboard() {
         try {
             const res = await updateComplaintStatusServerAction(id, newStatus);
             if (res.success) {
-                setComplaints(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+                setComplaints(prev => {
+                    const next = prev.map(c => c.id === id ? { ...c, status: newStatus } : c);
+                    try {
+                        sessionStorage.setItem("cached_admin_complaints", JSON.stringify(next));
+                        localStorage.setItem("cached_admin_complaints", JSON.stringify(next));
+                    } catch {}
+                    return next;
+                });
                 setExpandedId(null);
+                window.dispatchEvent(new CustomEvent("complaints_updated"));
             } else {
                 alert(res.error || "Failed to update complaint status.");
                 await refreshComplaintsFromServer();

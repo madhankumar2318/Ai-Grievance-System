@@ -18,7 +18,16 @@ export interface DbComplaintRecord {
 import { getVerifiedSessionServerAction } from "./authActions";
 import { cookies } from "next/headers";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimiter";
-import { findMatchingAreaComplaints, findOfficerActiveClaim, OpenComplaintSummary } from "@/lib/grievanceUtils";
+import {
+  findMatchingAreaComplaints,
+  findOfficerActiveClaim,
+  OpenComplaintSummary,
+  mapRoleToDepartment,
+  formatRelativeTime,
+  parseEmbeddedTag,
+  EmbeddedClaim,
+  EmbeddedDirective,
+} from "@/lib/grievanceUtils";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lxjevqkbkxafqknevbwf.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_TbfQF0Q4zPSBZn_XsyZHhA_E_oNyx-M";
@@ -1242,5 +1251,126 @@ export async function getUserComplaintsServerAction(targetEmail?: string): Promi
   }
 
   return { success: false, complaints: [], error: "Failed to load user grievances." };
+}
+
+export interface OfficerNotificationItem {
+  id: string;
+  complaintId: string;
+  title: string;
+  message: string;
+  time: string;
+  icon: string;
+  link: string;
+  unread: boolean;
+  assignedBy?: string;
+  priority?: string;
+  category?: string;
+  claimedAt?: string;
+}
+
+/**
+ * Fetches real-time notifications for the currently logged-in authority officer.
+ * Scans active grievances for direct Collector assignments and executive departmental directives.
+ */
+export async function getOfficerNotificationsServerAction(): Promise<{
+  success: boolean;
+  notifications: OfficerNotificationItem[];
+  hasUnread: boolean;
+}> {
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, notifications: [], hasUnread: false };
+  }
+
+  // Only authorities/officers or chief have officer notifications
+  if (session.user.role !== "authority" && session.user.role !== "chief") {
+    return { success: false, notifications: [], hasUnread: false };
+  }
+
+  const officerEmail = (session.user.email || "").toLowerCase().trim();
+  const officerRole = session.user.authorityRole || "";
+  const officerDept = mapRoleToDepartment(officerRole);
+
+  const notifications: OfficerNotificationItem[] = [];
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?status=neq.Rejected&select=id,subject,category,priority,status,description,created_at,updated_at&order=created_at.desc&limit=60`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (res.ok) {
+      const rows: any[] = await res.json();
+      for (const c of rows) {
+        const desc = c.description || "";
+
+        // 1. Direct officer assignment
+        if (desc.includes("[CLAIMED_BY:")) {
+          const claim = parseEmbeddedTag<EmbeddedClaim>(desc, "CLAIMED_BY");
+          if (claim && (claim.officerEmail || "").toLowerCase().trim() === officerEmail) {
+            const assignedBy = claim.assignedBy;
+            const isCollectorMandate = Boolean(assignedBy);
+            const isResolved = c.status === "Resolved";
+
+            notifications.push({
+              id: `assign-${c.id}`,
+              complaintId: c.id,
+              title: isCollectorMandate ? `🏛️ Mandate Assigned: #${c.id}` : `📌 Grievance In-Progress: #${c.id}`,
+              message: isCollectorMandate
+                ? `${assignedBy || "District Collector"} assigned #${c.id} ("${c.subject || "Civic Grievance"}") to you. Resolve promptly.`
+                : `Active in your queue: #${c.id} ("${c.subject || "Civic Grievance"}"). Status: ${c.status}.`,
+              time: claim.claimedAt ? formatRelativeTime(claim.claimedAt) : "Active",
+              icon: isCollectorMandate ? "🏛️" : "⚡",
+              link: `/admin?id=${c.id}`,
+              unread: !isResolved,
+              assignedBy: claim.assignedBy,
+              priority: c.priority,
+              category: c.category,
+              claimedAt: claim.claimedAt,
+            });
+          }
+        }
+
+        // 2. Collector Directive on officer's department
+        if (desc.includes("[COLLECTOR_DIRECTIVE:") && (!officerDept || c.category === officerDept)) {
+          const dir = parseEmbeddedTag<EmbeddedDirective>(desc, "COLLECTOR_DIRECTIVE");
+          if (dir) {
+            const isResolved = c.status === "Resolved";
+            notifications.push({
+              id: `dir-${c.id}`,
+              complaintId: c.id,
+              title: `⚡ Directive Order #${dir.orderId || dir.directiveId || c.id}`,
+              message: `District Collector order on #${c.id}: "${dir.directiveNote || "Urgent expedite"}". Target: ${dir.priorityTarget || "24 Hours"}.`,
+              time: dir.issuedAt ? formatRelativeTime(dir.issuedAt) : "Order",
+              icon: "🏛️",
+              link: `/admin?id=${c.id}`,
+              unread: !isResolved,
+              priority: "Critical",
+              category: c.category,
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching officer notifications:", err);
+  }
+
+  // De-duplicate notifications by ID
+  const seen = new Set<string>();
+  const uniqueNotifs = notifications.filter(n => {
+    if (seen.has(n.id)) return false;
+    seen.add(n.id);
+    return true;
+  });
+
+  const hasUnread = uniqueNotifs.some(n => n.unread);
+  return { success: true, notifications: uniqueNotifs, hasUnread };
 }
 

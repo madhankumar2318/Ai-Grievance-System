@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLang, LANGUAGE_NAMES, Language } from "@/context/LanguageContext";
 import { useState, useEffect } from "react";
+import { getOfficerNotificationsServerAction } from "@/app/actions/complaintActions";
 
 const ROLE_BADGE = {
     user: { label: "Citizen", color: "#6366f1", bg: "#6366f115" },
@@ -27,132 +28,185 @@ export default function Navbar() {
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showNotifMenu, setShowNotifMenu] = useState(false);
-    const [hasUnread, setHasUnread] = useState(true);
+    const [hasUnread, setHasUnread] = useState(false);
     const [notifications, setNotifications] = useState<{ id: string; title: string; message: string; time: string; icon: string; link?: string; unread: boolean; }[]>([]);
 
     useEffect(() => {
-        if (!isLoggedIn) return;
-        const notifs: { id: string; title: string; message: string; time: string; icon: string; link?: string; unread: boolean; }[] = [];
-
-        if (typeof window !== "undefined" && user?.role === "user") {
-            try {
-                const stored = JSON.parse(localStorage.getItem("grievance_my_complaints") || "[]");
-                if (Array.isArray(stored) && stored.length > 0) {
-                    stored.slice(0, 3).forEach((c, idx) => {
-                        const statusIcon = c.status === "Resolved" ? "✅" : c.status === "In Progress" ? "🔄" : "📋";
-                        notifs.push({
-                            id: `complaint-${c.id || idx}`,
-                            title: `Grievance #${c.id || "GRV-" + (idx + 1000)}`,
-                            message: `Status is currently ${c.status || "Pending"}. Click to view live progress.`,
-                            time: idx === 0 ? "Recent" : `${idx + 1}d ago`,
-                            icon: statusIcon,
-                            link: `/track?id=${c.id}`,
-                            unread: idx === 0,
-                        });
-                    });
-                }
-            } catch {
-                // Ignore json parse error
-            }
+        if (!isLoggedIn || !user) {
+            setNotifications([]);
+            setHasUnread(false);
+            return;
         }
 
-        if (user?.role === "authority") {
-            // Check session/local storage for assigned grievances to this officer
-            let myClaimCount = 0;
-            let recentClaimSubject = "";
-            let assignedByCollector = false;
-            let assignedGrievanceId = "";
+        let isMounted = true;
 
-            if (typeof window !== "undefined") {
-                try {
-                    const cachedComplaints = JSON.parse(sessionStorage.getItem("cached_admin_complaints") || "[]");
-                    if (Array.isArray(cachedComplaints)) {
-                        for (const c of cachedComplaints) {
-                            if (c.status === "In Progress" && c.description && c.description.includes("[CLAIMED_BY:")) {
-                                const claimMatch = c.description.match(/\[CLAIMED_BY:([\s\S]*?)\]/);
-                                if (claimMatch) {
-                                    try {
-                                        const parsed = JSON.parse(claimMatch[1]);
-                                        if (parsed?.officerEmail?.toLowerCase() === user.email?.toLowerCase()) {
-                                            myClaimCount++;
-                                            if (!recentClaimSubject) {
-                                                recentClaimSubject = c.subject || "Assigned Grievance";
-                                                assignedGrievanceId = c.id;
-                                                assignedByCollector = Boolean(parsed?.assignedBy);
-                                            }
-                                        }
-                                    } catch {}
-                                }
-                            }
+        const loadNotifications = async () => {
+            const notifs: { id: string; title: string; message: string; time: string; icon: string; link?: string; unread: boolean; }[] = [];
+            let unreadFound = false;
+
+            if (user.role === "user") {
+                if (typeof window !== "undefined") {
+                    try {
+                        const stored = JSON.parse(localStorage.getItem("grievance_my_complaints") || "[]");
+                        if (Array.isArray(stored) && stored.length > 0) {
+                            stored.slice(0, 3).forEach((c, idx) => {
+                                const statusIcon = c.status === "Resolved" ? "✅" : c.status === "In Progress" ? "🔄" : "📋";
+                                notifs.push({
+                                    id: `complaint-${c.id || idx}`,
+                                    title: `Grievance #${c.id || "GRV-" + (idx + 1000)}`,
+                                    message: `Status is currently ${c.status || "Pending"}. Click to view live progress.`,
+                                    time: idx === 0 ? "Recent" : `${idx + 1}d ago`,
+                                    icon: statusIcon,
+                                    link: `/track?id=${c.id}`,
+                                    unread: idx === 0,
+                                });
+                                if (idx === 0) unreadFound = true;
+                            });
                         }
-                    }
-                } catch {}
-            }
-
-            if (myClaimCount > 0) {
+                    } catch {}
+                }
                 notifs.push({
-                    id: "auth-assignment",
-                    title: assignedByCollector ? "🏛️ Collector Mandate Assignment" : "📌 Active Grievance In Progress",
-                    message: assignedByCollector
-                        ? `District Collector assigned #${assignedGrievanceId} ("${recentClaimSubject}") to you. Resolve promptly.`
-                        : `You have #${assignedGrievanceId} ("${recentClaimSubject}") currently locked in your active queue.`,
+                    id: "sys-welcome",
+                    title: "👋 Welcome to AI Grievance System",
+                    message: "You can file civic complaints with photos, voice input, and GPS camera tags.",
                     time: "Active",
-                    icon: assignedByCollector ? "🏛️" : "⚡",
-                    link: "/admin",
+                    icon: "✨",
+                    link: "/",
+                    unread: false,
+                });
+                notifs.push({
+                    id: "sys-ai",
+                    title: "🤖 24/7 AI Civic Assistant",
+                    message: "Need help? Tap the floating assistant icon in the bottom right corner anytime.",
+                    time: "Tip",
+                    icon: "💡",
+                    link: "/",
+                    unread: false,
+                });
+                if (isMounted) {
+                    setNotifications(notifs);
+                    setHasUnread(unreadFound);
+                }
+            } else if (user.role === "authority") {
+                const officerEmail = (user.email || "").toLowerCase().trim();
+                const officerKey = `officer_notifications_${officerEmail}`;
+
+                // 1. Fast-path: Synchronously load locally cached assignments for instant 0ms render
+                if (typeof window !== "undefined") {
+                    try {
+                        const localCached = JSON.parse(localStorage.getItem(officerKey) || "[]");
+                        if (Array.isArray(localCached) && localCached.length > 0) {
+                            localCached.forEach((item: any) => {
+                                notifs.push(item);
+                                if (item.unread) unreadFound = true;
+                            });
+                        }
+                    } catch {}
+                }
+
+                // Default district baseline info
+                const baseNotifs = [
+                    {
+                        id: "auth-district",
+                        title: "🛡️ District Queue Active",
+                        message: `Assigned to ${user.district || "Tiruchirappalli"} District queue. New complaints will appear automatically.`,
+                        time: "Live",
+                        icon: "🏛️",
+                        link: "/admin",
+                        unread: false,
+                    },
+                    {
+                        id: "auth-triage",
+                        title: "⚡ AI Triage Engine",
+                        message: "Complaints are automatically prioritized (Critical, High, Medium, Low).",
+                        time: "System",
+                        icon: "🤖",
+                        link: "/admin",
+                        unread: false,
+                    }
+                ];
+
+                if (isMounted && notifs.length > 0) {
+                    setNotifications([...notifs, ...baseNotifs]);
+                    setHasUnread(unreadFound);
+                }
+
+                // 2. Fetch live from server action (scans database for Collector assignments & directives)
+                try {
+                    const res = await getOfficerNotificationsServerAction();
+                    if (isMounted && res.success && res.notifications) {
+                        const serverNotifs = res.notifications.map(n => ({
+                            id: n.id,
+                            title: n.title,
+                            message: n.message,
+                            time: n.time,
+                            icon: n.icon,
+                            link: n.link,
+                            unread: n.unread,
+                        }));
+
+                        // Save fresh notifications to local cache
+                        if (typeof window !== "undefined") {
+                            try {
+                                localStorage.setItem(officerKey, JSON.stringify(serverNotifs));
+                            } catch {}
+                        }
+
+                        const combined = [...serverNotifs, ...baseNotifs];
+                        setNotifications(combined);
+                        setHasUnread(res.hasUnread || serverNotifs.some(n => n.unread));
+                    }
+                } catch (err) {
+                    console.error("Error loading live officer notifications:", err);
+                    if (isMounted && notifs.length === 0) {
+                        setNotifications(baseNotifs);
+                    }
+                }
+            } else if (user.role === "chief") {
+                notifs.push({
+                    id: "chief-oversight",
+                    title: "⭐ Chief Oversight Dashboard",
+                    message: "System-wide analytics, department resolution rates, and SLA metrics are synced.",
+                    time: "Live",
+                    icon: "📊",
+                    link: "/chief",
                     unread: true,
                 });
+                if (isMounted) {
+                    setNotifications(notifs);
+                    setHasUnread(true);
+                }
             }
+        };
 
-            notifs.push({
-                id: "auth-district",
-                title: "🛡️ District Queue Active",
-                message: `Assigned to ${user.district || "Tiruchirappalli"} District queue. New complaints will appear automatically.`,
-                time: "Live",
-                icon: "🏛️",
-                link: "/admin",
-                unread: myClaimCount === 0,
-            });
-            notifs.push({
-                id: "auth-triage",
-                title: "⚡ AI Triage Engine",
-                message: "Complaints are automatically prioritized (Critical, High, Medium, Low).",
-                time: "System",
-                icon: "🤖",
-                link: "/admin",
-                unread: false,
-            });
-        } else if (user?.role === "chief") {
-            notifs.push({
-                id: "chief-oversight",
-                title: "⭐ Chief Oversight Dashboard",
-                message: "System-wide analytics, department resolution rates, and SLA metrics are synced.",
-                time: "Live",
-                icon: "📊",
-                link: "/chief",
-                unread: true,
-            });
-        } else {
-            notifs.push({
-                id: "sys-welcome",
-                title: "👋 Welcome to AI Grievance System",
-                message: "You can file civic complaints with photos, voice input, and GPS camera tags.",
-                time: "Active",
-                icon: "✨",
-                link: "/",
-                unread: false,
-            });
-            notifs.push({
-                id: "sys-ai",
-                title: "🤖 24/7 AI Civic Assistant",
-                message: "Need help? Tap the floating assistant icon in the bottom right corner anytime.",
-                time: "Tip",
-                icon: "💡",
-                link: "/",
-                unread: false,
-            });
-        }
+        loadNotifications();
 
-        setNotifications(notifs);
+        // Listen for realtime assignment & update events
+        const handleOfficerAssigned = () => {
+            loadNotifications();
+        };
+
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key && (e.key.startsWith("officer_notifications") || e.key === "last_officer_assignment" || e.key === "cached_admin_complaints")) {
+                loadNotifications();
+            }
+        };
+
+        window.addEventListener("officer_assigned_notification", handleOfficerAssigned);
+        window.addEventListener("complaints_updated", handleOfficerAssigned);
+        window.addEventListener("storage", handleStorageChange);
+        window.addEventListener("focus", loadNotifications);
+
+        const pollTimer = setInterval(loadNotifications, 12000);
+
+        return () => {
+            isMounted = false;
+            window.removeEventListener("officer_assigned_notification", handleOfficerAssigned);
+            window.removeEventListener("complaints_updated", handleOfficerAssigned);
+            window.removeEventListener("storage", handleStorageChange);
+            window.removeEventListener("focus", loadNotifications);
+            clearInterval(pollTimer);
+        };
     }, [isLoggedIn, user]);
 
     useEffect(() => {
@@ -311,7 +365,18 @@ export default function Navbar() {
                                         </div>
                                         {hasUnread && (
                                             <button
-                                                onClick={() => setHasUnread(false)}
+                                                onClick={() => {
+                                                    setHasUnread(false);
+                                                    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+                                                    if (typeof window !== "undefined" && user?.email) {
+                                                        try {
+                                                            const officerKey = `officer_notifications_${user.email.toLowerCase().trim()}`;
+                                                            const cached = JSON.parse(localStorage.getItem(officerKey) || "[]");
+                                                            const updated = cached.map((n: any) => ({ ...n, unread: false }));
+                                                            localStorage.setItem(officerKey, JSON.stringify(updated));
+                                                        } catch {}
+                                                    }
+                                                }}
                                                 style={{
                                                     background: "transparent", border: "none", color: "var(--primary)",
                                                     fontSize: "0.72rem", cursor: "pointer", fontWeight: "600",
@@ -336,6 +401,21 @@ export default function Navbar() {
                                                     key={item.id}
                                                     onClick={() => {
                                                         setShowNotifMenu(false);
+                                                        setNotifications(prev => {
+                                                            const updated = prev.map(n => n.id === item.id ? { ...n, unread: false } : n);
+                                                            if (!updated.some(n => n.unread)) {
+                                                                setHasUnread(false);
+                                                            }
+                                                            return updated;
+                                                        });
+                                                        if (typeof window !== "undefined" && user?.email) {
+                                                            try {
+                                                                const officerKey = `officer_notifications_${user.email.toLowerCase().trim()}`;
+                                                                const cached = JSON.parse(localStorage.getItem(officerKey) || "[]");
+                                                                const updated = cached.map((n: any) => n.id === item.id ? { ...n, unread: false } : n);
+                                                                localStorage.setItem(officerKey, JSON.stringify(updated));
+                                                            } catch {}
+                                                        }
                                                         if (item.link) router.push(item.link);
                                                     }}
                                                     style={{
