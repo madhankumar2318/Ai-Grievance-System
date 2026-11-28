@@ -452,105 +452,110 @@ export default function TrackPage() {
                         padding: "2rem", borderRadius: "1.5rem",
                         borderLeft: `4px solid ${STATUS_COLORS[complaint.status] ?? "#6366f1"}`,
                     }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
-                            <div>
-                                <div style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.4rem" }}>
+                        {/* Top Header Row with ID, Subject, and Status/Priority Badges */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap", marginBottom: "0.85rem" }}>
+                            <div style={{ flex: "1 1 280px" }}>
+                                <div style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.35rem" }}>
                                     {complaint.id}
                                 </div>
-                                <h2 style={{ fontSize: "1.4rem", marginBottom: "0.5rem" }}>{complaint.subject}</h2>
-                                {(() => {
-                                    const photoMatch = complaint.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
-                                    const evidencePhoto = photoMatch ? photoMatch[1] : null;
-                                    const directiveData = parseEmbeddedTag<EmbeddedDirective>(complaint.description, "COLLECTOR_DIRECTIVE");
-                                    const atrData = parseEmbeddedTag<{ resolvedAt?: string }>(complaint.description, "ACTION_TAKEN_REPORT");
-                                    const cleanDesc = stripEmbeddedTags(complaint.description);
-                                    const sla = directiveData
-                                        ? computeDirectiveSlaStatus(
-                                              directiveData.issuedAt,
-                                              directiveData.priorityTarget,
-                                              complaint.status,
-                                              directiveData.deadlineHours,
-                                              Date.now(),
-                                              atrData?.resolvedAt
-                                          )
-                                        : null;
-                                    const orderId = directiveData?.orderId || directiveData?.directiveId || "DIR-2026";
-                                    const issuer = directiveData?.officerName || directiveData?.issuedBy || "District Collectorate";
-                                    return (
-                                        <>
-                                            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{cleanDesc}</p>
-                                            {evidencePhoto && (
-                                                <div style={{ marginTop: "0.75rem" }}>
-                                                    <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "#a5b4fc", marginBottom: "0.35rem" }}>
-                                                        📷 Attached Photo Evidence
-                                                    </div>
-                                                    <img
-                                                        src={evidencePhoto}
-                                                        alt="Evidence"
-                                                        style={{ maxWidth: "240px", maxHeight: "160px", borderRadius: "0.5rem", border: "1px solid var(--border)", objectFit: "cover", cursor: "pointer" }}
-                                                        onClick={() => setViewingModalPhoto({ url: evidencePhoto, title: "Citizen Evidence Photo" })}
-                                                    />
-                                                </div>
-                                            )}
-                                            {directiveData && sla && (
-                                                <div style={{
-                                                    marginTop: "1rem",
-                                                    padding: "0.85rem 1rem",
-                                                    borderRadius: "0.75rem",
-                                                    background: sla.isOverdue
-                                                        ? "linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(185, 28, 28, 0.08))"
-                                                        : "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08))",
-                                                    border: `1px solid ${sla.isOverdue ? "rgba(239, 68, 68, 0.45)" : "rgba(245, 158, 11, 0.4)"}`,
-                                                    display: "flex",
-                                                    flexDirection: "column",
-                                                    gap: "0.4rem",
-                                                }}>
-                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-                                                        <span style={{ fontSize: "0.78rem", fontWeight: "900", color: "#fbbf24", display: "flex", alignItems: "center", gap: "0.4rem", letterSpacing: "0.03em" }}>
-                                                            <span>🏛️</span>
-                                                            <span>COLLECTOR EXECUTIVE DIRECTIVE ISSUED</span>
-                                                        </span>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
-                                                            <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#fef08a", background: "rgba(245, 158, 11, 0.2)", padding: "0.15rem 0.5rem", borderRadius: "99px", fontWeight: "700" }}>
-                                                                #{orderId}
-                                                            </span>
-                                                            <span style={{ fontSize: "0.72rem", color: sla.color, background: sla.bg, border: `1px solid ${sla.border}`, padding: "0.15rem 0.55rem", borderRadius: "99px", fontWeight: "800" }}>
-                                                                {sla.label}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ fontSize: "0.85rem", color: "#fef3c7", fontWeight: "600" }}>
-                                                        &ldquo;{directiveData.directiveNote}&rdquo;
-                                                    </div>
-                                                    <div style={{ fontSize: "0.72rem", color: "#fde68a", display: "flex", gap: "1rem", marginTop: "0.1rem", flexWrap: "wrap" }}>
-                                                        <span>⏱️ Target Window: <strong>{directiveData.priorityTarget}</strong></span>
-                                                        <span>🏛️ Authority: <strong>{issuer}</strong></span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </>
-                                    );
-                                })()}
+                                <h2 style={{ fontSize: "1.4rem", margin: 0, lineHeight: 1.3 }}>{complaint.subject}</h2>
                             </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "flex-end" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
                                 <span style={{
-                                    padding: "0.3rem 0.9rem", borderRadius: "99px", fontSize: "0.8rem", fontWeight: "700",
+                                    padding: "0.35rem 0.9rem", borderRadius: "99px", fontSize: "0.8rem", fontWeight: "700",
                                     background: `${STATUS_COLORS[complaint.status] ?? "#6366f1"}22`,
                                     color: STATUS_COLORS[complaint.status] ?? "#6366f1",
                                     border: `1px solid ${STATUS_COLORS[complaint.status] ?? "#6366f1"}44`,
+                                    display: "inline-flex", alignItems: "center", gap: "0.35rem", whiteSpace: "nowrap"
                                 }}>
                                     ● {complaint.status}
                                 </span>
                                 <span style={{
-                                    padding: "0.3rem 0.9rem", borderRadius: "99px", fontSize: "0.8rem", fontWeight: "700",
+                                    padding: "0.35rem 0.9rem", borderRadius: "99px", fontSize: "0.8rem", fontWeight: "700",
                                     background: `${PRIORITY_COLORS[complaint.priority] ?? "#f59e0b"}22`,
                                     color: PRIORITY_COLORS[complaint.priority] ?? "#f59e0b",
                                     border: `1px solid ${PRIORITY_COLORS[complaint.priority] ?? "#f59e0b"}44`,
+                                    whiteSpace: "nowrap"
                                 }}>
                                     {complaint.priority} {t("track_priority")}
                                 </span>
                             </div>
                         </div>
+
+                        {/* Content Body */}
+                        {(() => {
+                            const photoMatch = complaint.description.match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
+                            const evidencePhoto = photoMatch ? photoMatch[1] : null;
+                            const directiveData = parseEmbeddedTag<EmbeddedDirective>(complaint.description, "COLLECTOR_DIRECTIVE");
+                            const atrData = parseEmbeddedTag<{ resolvedAt?: string }>(complaint.description, "ACTION_TAKEN_REPORT");
+                            const cleanDesc = stripEmbeddedTags(complaint.description);
+                            const sla = directiveData
+                                ? computeDirectiveSlaStatus(
+                                      directiveData.issuedAt,
+                                      directiveData.priorityTarget,
+                                      complaint.status,
+                                      directiveData.deadlineHours,
+                                      Date.now(),
+                                      atrData?.resolvedAt
+                                  )
+                                : null;
+                            const orderId = directiveData?.orderId || directiveData?.directiveId || "DIR-2026";
+                            const issuer = directiveData?.officerName || directiveData?.issuedBy || "District Collectorate";
+                            return (
+                                <>
+                                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: "0.5rem 0 0" }}>{cleanDesc}</p>
+                                    {evidencePhoto && (
+                                        <div style={{ marginTop: "0.75rem" }}>
+                                            <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "#a5b4fc", marginBottom: "0.35rem" }}>
+                                                📷 Attached Photo Evidence
+                                            </div>
+                                            <img
+                                                src={evidencePhoto}
+                                                alt="Evidence"
+                                                style={{ maxWidth: "240px", maxHeight: "160px", borderRadius: "0.5rem", border: "1px solid var(--border)", objectFit: "cover", cursor: "pointer" }}
+                                                onClick={() => setViewingModalPhoto({ url: evidencePhoto, title: "Citizen Evidence Photo" })}
+                                            />
+                                        </div>
+                                    )}
+                                    {directiveData && sla && (
+                                        <div style={{
+                                            marginTop: "1rem",
+                                            padding: "0.85rem 1rem",
+                                            borderRadius: "0.75rem",
+                                            background: sla.isOverdue
+                                                ? "linear-gradient(135deg, rgba(239, 68, 68, 0.14), rgba(185, 28, 28, 0.08))"
+                                                : "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08))",
+                                            border: `1px solid ${sla.isOverdue ? "rgba(239, 68, 68, 0.45)" : "rgba(245, 158, 11, 0.4)"}`,
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: "0.4rem",
+                                        }}>
+                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
+                                                <span style={{ fontSize: "0.78rem", fontWeight: "900", color: "#fbbf24", display: "flex", alignItems: "center", gap: "0.4rem", letterSpacing: "0.03em" }}>
+                                                    <span>🏛️</span>
+                                                    <span>COLLECTOR EXECUTIVE DIRECTIVE ISSUED</span>
+                                                </span>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                                    <span style={{ fontFamily: "monospace", fontSize: "0.72rem", color: "#fef08a", background: "rgba(245, 158, 11, 0.2)", padding: "0.15rem 0.5rem", borderRadius: "99px", fontWeight: "700" }}>
+                                                        #{orderId}
+                                                    </span>
+                                                    <span style={{ fontSize: "0.72rem", color: sla.color, background: sla.bg, border: `1px solid ${sla.border}`, padding: "0.15rem 0.55rem", borderRadius: "99px", fontWeight: "800" }}>
+                                                        {sla.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: "0.85rem", color: "#fef3c7", fontWeight: "600" }}>
+                                                &ldquo;{directiveData.directiveNote}&rdquo;
+                                            </div>
+                                            <div style={{ fontSize: "0.72rem", color: "#fde68a", display: "flex", gap: "1rem", marginTop: "0.1rem", flexWrap: "wrap" }}>
+                                                <span>⏱️ Target Window: <strong>{directiveData.priorityTarget}</strong></span>
+                                                <span>🏛️ Authority: <strong>{issuer}</strong></span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
 
                         {/* Meta row */}
                         <div style={{
