@@ -927,60 +927,7 @@ export default function TrackPage() {
                         </div>
                     )}
 
-                    {/* ── Photo Evidence Viewer Lightbox Modal ── */}
-            {viewingModalPhoto && (
-                <div
-                    onClick={() => setViewingModalPhoto(null)}
-                    style={{
-                        position: "fixed", inset: 0, zIndex: 9999,
-                        background: "rgba(5,5,10,0.85)", backdropFilter: "blur(8px)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        padding: "1.5rem",
-                    }}
-                >
-                    <div
-                        onClick={e => e.stopPropagation()}
-                        className="animate-fade-in"
-                        style={{
-                            maxWidth: "900px", width: "100%", maxHeight: "90vh",
-                            background: "rgba(15,15,26,0.98)", border: "1px solid rgba(99,102,241,0.3)",
-                            borderRadius: "1.25rem", overflow: "hidden", display: "flex", flexDirection: "column",
-                            boxShadow: "0 25px 60px rgba(0,0,0,0.7)",
-                        }}
-                    >
-                        <div style={{
-                            padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)",
-                            display: "flex", justifyContent: "space-between", alignItems: "center",
-                            background: "rgba(255,255,255,0.02)",
-                        }}>
-                            <span style={{ fontWeight: "800", fontSize: "0.95rem", color: "#ffffff" }}>
-                                {viewingModalPhoto.title}
-                            </span>
-                            <button
-                                onClick={() => setViewingModalPhoto(null)}
-                                style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: "1.4rem", cursor: "pointer" }}
-                            >✕</button>
-                        </div>
-                        <div style={{ padding: "1.25rem", display: "flex", alignItems: "center", justifyContent: "center", background: "#000" }}>
-                            <img
-                                src={viewingModalPhoto.url}
-                                alt={viewingModalPhoto.title}
-                                style={{ maxHeight: "70vh", maxWidth: "100%", objectFit: "contain" }}
-                            />
-                        </div>
-                        <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid var(--border)", textAlign: "right" }}>
-                            <button
-                                onClick={() => setViewingModalPhoto(null)}
-                                style={{ padding: "0.4rem 1rem", borderRadius: "0.5rem", background: "var(--primary)", border: "none", color: "white", fontSize: "0.8rem", fontWeight: "700", cursor: "pointer" }}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Back button */}
+                    {/* Back button */}
                     <div style={{ textAlign: "center" }}>
                         <Link
                             href="/"
@@ -989,6 +936,132 @@ export default function TrackPage() {
                         >
                             🏠 {t("track_submit_another")}
                         </Link>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Photo Evidence Viewer Lightbox Modal (Fixed to Viewport) ── */}
+            {viewingModalPhoto && (
+                <div
+                    onClick={() => setViewingModalPhoto(null)}
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: "100vw",
+                        height: "100vh",
+                        zIndex: 999999,
+                        background: "rgba(0, 0, 0, 0.88)",
+                        backdropFilter: "blur(10px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "1rem",
+                        boxSizing: "border-box",
+                    }}
+                >
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            maxWidth: "850px",
+                            width: "100%",
+                            maxHeight: "90vh",
+                            background: "var(--bg-card, #111827)",
+                            border: "1px solid rgba(255, 255, 255, 0.15)",
+                            borderRadius: "1.25rem",
+                            overflow: "hidden",
+                            display: "flex",
+                            flexDirection: "column",
+                            boxShadow: "0 25px 60px rgba(0,0,0,0.85)",
+                            position: "relative",
+                        }}
+                    >
+                        {/* Header */}
+                        <div style={{
+                            padding: "1rem 1.25rem",
+                            borderBottom: "1px solid var(--border, rgba(255,255,255,0.1))",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            background: "rgba(255, 255, 255, 0.03)",
+                        }}>
+                            <span style={{ fontWeight: "800", fontSize: "0.95rem", color: "#ffffff" }}>
+                                📸 {viewingModalPhoto.title}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setViewingModalPhoto(null)}
+                                style={{
+                                    background: "rgba(255,255,255,0.08)",
+                                    border: "none",
+                                    color: "#ffffff",
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    fontSize: "1.2rem",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Image body */}
+                        <div style={{
+                            padding: "1rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "#000000",
+                            overflow: "hidden",
+                            flex: 1,
+                        }}>
+                            <img
+                                src={viewingModalPhoto.url}
+                                alt={viewingModalPhoto.title}
+                                style={{
+                                    maxHeight: "65vh",
+                                    maxWidth: "100%",
+                                    objectFit: "contain",
+                                    borderRadius: "0.5rem",
+                                }}
+                            />
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{
+                            padding: "0.75rem 1.25rem",
+                            borderTop: "1px solid var(--border, rgba(255,255,255,0.1))",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            background: "rgba(255, 255, 255, 0.02)",
+                        }}>
+                            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                                Tap anywhere outside or click Close to return
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setViewingModalPhoto(null)}
+                                style={{
+                                    padding: "0.45rem 1.25rem",
+                                    borderRadius: "0.5rem",
+                                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                                    border: "none",
+                                    color: "white",
+                                    fontSize: "0.82rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
