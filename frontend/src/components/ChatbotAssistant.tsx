@@ -8,41 +8,111 @@ interface Message {
     text: string;
 }
 
-const BOT_RESPONSES: Record<string, string> = {
-    water: "🚰 For water-related issues (contamination, supply shortage, leakage), please file under **Environment** category. Include your exact location and photos if possible. These are treated as High priority.",
-    pothole: "🚧 Potholes fall under **Infrastructure** category. GPS photo evidence is very helpful! Our AI auto-assigns it to the Road Maintenance dept.",
-    light: "💡 Street light issues go under **Infrastructure**. Mention the exact pole number or nearby landmark for faster resolution.",
-    garbage: "🗑️ Garbage/waste issues fall under **Environment**. Include photos and GPS location. Usually resolved within 48 hours.",
-    parking: "🚗 Illegal parking complaints go under **Safety**. Note the vehicle numbers and location with time.",
-    hospital: "🏥 Hospital and healthcare issues are categorized as **Public Health** — these are given High/Critical priority immediately.",
-    noise: "🔊 Noise pollution complaints go under **Environment**. Note the time and source of noise.",
-    status: "📋 To check your complaint status, click **Track** in the navigation, then enter your GRV tracking ID. You'll see a full timeline of your complaint.",
-    long: "⏱️ Resolution times vary by priority: Critical (24-48 hrs), High (3-5 days), Medium (7-10 days), Low (14+ days). You'll get browser notifications on status changes.",
-    file: "📝 To file a complaint:\n1️⃣ Fill the Subject field\n2️⃣ Describe the issue in detail\n3️⃣ Add your location or use GPS Camera\n4️⃣ Upload photos/videos (optional)\n5️⃣ Click Submit — AI will triage it instantly!",
-    voice: "🎙️ Yes! Click the **Voice Input** button on the complaint form, speak your issue, and the text will be filled automatically. No typing needed!",
-    photo: "📸 Click **AI Analyze Photo** after uploading an image. Our AI will read what's in the photo and auto-fill the Subject and Category fields!",
-    track: "🔍 Use your GRV- tracking ID (shown after submission) on the Track page. You can also enable browser notifications to get automatic status alerts.",
-    login: "🔐 Account Access:\n• Citizens: Register using your email address on the Login page.\n• Field Officers & Chiefs: Contact your system administrator for official department credentials and onboarding passphrases.",
-    hi: "👋 Hello! I'm here to help you with grievance filing. You can ask me about filing complaints, tracking status, or any category-specific info!",
-    hello: "👋 Hello! I'm here to help you with grievance filing. You can ask me about filing complaints, tracking status, or any category-specific info!",
-    namaste: "🙏 Namaste! I'm here to help you. Ask me about filing complaints, tracking status, or how our AI system works!",
-};
+// ── Domain Security Guardrails ──────────────────────────────────────────────
+const OFF_TOPIC_REGEX = /\b(cricket|football|fifa|ipl|world cup|messi|ronaldo|match|score|sports|movie|cinema|actor|actress|hollywood|bollywood|song|lyrics|joke|story|recipe|cooking|president|election|bitcoin|crypto|stock market|shares|astrology|horoscope|weather tomorrow|forecast)\b/i;
 
-function getBotReply(input: string): string {
-    const lower = input.toLowerCase();
-    for (const [keyword, reply] of Object.entries(BOT_RESPONSES)) {
-        if (lower.includes(keyword)) return reply;
+const OFFICER_PRIVACY_REGEX = /\b(officer phone|officer number|chief phone|chief number|collector phone|collector number|officer contact|chief contact|officer personal|officer salary|officer address|collector address|officer home|passphrase|secret key|admin password|database password|internal credential)\b/i;
+
+function getBotReply(rawInput: string): string {
+    const text = (rawInput || "").trim().toLowerCase();
+
+    // 1. Officer & Chief Safety Guardrail (Strict PII Protection)
+    if (OFFICER_PRIVACY_REGEX.test(text)) {
+        return "🔒 **Official Protocol Notice:**\nFor administrative security and officer safety, personal contact numbers, private addresses, and internal credentials of Field Officers and the District Collector are confidential.\n\n• All verified action updates, officer directives, and resolution proof photos are logged directly on your **Track** page (`/track`).\n• For urgent administrative inquiries, please contact the **District Public Grievance Helpline at 📞 1913** (Toll-Free, 24/7).";
     }
-    if (lower.includes("air") || lower.includes("pollution") || lower.includes("smoke")) {
-        return "🏭 Air pollution complaints go under **Environment — Critical**. Include factory name/location and time of occurrence. Our AI escalates these immediately.";
+
+    // 2. Strict Off-Topic Guardrail (Domain Boundary Shield)
+    if (OFF_TOPIC_REGEX.test(text)) {
+        return "⛔ **Civic Portal Notice:**\nI am the dedicated Civic Grievance Assistant for this portal. I can only answer questions related to:\n• Filing civic grievances (text, voice, photo)\n• Tracking complaints & resolution deadlines (SLAs)\n• Account settings & password management\n• Civic department issues (Water, Roads, Garbage, Streetlights)\n\nPlease ask any question related to our civic portal!";
     }
-    if (lower.includes("road") || lower.includes("accident")) {
-        return "🚦 Road safety issues fall under **Infrastructure** or **Safety** categories. Include exact location (GPS photo recommended) and time.";
+
+    // 3. Greetings
+    if (/^(hi|hello|hey|namaste|vanakkam|good morning|good afternoon|good evening|yo)\b/i.test(text)) {
+        return "👋 **Hello & Welcome!**\nI'm your official Civic Grievance Assistant. I can help you:\n\n• 📝 **File a complaint** using text, voice, or photos\n• 🔍 **Track your grievance** with your GRV-ID\n• ⏱️ **Check resolution deadlines** (24h to 14 days)\n• 🔑 **Change your password** or update your profile\n• 🆘 **Find official emergency helplines**\n\nHow can I help you today? You can type your question or tap any topic chip above!";
     }
-    if (lower.includes("electric") || lower.includes("power") || lower.includes("current")) {
-        return "⚡ Power/electricity issues go under **Infrastructure**. Mention your area, consumer number if possible, and duration of the outage.";
+
+    // 4. Filing Complaints & Voice / Photo Features
+    if (/\b(how to file|file complaint|lodge complaint|submit complaint|raise complaint|report problem|voice input|voice typing|speak|mic|audio|photo|ai analyze|scanner|camera|duplicate)\b/i.test(text) || text.includes("how to file")) {
+        return "📝 **How to File a Civic Grievance:**\n\n1️⃣ **Open Form:** Go to the home page (`/`) to access the grievance form.\n2️⃣ **Subject & Category:** Enter a clear title (e.g. *\"Broken Drinking Water Pipe\"*) and choose your department (Environment, Infrastructure, Safety, etc.).\n3️⃣ **Description & Voice Input:** Type details or click **🎙️ Voice Input** to speak your complaint in Tamil or English without typing!\n4️⃣ **Location & Geotag:** Click **📍 Auto-Detect GPS** or choose your district from the dropdown.\n5️⃣ **Photos & AI Scanner:** Upload photo evidence and click **📸 AI Analyze Photo** to automatically recognize the problem and auto-fill details!\n6️⃣ **Submit:** Click **Submit Grievance**. You'll instantly receive your unique tracking ID (`GRV-XXXXX`)!";
     }
-    return "🤔 I'm not sure about that specific query. Try asking about:\n• How to file a complaint\n• Water/road/hospital/pollution issues\n• Tracking your complaint status\n• Voice input or photo analysis features\n• Account access & registration";
+
+    // 5. Tracking Grievance & GRV-ID
+    if (/\b(track|tracking id|grv|check status|status meaning|progress|where is my complaint|ticket id)\b/i.test(text) || text.includes("track status")) {
+        return "🔍 **How to Track Your Grievance:**\n\n1️⃣ Click **Track** in the top menu (or go to `/track`).\n2️⃣ Enter your **Tracking ID** (e.g. `GRV-49033`).\n3️⃣ Click **Track Grievance** to see real-time status:\n\n• ⏳ **Pending:** Awaiting department triage and officer dispatch.\n• ⚙️ **In Progress:** Assigned field officer is actively resolving on-site.\n• ✅ **Resolved:** Repair complete with verified before & after photos!\n• ❌ **Rejected:** Out-of-jurisdiction with AI Advocate appeal options.\n\n💡 *Tip: Your tracking ID was shown on-screen right after filing and saved in 'My Grievances'!*";
+    }
+
+    // 6. Deadlines & Resolution Time Limits (SLAs)
+    if (/\b(deadline|time limit|how long|how many days|sla|resolution time|when will it be resolved|urgent|urgency|priority|critical|high priority)\b/i.test(text) || text.includes("time limits")) {
+        return "⏱️ **Official Resolution Deadlines (SLAs):**\n\nOur system categorizes complaints into 4 priority tiers with strict time limits:\n\n🔴 **Critical Priority (24 – 48 Hours):**\nDrinking water contamination, open high-voltage live wires, hospital hazards, or severe road collapses.\n\n🟠 **High Priority (3 – 5 Days):**\nMajor road potholes, overflowing garbage dumps, broken streetlights on main avenues.\n\n🟡 **Medium Priority (7 – 10 Days):**\nPublic park maintenance, drainage odor, non-functional public signage.\n\n🟢 **Low Priority (14+ Days):**\nGeneral administrative requests and routine civic improvements.\n\n🏛️ *Note: If a deadline passes, the complaint is auto-flagged as 'Overdue' and escalated to the District Collector's Executive Directive dashboard.*";
+    }
+
+    // 7. Password & Account Profile Management
+    if (/\b(password|change password|reset password|forgot password|profile|update profile|edit profile|phone number|ward|district|pincode|resident badge|verified resident)\b/i.test(text) || text.includes("change password")) {
+        return "🔑 **Account & Profile Guide:**\n\n• **Change Password:**\nClick your **MK Profile** button at the top right → Select **👤 My Profile** → Click the gold **🔑 Change Password** button. Enter your current password and your new password.\n\n• **Update Contact / District:**\nOn your Profile page, click **Edit Profile Details** to update your official name, district, contact phone, or pincode.\n\n• **Verified Resident Badge (🛡️):**\nIndicates you are a registered resident with verified civic representation in your municipal ward.";
+    }
+
+    // 8. My Grievances History Page
+    if (/\b(my grievances|past complaints|history|previous complaint|view my|all complaints)\b/i.test(text)) {
+        return "📋 **My Grievances Portal (`/my-grievances`):**\n\nClick **My Grievances** in your profile menu to:\n• View every grievance you have ever filed.\n• Filter by status (**All**, **Pending**, **In Progress**, **Resolved**).\n• Click **Track →** on any complaint card to view its live redressal timeline and official repair proof.";
+    }
+
+    // 9. Water & Drainage Issues
+    if (/\b(water|drinking water|leakage|pipe|contamination|drainage|water supply|sewage|borewell)\b/i.test(text) || text.includes("water")) {
+        return "🚰 **Water & Drainage Issues:**\n\n• **Department:** Handled by the **Environment & Water Redressing Division**.\n• **Contaminated Water:** Treated as **🔴 Critical Priority (24-Hour SLA)** due to public health risks.\n• **Leakages & Low Pressure:** Treated as **🟠 High Priority (3-5 Days)**.\n• **Filing Tip:** Upload a photo of the leaking pipe or discolored water and mention your ward/street number.";
+    }
+
+    // 10. Roads, Potholes & Infrastructure
+    if (/\b(road|pothole|street|tar|asphalt|traffic light|signal|speed breaker|bridge|culvert)\b/i.test(text) || text.includes("roads") || text.includes("potholes")) {
+        return "🚧 **Roads & Potholes:**\n\n• **Department:** Handled by the **Infrastructure (Public Works / Highways) Division**.\n• **Major Potholes & Collapses:** Classified as **🟠 High** or **🔴 Critical Priority**.\n• **Filing Tip:** Take a photo from 5–10 feet away showing the road context. The system automatically tags GPS coordinates to dispatch the nearest asphalt repair team.";
+    }
+
+    // 11. Streetlights & Pole Issues
+    if (/\b(street light|streetlight|light|lamp|pole|dark street|bulb)\b/i.test(text)) {
+        return "💡 **Streetlight Complaints:**\n\n• **Department:** Handled by the **Infrastructure (Electrical Division)**.\n• **Timeline:** Fixed within **3 to 5 business days**.\n• **Filing Tip:** Mention the **Pole Number** (stenciled in yellow/white on the pole) or the nearest house landmark. This helps the lineman locate the exact light immediately!";
+    }
+
+    // 12. Garbage, Waste & Sanitation
+    if (/\b(garbage|trash|waste|dump|litter|cleaning|sanitation|stray animal|dog|mosquito|debris)\b/i.test(text) || text.includes("garbage") || text.includes("waste")) {
+        return "🗑️ **Garbage & Sanitation:**\n\n• **Department:** Handled by the **Environment (Solid Waste Management) Division**.\n• **Timeline:** Routine bin overflows cleared within **24 to 48 hours**.\n• **Filing Tip:** Take a photo of the overflowing container or uncollected pile with your GPS camera turned on.";
+    }
+
+    // 13. Electricity, Live Wires & Power Outages
+    if (/\b(electric|power cut|wire|transformer|spark|current|eb|power outage|voltage)\b/i.test(text)) {
+        return "⚡ **Electricity & Power Hazards:**\n\n• **Sparking or Hanging Live Wires:** Treated as **🔴 Critical Emergency Priority (Immediate Escalation)**.\n• **Department:** Handled by the **State Electricity Board (EB / TANGEDCO)**.\n• **Emergency Tip:** For immediate live wire emergencies, stay at least 10 meters away and dial the state electricity toll-free emergency number at **📞 1912**.";
+    }
+
+    // 14. Hospitals, Healthcare & Medicine
+    if (/\b(hospital|health|doctor|clinic|medicine|ambulance|disease|sanitary)\b/i.test(text)) {
+        return "🏥 **Public Health & Hospital Grievances:**\n\n• **Department:** Handled by the **Public Health Department**.\n• **Priority:** Escalated to **🔴 Critical / High** immediately.\n• **Issues Handled:** PHC doctor non-availability, essential medicine shortage, unsanitary hospital wards, or emergency ambulance delays.";
+    }
+
+    // 15. Collector Executive Directives & ATR Reports
+    if (/\b(directive|collector|executive directive|atr|action taken report|collector order|resolution proof|proof photo|inspection)\b/i.test(text)) {
+        return "🏛️ **Collector Directives & ATR Reports:**\n\n• **Executive Directive:** When a grievance is urgent or overdue, the District Collector can issue a legally binding directive expediting resolution within a target window (e.g. 24 Hours).\n• **Action Taken Report (ATR):** Once the field officer executes the repair, they must upload an official report with verified **AFTER REPAIR ✓** photo evidence.\n• **Inspect Proof:** You can tap any resolution photo on `/track` to view full-size geotagged evidence!";
+    }
+
+    // 16. Rejections & AI Advocate Appeal
+    if (/\b(reject|rejected|why rejected|appeal|advocate|ai advocate|false report)\b/i.test(text)) {
+        return "⚖️ **Rejected Complaints & Appeal Rights:**\n\n• If an officer rejects a complaint, the rejection reason is clearly stated on your `/track` page.\n• **AI Advocate Card:** For rejected grievances, an AI Advocate button appears with official legal clauses (such as *Article 21 Right to Clean Environment* or *Municipal Corporation Act*) and allows you to submit an official appeal to the District Collectorate.";
+    }
+
+    // 17. Official Emergency Helplines
+    if (/\b(helpline|emergency|phone number|call|police|fire|contact number|toll free|customer care)\b/i.test(text) || text.includes("emergency") || text.includes("helpline")) {
+        return "🆘 **Official Government Civic Helplines:**\n\n🏛️ **Municipal Civic Grievances:** 1913 (Toll-Free)\n⚡ **Electricity Emergency:** 1912\n🚑 **Medical Emergency / Ambulance:** 108\n🚓 **Police Control Room:** 100 / 112\n🚒 **Fire & Rescue Services:** 101\n👩 **Women Helpline:** 1091\n💻 **National Cyber Crime:** 1930\n\n⏰ *District Collectorate Grievance Hall operates Monday to Saturday from 9:30 AM to 5:30 PM.*";
+    }
+
+    // 18. Language & Dark/Light Themes
+    if (/\b(language|tamil|hindi|english|dark mode|light mode|theme|color)\b/i.test(text)) {
+        return "🌐 **Language & Display Settings:**\n\n• **Language Switcher:** Click the Globe 🌐 icon in the top navigation bar to switch between **English**, **தமிழ் (Tamil)**, and **हिन्दी (Hindi)**.\n• **Theme Toggle:** Click the Sun ☀️ / Moon 🌙 icon in the navbar to toggle between Dark Mode and Light Mode anytime.";
+    }
+
+    // 19. Roles & Permissions (Citizen vs Officer vs Chief)
+    if (/\b(roles|citizen role|officer role|chief role|authority role|admin access)\b/i.test(text)) {
+        return "👥 **Portal User Roles:**\n\n• **Citizen (You):** File grievances, track status, view before/after proof, and manage profile.\n• **Field Officer:** Field engineers dispatched to inspect, repair, and submit Action Taken Reports (ATRs).\n• **District Chief (Collector):** Oversees district metrics, issues executive directives, and monitors department clearance rates.";
+    }
+
+    // 20. Comprehensive Helpful Fallback
+    return "🤔 **I'm here to help you with the Civic Grievance Portal!**\n\nHere are the most common things I can assist you with:\n\n• 📝 **Filing a Complaint** (Voice typing, photo analysis, GPS)\n• 🔍 **Tracking Grievances** (Enter your `GRV-ID` to see live progress)\n• ⏱️ **Resolution Deadlines** (SLA limits from 24 hours to 14 days)\n• 🔑 **Account & Password** (Reset password, update phone or district)\n• 🚰 **Civic Issues** (Water, Potholes, Streetlights, Garbage, Hospitals)\n• 🆘 **Emergency Helplines** (1913, 108, 100, 1091)\n\n💡 *Tip: You can also tap any topic chip above for instant help!*";
 }
 
 export default function ChatbotAssistant() {
@@ -73,8 +143,8 @@ export default function ChatbotAssistant() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, isTyping]);
 
-    const sendMessage = () => {
-        const text = input.trim();
+    const handleSend = (queryText?: string) => {
+        const text = (typeof queryText === "string" ? queryText : input).trim();
         if (!text) return;
         setMessages((prev) => [...prev, { role: "user", text }]);
         setInput("");
@@ -84,7 +154,7 @@ export default function ChatbotAssistant() {
             setMessages((prev) => [...prev, { role: "bot", text: reply }]);
             setIsTyping(false);
             if (!isOpen) setHasNew(true);
-        }, 800 + Math.random() * 500);
+        }, 350 + Math.random() * 250);
     };
 
     const renderText = (text: string) => {
@@ -98,7 +168,16 @@ export default function ChatbotAssistant() {
         ));
     };
 
-    const quickChips = ["How to file?", "Track status", "Water issue", "Login help"];
+    const quickChips = [
+        "📝 How to File",
+        "🔍 Track Status",
+        "⏱️ Time Limits",
+        "🔑 Change Password",
+        "🚰 Water Issue",
+        "🚧 Roads & Potholes",
+        "🗑️ Garbage & Waste",
+        "🆘 Helplines"
+    ];
 
     return (
         <>
@@ -213,7 +292,7 @@ export default function ChatbotAssistant() {
                     {/* Quick chips */}
                     <div style={{ padding: "0.5rem 0.85rem", display: "flex", gap: "0.4rem", flexWrap: "wrap", borderTop: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
                         {quickChips.map((chip) => (
-                            <button key={chip} onClick={() => { setInput(chip); setTimeout(sendMessage, 10); }}
+                            <button key={chip} onClick={() => handleSend(chip)}
                                 style={{ padding: "0.25rem 0.65rem", borderRadius: "99px", fontSize: "0.72rem", fontWeight: "600", background: "var(--bg-main, #1e293b)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-muted)", transition: "all 0.2s" }}
                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#6366f1"; e.currentTarget.style.color = "#6366f1"; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-muted)"; }}
@@ -229,11 +308,11 @@ export default function ChatbotAssistant() {
                             ref={inputRef}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                            onKeyDown={(e) => e.key === "Enter" && handleSend()}
                             placeholder={t("chat_placeholder")}
                             style={{ flex: 1, padding: "0.6rem 0.85rem", fontSize: "0.85rem", borderRadius: "0.75rem", background: "var(--bg-main, #0b0f19)", border: "1px solid var(--border)", color: "var(--text-main)" }}
                         />
-                        <button onClick={sendMessage}
+                        <button onClick={() => handleSend()}
                             style={{ padding: "0.6rem 1rem", borderRadius: "0.75rem", background: "linear-gradient(135deg, #6366f1, #ec4899)", border: "none", cursor: "pointer", color: "white", fontWeight: "700", fontSize: "0.85rem" }}
                         >→</button>
                     </div>
