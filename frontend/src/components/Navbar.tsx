@@ -269,7 +269,7 @@ function NavbarContent() {
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
-                                <NavLink href="/profile?tab=grievances" active={pathname === "/profile" && currentTab !== "profile"}>📋 {t("nav_my_grievances")}</NavLink>
+                                <NavLink href="/my-grievances" active={isActive("/my-grievances")}>📋 {t("nav_my_grievances")}</NavLink>
                             </>)}
                             {user?.role === "authority" && (
                                 <>
@@ -627,19 +627,19 @@ function NavbarContent() {
 
                                         {/* My Profile link */}
                                         <Link
-                                            href="/profile?tab=profile"
+                                            href="/profile"
                                             onClick={() => setShowUserMenu(false)}
                                             style={{
                                                 display: "flex", alignItems: "center", gap: "0.5rem",
                                                 padding: "0.65rem 1rem", textDecoration: "none",
                                                 fontSize: "0.85rem", fontWeight: "600",
-                                                color: (pathname === "/profile" && currentTab === "profile") ? "var(--primary)" : "var(--text-main)",
-                                                background: (pathname === "/profile" && currentTab === "profile") ? "rgba(99,102,241,0.12)" : "transparent",
+                                                color: pathname === "/profile" ? "var(--primary)" : "var(--text-main)",
+                                                background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
                                                 borderBottom: "1px solid var(--border)",
                                                 transition: "background 0.15s",
                                             }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = (pathname === "/profile" && currentTab === "profile") ? "rgba(99,102,241,0.18)" : "var(--bg-main)"; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = (pathname === "/profile" && currentTab === "profile") ? "rgba(99,102,241,0.12)" : "transparent"; }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = pathname === "/profile" ? "rgba(99,102,241,0.18)" : "var(--bg-main)"; }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent"; }}
                                         >
                                             👤 {t("nav_my_profile")}
                                         </Link>
@@ -710,15 +710,15 @@ function NavbarContent() {
                                 🔍 {t("nav_track")}
                             </Link>
                             <Link
-                                href="/profile?tab=grievances"
-                                className={`mobile-menu-drawer-item${(pathname === "/profile" && currentTab !== "profile") ? " mobile-menu-drawer-item--active" : ""}`}
+                                href="/my-grievances"
+                                className={`mobile-menu-drawer-item${isActive("/my-grievances") ? " mobile-menu-drawer-item--active" : ""}`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 📋 {t("nav_my_grievances")}
                             </Link>
                             <Link
-                                href="/profile?tab=profile"
-                                className={`mobile-menu-drawer-item${(pathname === "/profile" && currentTab === "profile") ? " mobile-menu-drawer-item--active" : ""}`}
+                                href="/profile"
+                                className={`mobile-menu-drawer-item${isActive("/profile") ? " mobile-menu-drawer-item--active" : ""}`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 👤 {t("nav_my_profile")}
