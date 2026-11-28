@@ -945,7 +945,7 @@ export async function getDistrictOfficersServerAction(targetDistrict?: string): 
   }
 }
 
-// ── Official Officer Retirement & Superannuation System ────────────────────────
+// ── Official Officer Retirement System ────────────────────────
 export interface RetirementNotice {
   id: string;
   officerEmail: string;
@@ -967,7 +967,7 @@ const activeRetirementNotices: RetirementNotice[] = [];
 const officerDutyStatusMap = new Map<string, "active" | "pending" | "retired">();
 
 /**
- * Field Officer submits superannuation / retirement notice with security confirmation.
+ * Field Officer submits retirement notice with security confirmation.
  */
 export async function submitRetirementNoticeServerAction(data: {
   email: string;
@@ -987,7 +987,7 @@ export async function submitRetirementNoticeServerAction(data: {
     }
 
     const effectiveDate = data.effectiveDate || new Date().toISOString().slice(0, 10);
-    const reason = (data.reason || "Superannuation (Completed Service Tenure)").slice(0, 300);
+    const reason = (data.reason || "Official Retirement (Completed Service Tenure)").slice(0, 300);
 
     // Verify existing notice
     const existing = activeRetirementNotices.find(n => n.officerEmail.toLowerCase() === email && n.status === "pending");

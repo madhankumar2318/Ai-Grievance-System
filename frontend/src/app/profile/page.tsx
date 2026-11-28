@@ -99,11 +99,11 @@ function ProfileContent() {
     const [pwError, setPwError] = useState("");
     const [pwSuccess, setPwSuccess] = useState(false);
 
-    // Retirement / Superannuation notice state
+    // Retirement notice state
     const [dutyStatus, setDutyStatus] = useState<"active" | "pending" | "retired">("active");
     const [retirementNotice, setRetirementNotice] = useState<RetirementNotice | null>(null);
     const [showRetireModal, setShowRetireModal] = useState(false);
-    const [retireReason, setRetireReason] = useState("Superannuation (Full Service Completed)");
+    const [retireReason, setRetireReason] = useState("Official Retirement (Full Service Completed)");
     const [retireDate, setRetireDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [retirePassword, setRetirePassword] = useState("");
     const [retireLoading, setRetireLoading] = useState(false);
@@ -111,7 +111,7 @@ function ProfileContent() {
     const [retireSuccess, setRetireSuccess] = useState(false);
 
     const handleOpenRetireModal = () => {
-        setRetireReason("Superannuation (Full Service Completed)");
+        setRetireReason("Official Retirement (Full Service Completed)");
         setRetireDate(new Date().toISOString().slice(0, 10));
         setRetirePassword("");
         setRetireError("");
@@ -611,7 +611,7 @@ function ProfileContent() {
                                 )}
                             </div>
 
-                            {/* ── Official Retirement & Superannuation Action Bar (Authority Only) ── */}
+                            {/* ── Official Retirement Action Bar (Authority Only) ── */}
                             {user.role === "authority" && (
                                 <div style={{ marginTop: "1.25rem" }}>
                                     {dutyStatus === "active" && (
@@ -628,12 +628,12 @@ function ProfileContent() {
                                         }}>
                                             <div>
                                                 <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                                                    📜 {lang === "ta" ? "அதிகாரி பணி ஓய்வு அறிவிப்பு" : "Superannuation / Retirement Notice"}
+                                                    📜 {lang === "ta" ? "அதிகாரி பணி ஓய்வு அறிவிப்பு" : "Official Retirement Notice"}
                                                 </div>
                                                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
                                                     {lang === "ta"
                                                         ? "பணி ஓய்வு பெற திட்டமிடுகிறீர்களா? மாவட்ட ஆட்சியர் ஒப்புதலுக்கான அதிகாரப்பூர்வ அறிவிப்பைச் சமர்ப்பிக்கவும்."
-                                                        : "Planning superannuation or voluntary retirement? Submit an official notice for District Collector sanction."}
+                                                        : "Planning retirement or voluntary retirement? Submit an official notice for District Collector sanction."}
                                                 </div>
                                             </div>
                                             <button
@@ -678,7 +678,7 @@ function ProfileContent() {
                                                 <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem", lineHeight: "1.4" }}>
                                                     {lang === "ta"
                                                         ? `அறிவிப்பு சமர்ப்பிக்கப்பட்டது: ${retirementNotice?.requestedAt ? new Date(retirementNotice.requestedAt).toLocaleDateString() : "இன்று"}. காரணம்: ${retirementNotice?.reason || "பணி ஓய்வு"}. மாவட்ட ஆட்சியரின் ஒப்புதலுக்குப் பிறகு வழக்குகள் மாற்றப்பட்டு கணக்கு விடுவிக்கப்படும்.`
-                                                        : `Official notice submitted on ${retirementNotice?.requestedAt ? new Date(retirementNotice.requestedAt).toLocaleDateString("en-IN") : "today"} (Reason: ${retirementNotice?.reason || "Superannuation"}). Active complaints will be reassigned upon executive sanction.`}
+                                                        : `Official notice submitted on ${retirementNotice?.requestedAt ? new Date(retirementNotice.requestedAt).toLocaleDateString("en-IN") : "today"} (Reason: ${retirementNotice?.reason || "Official Retirement"}). Active complaints will be reassigned upon executive sanction.`}
                                                 </div>
                                             </div>
                                         </div>
@@ -745,7 +745,7 @@ function ProfileContent() {
                                 </div>
                                 <div>
                                     <div style={{ fontWeight: "800", fontSize: "1.05rem", color: "var(--text-main)" }}>
-                                        {lang === "ta" ? "பணி ஓய்வு & கடமை விடுவிப்பு அறிவிப்பு" : "Officer Superannuation & Retirement Notice"}
+                                        {lang === "ta" ? "பணி ஓய்வு & கடமை விடுவிப்பு அறிவிப்பு" : "Officer Retirement Notice"}
                                     </div>
                                     <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                                         {lang === "ta" ? "மாவட்ட ஆட்சியர் ஒப்புதலுக்கான அதிகாரப்பூர்வ மனு" : "Official dossier submission to District Collectorate"}
@@ -805,7 +805,7 @@ function ProfileContent() {
                                     {/* Formal Reason */}
                                     <div>
                                         <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
-                                            📋 Superannuation Grounds / Reason
+                                            📋 Retirement Grounds / Reason
                                         </label>
                                         <select
                                             value={retireReason}
@@ -816,7 +816,7 @@ function ProfileContent() {
                                                 color: "var(--text-main)", fontSize: "0.85rem"
                                             }}
                                         >
-                                            <option value="Superannuation (Full Service Completed)">Superannuation (Age of Retirement / Full Service)</option>
+                                            <option value="Official Retirement (Full Service Completed)">Official Retirement (Age Limit / Full Service)</option>
                                             <option value="Voluntary Retirement Scheme (VRS)">Voluntary Retirement Scheme (VRS)</option>
                                             <option value="Medical Relief / Health Grounds">Medical Relief / Health Grounds</option>
                                             <option value="Administrative Transfer / Resignation">Administrative Transfer / Handover</option>

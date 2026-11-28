@@ -654,7 +654,7 @@ export default function DistrictOfficersPage() {
                             </div>
                         </div>
 
-                        {/* ── Executive Directive: Officer Superannuation / Retirement Sanctions ── */}
+                        {/* ── Executive Directive: Officer Retirement Sanctions ── */}
                         {sanctionSuccessMsg && (
                             <div style={{
                                 padding: "0.85rem 1.25rem",
@@ -685,7 +685,7 @@ export default function DistrictOfficersPage() {
                                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
                                     <div>
                                         <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.2rem 0.65rem", borderRadius: "99px", background: "rgba(245, 158, 11, 0.2)", color: "#f59e0b", fontSize: "0.72rem", fontWeight: "800", marginBottom: "0.35rem" }}>
-                                            🔔 EXECUTIVE SANCTION REQUIRED · OFFICER SUPERANNUATION NOTICE
+                                            🔔 EXECUTIVE SANCTION REQUIRED · OFFICER RETIREMENT NOTICE
                                         </div>
                                         <div style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--text-main)" }}>
                                             {notice.officerName} <span style={{ fontSize: "0.85rem", color: "#f97316", fontWeight: "600" }}>({notice.authorityRole} · {notice.serviceId})</span>
