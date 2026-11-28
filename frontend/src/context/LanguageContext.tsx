@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 export type Language = "en" | "ta";
 
@@ -47,7 +47,19 @@ export type TranslationKey =
     | "chief_col_priority" | "chief_col_status" | "chief_col_date"
     | "chief_active" | "chief_busy" | "chief_available" | "chief_active_cases"
     | "status_pending" | "status_in_progress" | "status_resolved" | "status_rejected"
-    | "priority_critical" | "priority_high" | "priority_medium" | "priority_low";
+    | "priority_critical" | "priority_high" | "priority_medium" | "priority_low"
+    | "nav_my_grievances" | "nav_my_profile" | "nav_authority_portal" | "nav_district_officers"
+    | "nav_notifications" | "nav_no_notifications" | "nav_mark_all_read" | "nav_new"
+    | "role_citizen" | "role_authority" | "role_chief" | "role_verified"
+    | "profile_back_citizen" | "profile_back_authority" | "profile_back_chief"
+    | "profile_edit_btn" | "profile_email" | "profile_location" | "profile_role"
+    | "profile_account_status" | "profile_active_citizen" | "profile_assigned_office"
+    | "profile_service_id" | "profile_phone" | "profile_department" | "profile_clearance"
+    | "profile_clearance_val" | "profile_total_filed" | "profile_resolved" | "profile_pending"
+    | "profile_recent_complaints" | "profile_loading_complaints" | "profile_no_complaints"
+    | "profile_file_first" | "profile_track_btn" | "profile_modal_title" | "profile_fullname"
+    | "profile_phone_label" | "profile_workplace_label" | "profile_email_locked"
+    | "profile_dept_locked" | "profile_cancel" | "profile_save" | "profile_saving" | "profile_success";
 
 type Translations = Record<TranslationKey, string>;
 
@@ -168,6 +180,51 @@ const translations: Record<Language, Translations> = {
         priority_high: "High",
         priority_medium: "Medium",
         priority_low: "Low",
+        nav_my_grievances: "My Grievances",
+        nav_my_profile: "My Profile",
+        nav_authority_portal: "Authority Portal",
+        nav_district_officers: "District Officers",
+        nav_notifications: "Notifications",
+        nav_no_notifications: "No new notifications",
+        nav_mark_all_read: "Mark all read",
+        nav_new: "New",
+        role_citizen: "Citizen",
+        role_authority: "Authority",
+        role_chief: "Chief",
+        role_verified: "Verified Officer",
+        profile_back_citizen: "← Back to Citizen Portal",
+        profile_back_authority: "← Back to Authority Portal",
+        profile_back_chief: "← Back to Chief Command Center",
+        profile_edit_btn: "Edit Profile Details",
+        profile_email: "EMAIL",
+        profile_location: "LOCATION / DISTRICT",
+        profile_role: "OFFICIAL ROLE / DESIGNATION",
+        profile_account_status: "ACCOUNT STATUS",
+        profile_active_citizen: "Active Citizen",
+        profile_assigned_office: "ASSIGNED OFFICE / WORKING PLACE",
+        profile_service_id: "GOVERNMENT SERVICE / EMPLOYEE ID",
+        profile_phone: "OFFICIAL CONTACT PHONE",
+        profile_department: "DEPARTMENT",
+        profile_clearance: "PORTAL CLEARANCE",
+        profile_clearance_val: "Level 2 Redressal Officer",
+        profile_total_filed: "Total Filed",
+        profile_resolved: "Resolved",
+        profile_pending: "Pending",
+        profile_recent_complaints: "Recent Complaints",
+        profile_loading_complaints: "Loading your grievances...",
+        profile_no_complaints: "No complaints filed yet.",
+        profile_file_first: "File your first complaint →",
+        profile_track_btn: "Track →",
+        profile_modal_title: "Edit Profile Information",
+        profile_fullname: "Full Official Name",
+        profile_phone_label: "Contact Phone Number",
+        profile_workplace_label: "Official Office / Posting Location",
+        profile_email_locked: "Registered Email Address (Locked)",
+        profile_dept_locked: "Official Department Jurisdiction (Locked)",
+        profile_cancel: "Cancel",
+        profile_save: "Save Changes",
+        profile_saving: "Saving...",
+        profile_success: "Profile Updated Successfully!",
     },
     ta: {
         nav_home: "புகார் பதிவு",
@@ -281,10 +338,55 @@ const translations: Record<Language, Translations> = {
         status_in_progress: "நடைபெறுகிறது",
         status_resolved: "தீர்க்கப்பட்டது",
         status_rejected: "நிராகரிக்கப்பட்டது",
-        priority_critical: "குரிப்பிட்டம்",
+        priority_critical: "அவசரம்",
         priority_high: "உயர்வு",
         priority_medium: "மத்திமம்",
         priority_low: "தாழ்வு",
+        nav_my_grievances: "எனது புகார்கள்",
+        nav_my_profile: "எனது விவரக்குறிப்பு",
+        nav_authority_portal: "துறை அதிகாரி போர்ட்டல்",
+        nav_district_officers: "மாவட்ட அதிகாரிகள்",
+        nav_notifications: "அறிவிப்புகள்",
+        nav_no_notifications: "புதிய அறிவிப்புகள் இல்லை",
+        nav_mark_all_read: "அனைத்தையும் படித்ததாகக் குறி",
+        nav_new: "புதியது",
+        role_citizen: "குடிமகன்",
+        role_authority: "துறை அதிகாரி",
+        role_chief: "தலைமை அதிகாரி",
+        role_verified: "சரிபார்க்கப்பட்ட அதிகாரி",
+        profile_back_citizen: "← குடிமக்கள் போர்ட்டலுக்குத் திரும்பு",
+        profile_back_authority: "← துறை அதிகாரி போர்ட்டலுக்குத் திரும்பு",
+        profile_back_chief: "← தலைமை கட்டளை மையத்திற்குத் திரும்பு",
+        profile_edit_btn: "சுயவிவர விவரங்களைத் திருத்து",
+        profile_email: "மின்னஞ்சல்",
+        profile_location: "இடம் / மாவட்டம்",
+        profile_role: "பணிப் பொறுப்பு / பதவி",
+        profile_account_status: "கணக்கு நிலை",
+        profile_active_citizen: "செயலில் உள்ள குடிமகன்",
+        profile_assigned_office: "ஒதுக்கப்பட்ட அலுவலகம் / பணியிடம்",
+        profile_service_id: "அரசு சேவை / பணியாளர் அடையாள எண்",
+        profile_phone: "அதிகாரப்பூர்வ தொலைபேசி எண்",
+        profile_department: "துறை",
+        profile_clearance: "போர்ட்டல் அனுமதி",
+        profile_clearance_val: "நிலை 2 குறைதீர்க்கும் அதிகாரி",
+        profile_total_filed: "மொத்தம் பதிவு செய்தவை",
+        profile_resolved: "தீர்க்கப்பட்டது",
+        profile_pending: "நிலுவையில்",
+        profile_recent_complaints: "சமீபத்திய புகார்கள்",
+        profile_loading_complaints: "உங்கள் புகார்கள் ஏற்றப்படுகின்றன...",
+        profile_no_complaints: "இதுவரை புகார்கள் எதுவும் பதிவு செய்யப்படவில்லை.",
+        profile_file_first: "உங்கள் முதல் புகாரைப் பதிவு செய்யுங்கள் →",
+        profile_track_btn: "கண்காணி →",
+        profile_modal_title: "சுயவிவரத் தகவலைத் திருத்தவும்",
+        profile_fullname: "முழு பெயர்",
+        profile_phone_label: "தொடர்பு தொலைபேசி எண்",
+        profile_workplace_label: "அலுவலகம் / பணிபுரியும் இடம்",
+        profile_email_locked: "பதிவுசெய்யப்பட்ட மின்னஞ்சல் முகவரி (மாற்ற முடியாது)",
+        profile_dept_locked: "அதிகாரப்பூர்வ துறை வரம்பு (மாற்ற முடியாது)",
+        profile_cancel: "ரத்துசெய்",
+        profile_save: "மாற்றங்களைச் சேமி",
+        profile_saving: "சேமிக்கப்படுகிறது...",
+        profile_success: "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!",
     },
 };
 
@@ -297,7 +399,24 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [lang, setLang] = useState<Language>("en");
+    const [lang, setLangState] = useState<Language>("en");
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("grievance_lang") as Language;
+            if (saved === "en" || saved === "ta") {
+                setLangState(saved);
+            }
+        } catch {}
+    }, []);
+
+    const setLang = (nextLang: Language) => {
+        setLangState(nextLang);
+        try {
+            localStorage.setItem("grievance_lang", nextLang);
+        } catch {}
+    };
+
     const t = (key: TranslationKey) => translations[lang][key] ?? key;
     return (
         <LanguageContext.Provider value={{ lang, setLang, t }}>

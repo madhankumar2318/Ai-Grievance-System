@@ -9,9 +9,9 @@ import { useState, useEffect } from "react";
 import { getOfficerNotificationsServerAction } from "@/app/actions/complaintActions";
 
 const ROLE_BADGE = {
-    user: { label: "Citizen", color: "#6366f1", bg: "#6366f115" },
-    authority: { label: "Authority", color: "#f97316", bg: "#f9731615" },
-    chief: { label: "Chief", color: "#ec4899", bg: "#ec489915" },
+    user: { label: "Citizen", labelKey: "role_citizen" as const, color: "#6366f1", bg: "#6366f115" },
+    authority: { label: "Authority", labelKey: "role_authority" as const, color: "#f97316", bg: "#f9731615" },
+    chief: { label: "Chief", labelKey: "role_chief" as const, color: "#ec4899", bg: "#ec489915" },
 };
 
 function getInitials(username: string) {
@@ -267,13 +267,13 @@ export default function Navbar() {
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
-                                <NavLink href="/profile" active={isActive("/profile")}>📋 My Grievances</NavLink>
+                                <NavLink href="/profile" active={isActive("/profile")}>📋 {t("nav_my_grievances")}</NavLink>
                             </>)}
                             {user?.role === "authority" && (
                                 <>
-                                    <NavLink href="/admin" active={isActive("/admin")}>🛡️ Authority Portal</NavLink>
+                                    <NavLink href="/admin" active={isActive("/admin")}>🛡️ {t("nav_authority_portal")}</NavLink>
                                     {isDistrictHead && (
-                                        <NavLink href="/admin/officers" active={isActive("/admin/officers")}>👥 District Officers</NavLink>
+                                        <NavLink href="/admin/officers" active={isActive("/admin/officers")}>👥 {t("nav_district_officers")}</NavLink>
                                     )}
                                 </>
                             )}
@@ -353,13 +353,13 @@ export default function Navbar() {
                                     }}>
                                         <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
                                             <span style={{ fontSize: "1rem" }}>🔔</span>
-                                            <span style={{ fontWeight: "700", fontSize: "0.9rem", color: "var(--text-main)" }}>Notifications</span>
+                                            <span style={{ fontWeight: "700", fontSize: "0.9rem", color: "var(--text-main)" }}>{t("nav_notifications")}</span>
                                             {hasUnread && (
                                                 <span style={{
                                                     background: "#ef4444", color: "white", fontSize: "0.65rem",
                                                     padding: "0.1rem 0.45rem", borderRadius: "999px", fontWeight: "700"
                                                 }}>
-                                                    New
+                                                    {t("nav_new")}
                                                 </span>
                                             )}
                                         </div>
@@ -383,7 +383,7 @@ export default function Navbar() {
                                                     padding: "0.2rem 0.4rem", borderRadius: "0.35rem",
                                                 }}
                                             >
-                                                Mark all read
+                                                {t("nav_mark_all_read")}
                                             </button>
                                         )}
                                     </div>
@@ -393,7 +393,7 @@ export default function Navbar() {
                                         {notifications.length === 0 ? (
                                             <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem" }}>
                                                 <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "0.4rem" }}>📭</span>
-                                                No new notifications
+                                                {t("nav_no_notifications")}
                                             </div>
                                         ) : (
                                             notifications.map((item) => (
@@ -480,7 +480,7 @@ export default function Navbar() {
                                                 gap: "0.3rem",
                                             }}
                                         >
-                                            <span>{user?.role === "user" ? "Track All Grievances" : "View Dashboard Queue"}</span>
+                                            <span>{user?.role === "user" ? (lang === "ta" ? "அனைத்து புகார்களையும் கண்காணிக்கவும்" : "Track All Grievances") : (lang === "ta" ? "டாஷ்போர்டு வரிசையைக் காண்க" : "View Dashboard Queue")}</span>
                                             <span>→</span>
                                         </button>
                                     </div>
@@ -603,7 +603,7 @@ export default function Navbar() {
                                     {getInitials(user.username)}
                                 </div>
                                 <span className="nav-btn-text" style={{ fontSize: "0.8rem", fontWeight: "700", color: ROLE_BADGE[user.role].color, paddingRight: "0.25rem" }}>
-                                    {ROLE_BADGE[user.role].label}
+                                    {t(ROLE_BADGE[user.role].labelKey)}
                                 </span>
                                 <span style={{ fontSize: "0.6rem", color: "var(--text-muted)", paddingRight: "0.5rem" }}>▾</span>
                             </button>
@@ -637,7 +637,7 @@ export default function Navbar() {
                                             onMouseEnter={e => { e.currentTarget.style.background = "var(--bg-main)"; }}
                                             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                                         >
-                                            📋 {user.role === "user" ? "My Grievances" : "My Profile"}
+                                            📋 {user.role === "user" ? t("nav_my_grievances") : t("nav_my_profile")}
                                         </Link>
                                         {/* Logout */}
                                         <button
@@ -710,7 +710,7 @@ export default function Navbar() {
                                 className={`mobile-menu-drawer-item${isActive("/profile") ? " mobile-menu-drawer-item--active" : ""}`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                📋 My Grievances
+                                📋 {user.role === "user" ? t("nav_my_grievances") : t("nav_my_profile")}
                             </Link>
                         </>
                     )}
@@ -721,7 +721,7 @@ export default function Navbar() {
                                 className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                🛡️ Authority Portal
+                                🛡️ {t("nav_authority_portal")}
                             </Link>
                             {isDistrictHead && (
                                 <Link
@@ -729,7 +729,7 @@ export default function Navbar() {
                                     className={`mobile-menu-drawer-item${isActive("/admin/officers") ? " mobile-menu-drawer-item--active" : ""}`}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                 >
-                                    👥 District Officers
+                                    👥 {t("nav_district_officers")}
                                 </Link>
                             )}
                         </>
