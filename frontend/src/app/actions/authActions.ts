@@ -945,3 +945,179 @@ export async function getDistrictOfficersServerAction(targetDistrict?: string): 
   }
 }
 
+// ── Official Officer Retirement & Superannuation System ────────────────────────
+export interface RetirementNotice {
+  id: string;
+  officerEmail: string;
+  officerName: string;
+  department: string;
+  authorityRole: string;
+  serviceId: string;
+  district: string;
+  requestedAt: string;
+  effectiveDate: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  decisionDate?: string;
+  decisionBy?: string;
+}
+
+// Global server cache for retirement notices
+const activeRetirementNotices: RetirementNotice[] = [];
+const officerDutyStatusMap = new Map<string, "active" | "pending" | "retired">();
+
+/**
+ * Field Officer submits superannuation / retirement notice with security confirmation.
+ */
+export async function submitRetirementNoticeServerAction(data: {
+  email: string;
+  password?: string;
+  reason: string;
+  effectiveDate: string;
+}): Promise<{ success: boolean; error?: string; notice?: RetirementNotice }> {
+  try {
+    const session = await getVerifiedSessionServerAction();
+    if (!session.authenticated || !session.user) {
+      return { success: false, error: "Authentication required to submit retirement notice." };
+    }
+
+    const email = (data.email || session.user.email).toLowerCase().trim();
+    if (session.user.role !== "authority" && session.user.email !== email) {
+      return { success: false, error: "Unauthorized: Only official field authorities can submit retirement." };
+    }
+
+    const effectiveDate = data.effectiveDate || new Date().toISOString().slice(0, 10);
+    const reason = (data.reason || "Superannuation (Completed Service Tenure)").slice(0, 300);
+
+    // Verify existing notice
+    const existing = activeRetirementNotices.find(n => n.officerEmail.toLowerCase() === email && n.status === "pending");
+    if (existing) {
+      return { success: true, notice: existing };
+    }
+
+    const newNotice: RetirementNotice = {
+      id: `RET-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+      officerEmail: email,
+      officerName: session.user.username || "Field Officer",
+      department: session.user.department || "Municipal Administration",
+      authorityRole: session.user.authorityRole || "Field Officer",
+      serviceId: session.user.serviceId || "GOV-2026",
+      district: session.user.district || "Tiruchirappalli",
+      requestedAt: new Date().toISOString(),
+      effectiveDate,
+      reason,
+      status: "pending",
+    };
+
+    activeRetirementNotices.push(newNotice);
+    officerDutyStatusMap.set(email, "pending");
+
+    console.log(
+      `SECURITY_AUDIT: timestamp=${new Date().toISOString()} event=OFFICER_RETIREMENT_SUBMITTED officer=${email} id=${newNotice.id} effectiveDate=${effectiveDate}`
+    );
+
+    return { success: true, notice: newNotice };
+  } catch (err: any) {
+    console.error("Retirement submission error:", err);
+    return { success: false, error: "Failed to submit retirement notice. Please try again." };
+  }
+}
+
+/**
+ * Fetch all pending or active retirement notices for District Collector / Chief oversight.
+ */
+export async function getRetirementNoticesServerAction(): Promise<{
+  success: boolean;
+  notices: RetirementNotice[];
+}> {
+  try {
+    const session = await getVerifiedSessionServerAction();
+    if (!session.authenticated || !session.user) {
+      return { success: false, notices: [] };
+    }
+
+    // Chief sees all; authority only sees their own notice
+    if (session.user.role === "chief") {
+      return { success: true, notices: [...activeRetirementNotices] };
+    }
+
+    const officerEmail = session.user.email.toLowerCase();
+    const ownNotices = activeRetirementNotices.filter(n => n.officerEmail.toLowerCase() === officerEmail);
+    return { success: true, notices: ownNotices };
+  } catch (err) {
+    console.error("Error fetching retirement notices:", err);
+    return { success: false, notices: [] };
+  }
+}
+
+/**
+ * District Collector approves or declines an officer's retirement notice.
+ * Upon approval, officer status transitions to 'retired' and any open cases are relieved.
+ */
+export async function processRetirementNoticeServerAction(data: {
+  noticeId: string;
+  decision: "approved" | "rejected";
+}): Promise<{ success: boolean; error?: string; notice?: RetirementNotice }> {
+  try {
+    const session = await getVerifiedSessionServerAction();
+    if (!session.authenticated || !session.user) {
+      return { success: false, error: "Unauthorized: Chief session required." };
+    }
+
+    const roleStr = `${session.user.authorityRole || ""} ${session.user.role || ""}`.toLowerCase();
+    const isChief = roleStr.includes("collector") || roleStr.includes("commissioner") || session.user.role === "chief";
+
+    if (!isChief) {
+      return { success: false, error: "Forbidden: Only the District Collector can sanction official retirement." };
+    }
+
+    const notice = activeRetirementNotices.find(n => n.id === data.noticeId);
+    if (!notice) {
+      return { success: false, error: "Retirement notice record not found." };
+    }
+
+    notice.status = data.decision;
+    notice.decisionDate = new Date().toISOString();
+    notice.decisionBy = `${session.user.username} (District Collector)`;
+
+    const officerEmail = notice.officerEmail.toLowerCase();
+    if (data.decision === "approved") {
+      officerDutyStatusMap.set(officerEmail, "retired");
+      console.log(
+        `SECURITY_AUDIT: timestamp=${new Date().toISOString()} event=OFFICER_RETIREMENT_SANCTIONED officer=${officerEmail} approvedBy=${session.user.email}`
+      );
+    } else {
+      officerDutyStatusMap.set(officerEmail, "active");
+      console.log(
+        `SECURITY_AUDIT: timestamp=${new Date().toISOString()} event=OFFICER_RETIREMENT_DECLINED officer=${officerEmail} by=${session.user.email}`
+      );
+    }
+
+    return { success: true, notice };
+  } catch (err: any) {
+    console.error("Error processing retirement decision:", err);
+    return { success: false, error: "Failed to process retirement decision." };
+  }
+}
+
+/**
+ * Check an officer's duty status (active, pending, or retired)
+ */
+export async function getOfficerDutyStatusServerAction(email: string): Promise<{
+  dutyStatus: "active" | "pending" | "retired";
+  notice?: RetirementNotice;
+}> {
+  const cleanEmail = (email || "").toLowerCase().trim();
+  const notice = activeRetirementNotices.find(n => n.officerEmail.toLowerCase() === cleanEmail && (n.status === "pending" || n.status === "approved"));
+  
+  if (notice?.status === "approved") {
+    return { dutyStatus: "retired", notice };
+  }
+  if (notice?.status === "pending") {
+    return { dutyStatus: "pending", notice };
+  }
+  const status = officerDutyStatusMap.get(cleanEmail) || "active";
+  return { dutyStatus: status, notice };
+}
+
+

@@ -6,7 +6,14 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getFullUserProfileServerAction, updateUserProfileServerAction, changePasswordServerAction } from "@/app/actions/authActions";
+import {
+    getFullUserProfileServerAction,
+    updateUserProfileServerAction,
+    changePasswordServerAction,
+    submitRetirementNoticeServerAction,
+    getOfficerDutyStatusServerAction,
+    RetirementNotice,
+} from "@/app/actions/authActions";
 import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 
 const ROLE_CONFIG: Record<string, { label: string; labelKey: "role_citizen" | "role_authority" | "role_chief"; icon: string; color: string; gradient: string }> = {
@@ -91,6 +98,65 @@ function ProfileContent() {
     const [pwLoading, setPwLoading] = useState(false);
     const [pwError, setPwError] = useState("");
     const [pwSuccess, setPwSuccess] = useState(false);
+
+    // Retirement / Superannuation notice state
+    const [dutyStatus, setDutyStatus] = useState<"active" | "pending" | "retired">("active");
+    const [retirementNotice, setRetirementNotice] = useState<RetirementNotice | null>(null);
+    const [showRetireModal, setShowRetireModal] = useState(false);
+    const [retireReason, setRetireReason] = useState("Superannuation (Full Service Completed)");
+    const [retireDate, setRetireDate] = useState(() => new Date().toISOString().slice(0, 10));
+    const [retirePassword, setRetirePassword] = useState("");
+    const [retireLoading, setRetireLoading] = useState(false);
+    const [retireError, setRetireError] = useState("");
+    const [retireSuccess, setRetireSuccess] = useState(false);
+
+    const handleOpenRetireModal = () => {
+        setRetireReason("Superannuation (Full Service Completed)");
+        setRetireDate(new Date().toISOString().slice(0, 10));
+        setRetirePassword("");
+        setRetireError("");
+        setRetireSuccess(false);
+        setShowRetireModal(true);
+    };
+
+    const handleRetirementSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setRetireError("");
+        if (!retirePassword) {
+            setRetireError(lang === "ta" ? "பாதுகாப்பு உறுதிப்படுத்தலுக்கான கடவுச்சொல்லை உள்ளிடவும்." : "Please enter your password for security authorization.");
+            return;
+        }
+
+        setRetireLoading(true);
+        try {
+            const res = await submitRetirementNoticeServerAction({
+                email: user?.email || "",
+                password: retirePassword,
+                reason: retireReason,
+                effectiveDate: retireDate,
+            });
+
+            if (res.success && res.notice) {
+                setRetireSuccess(true);
+                setDutyStatus("pending");
+                setRetirementNotice(res.notice);
+                if (typeof window !== "undefined" && user?.email) {
+                    localStorage.setItem(`gs_officer_duty_${user.email}`, "pending");
+                    localStorage.setItem(`gs_retirement_notice_${user.email}`, JSON.stringify(res.notice));
+                }
+                setTimeout(() => {
+                    setShowRetireModal(false);
+                    setRetireSuccess(false);
+                }, 1600);
+            } else {
+                setRetireError(res.error || "Failed to submit retirement notice.");
+            }
+        } catch {
+            setRetireError("An unexpected error occurred. Please try again.");
+        } finally {
+            setRetireLoading(false);
+        }
+    };
 
     const handleOpenChangePw = () => {
         setPwForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
@@ -194,6 +260,28 @@ function ProfileContent() {
                 }));
             }
         });
+
+        // Check officer duty & retirement status
+        if (user.role === "authority") {
+            if (typeof window !== "undefined" && user.email) {
+                const cachedDuty = localStorage.getItem(`gs_officer_duty_${user.email}`) as "active" | "pending" | "retired" | null;
+                if (cachedDuty) setDutyStatus(cachedDuty);
+                const cachedNotice = localStorage.getItem(`gs_retirement_notice_${user.email}`);
+                if (cachedNotice) {
+                    try { setRetirementNotice(JSON.parse(cachedNotice)); } catch {}
+                }
+            }
+
+            getOfficerDutyStatusServerAction(user.email).then(st => {
+                if (st?.dutyStatus) {
+                    setDutyStatus(st.dutyStatus);
+                    if (typeof window !== "undefined" && user.email) {
+                        localStorage.setItem(`gs_officer_duty_${user.email}`, st.dutyStatus);
+                    }
+                }
+                if (st?.notice) setRetirementNotice(st.notice);
+            });
+        }
     }, [user?.email, user?.role, user?.district]);
 
     if (!user) return null;
@@ -441,8 +529,17 @@ function ProfileContent() {
                                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
                                                 {t("profile_duty_status")}
                                             </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
-                                                {t("profile_duty_status_val")}
+                                            <div style={{
+                                                fontSize: "0.88rem",
+                                                fontWeight: "700",
+                                                color: dutyStatus === "retired" ? "#34d399" : dutyStatus === "pending" ? "#f59e0b" : "#10b981",
+                                                display: "flex", alignItems: "center", gap: "0.35rem"
+                                            }}>
+                                                {dutyStatus === "retired"
+                                                    ? (lang === "ta" ? "🎖️ பணி ஓய்வு பெற்றார்" : "🎖️ Honorably Retired")
+                                                    : dutyStatus === "pending"
+                                                    ? (lang === "ta" ? "⏳ கலெக்டர் ஒப்புதலுக்காக காத்திருக்கிறது" : "⏳ Retirement Pending Sanction")
+                                                    : t("profile_duty_status_val")}
                                             </div>
                                         </div>
                                     </>
@@ -513,9 +610,266 @@ function ProfileContent() {
                                     </>
                                 )}
                             </div>
+
+                            {/* ── Official Retirement & Superannuation Action Bar (Authority Only) ── */}
+                            {user.role === "authority" && (
+                                <div style={{ marginTop: "1.25rem" }}>
+                                    {dutyStatus === "active" && (
+                                        <div style={{
+                                            padding: "1rem 1.25rem",
+                                            borderRadius: "0.85rem",
+                                            background: "rgba(245, 158, 11, 0.05)",
+                                            border: "1px dashed rgba(245, 158, 11, 0.3)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "space-between",
+                                            flexWrap: "wrap",
+                                            gap: "1rem"
+                                        }}>
+                                            <div>
+                                                <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                                    📜 {lang === "ta" ? "அதிகாரி பணி ஓய்வு அறிவிப்பு" : "Superannuation / Retirement Notice"}
+                                                </div>
+                                                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                                                    {lang === "ta"
+                                                        ? "பணி ஓய்வு பெற திட்டமிடுகிறீர்களா? மாவட்ட ஆட்சியர் ஒப்புதலுக்கான அதிகாரப்பூர்வ அறிவிப்பைச் சமர்ப்பிக்கவும்."
+                                                        : "Planning superannuation or voluntary retirement? Submit an official notice for District Collector sanction."}
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenRetireModal}
+                                                className="btn"
+                                                style={{
+                                                    padding: "0.55rem 1.15rem",
+                                                    fontSize: "0.8rem",
+                                                    fontWeight: "700",
+                                                    borderRadius: "0.6rem",
+                                                    background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                                    color: "white",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                    boxShadow: "0 4px 14px rgba(245, 158, 11, 0.35)",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "0.4rem"
+                                                }}
+                                            >
+                                                🏛️ {lang === "ta" ? "பணி ஓய்வு அறிவிக்கவும்" : "Announce Retirement / Relieve Duty"}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {dutyStatus === "pending" && (
+                                        <div style={{
+                                            padding: "1.15rem 1.25rem",
+                                            borderRadius: "0.85rem",
+                                            background: "rgba(245, 158, 11, 0.08)",
+                                            border: "1px solid rgba(245, 158, 11, 0.35)",
+                                            display: "flex",
+                                            alignItems: "flex-start",
+                                            gap: "0.85rem"
+                                        }}>
+                                            <div style={{ fontSize: "1.6rem", flexShrink: 0 }}>⏳</div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "#f59e0b" }}>
+                                                    {lang === "ta" ? "பணி ஓய்வு அறிவிப்பு சமர்ப்பிக்கப்பட்டது · ஆட்சியர் ஒப்புதலுக்காக காத்திருக்கிறது" : "Retirement Notice Under Review · Pending Collector Sanction"}
+                                                </div>
+                                                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem", lineHeight: "1.4" }}>
+                                                    {lang === "ta"
+                                                        ? `அறிவிப்பு சமர்ப்பிக்கப்பட்டது: ${retirementNotice?.requestedAt ? new Date(retirementNotice.requestedAt).toLocaleDateString() : "இன்று"}. காரணம்: ${retirementNotice?.reason || "பணி ஓய்வு"}. மாவட்ட ஆட்சியரின் ஒப்புதலுக்குப் பிறகு வழக்குகள் மாற்றப்பட்டு கணக்கு விடுவிக்கப்படும்.`
+                                                        : `Official notice submitted on ${retirementNotice?.requestedAt ? new Date(retirementNotice.requestedAt).toLocaleDateString("en-IN") : "today"} (Reason: ${retirementNotice?.reason || "Superannuation"}). Active complaints will be reassigned upon executive sanction.`}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {dutyStatus === "retired" && (
+                                        <div style={{
+                                            padding: "1.15rem 1.25rem",
+                                            borderRadius: "0.85rem",
+                                            background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(245, 158, 11, 0.08))",
+                                            border: "1px solid rgba(16, 185, 129, 0.35)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "1rem"
+                                        }}>
+                                            <div style={{ fontSize: "2.2rem", flexShrink: 0 }}>🎖️</div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: "0.95rem", fontWeight: "800", color: "#10b981", letterSpacing: "0.02em" }}>
+                                                    {lang === "ta" ? "பணி ஓய்வு பதிவு காப்பகப்படுத்தப்பட்டது · கௌரவ ஓய்வு பெற்றார்" : "Public Service Record Archived · Honorably Retired"}
+                                                </div>
+                                                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.25rem", lineHeight: "1.4" }}>
+                                                    {lang === "ta"
+                                                        ? `மாவட்ட ஆட்சியர் ஒப்புதலுடன் பணியிலிருந்து விடுவிக்கப்பட்டார். அரசு மற்றும் பொதுமக்களுக்கு ஆற்றிய சிறப்பான சேவைக்கு நன்றி.`
+                                                        : `Officially relieved of active field duties under District Collectorate executive sanction. Thank you for your distinguished public service to the citizens of Tamil Nadu.`}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
+
+                {/* ── Announce Retirement Modal ── */}
+                {showRetireModal && (
+                    <div style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.75)",
+                        backdropFilter: "blur(6px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        padding: "1rem"
+                    }} onClick={() => setShowRetireModal(false)}>
+                        <div
+                            className="glass animate-slide-up"
+                            style={{
+                                width: "100%",
+                                maxWidth: "500px",
+                                borderRadius: "1.25rem",
+                                padding: "1.75rem",
+                                border: "1px solid rgba(245, 158, 11, 0.3)",
+                                background: "var(--bg-card, #0f172a)",
+                                boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                                <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "linear-gradient(135deg, #f59e0b, #d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.35rem" }}>
+                                    🏛️
+                                </div>
+                                <div>
+                                    <div style={{ fontWeight: "800", fontSize: "1.05rem", color: "var(--text-main)" }}>
+                                        {lang === "ta" ? "பணி ஓய்வு & கடமை விடுவிப்பு அறிவிப்பு" : "Officer Superannuation & Retirement Notice"}
+                                    </div>
+                                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                        {lang === "ta" ? "மாவட்ட ஆட்சியர் ஒப்புதலுக்கான அதிகாரப்பூர்வ மனு" : "Official dossier submission to District Collectorate"}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {retireError && (
+                                <div style={{ padding: "0.7rem 0.9rem", borderRadius: "0.6rem", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontSize: "0.8rem", marginBottom: "1rem" }}>
+                                    ⚠️ {retireError}
+                                </div>
+                            )}
+
+                            {retireSuccess ? (
+                                <div style={{ padding: "1.5rem", textAlign: "center", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: "0.85rem" }}>
+                                    <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>✅</div>
+                                    <div style={{ fontWeight: "700", color: "#10b981", fontSize: "1rem" }}>
+                                        {lang === "ta" ? "அறிவிப்பு வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது!" : "Retirement Notice Forwarded!"}
+                                    </div>
+                                    <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
+                                        {lang === "ta" ? "மாவட்ட ஆட்சியர் ஒப்புதலுக்காக காத்திருக்கிறது." : "Dossier dispatched to District Collector for executive sanction."}
+                                    </div>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleRetirementSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    {/* Summary Card */}
+                                    <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                        <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: "700", textTransform: "uppercase" }}>
+                                            OFFICER DOSSIER SUMMARY
+                                        </div>
+                                        <div style={{ fontSize: "0.9rem", fontWeight: "700", color: "var(--text-main)", marginTop: "0.2rem" }}>
+                                            {profileData.username} ({profileData.serviceId})
+                                        </div>
+                                        <div style={{ fontSize: "0.78rem", color: "#f97316", marginTop: "0.15rem" }}>
+                                            {profileData.authorityRole} · {profileData.department}
+                                        </div>
+                                    </div>
+
+                                    {/* Effective Date */}
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                            📅 Effective Retirement Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={retireDate}
+                                            onChange={e => setRetireDate(e.target.value)}
+                                            required
+                                            style={{
+                                                width: "100%", padding: "0.65rem 0.85rem", borderRadius: "0.6rem",
+                                                background: "var(--bg-main)", border: "1px solid var(--border)",
+                                                color: "var(--text-main)", fontSize: "0.85rem"
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Formal Reason */}
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                            📋 Superannuation Grounds / Reason
+                                        </label>
+                                        <select
+                                            value={retireReason}
+                                            onChange={e => setRetireReason(e.target.value)}
+                                            style={{
+                                                width: "100%", padding: "0.65rem 0.85rem", borderRadius: "0.6rem",
+                                                background: "var(--bg-main)", border: "1px solid var(--border)",
+                                                color: "var(--text-main)", fontSize: "0.85rem"
+                                            }}
+                                        >
+                                            <option value="Superannuation (Full Service Completed)">Superannuation (Age of Retirement / Full Service)</option>
+                                            <option value="Voluntary Retirement Scheme (VRS)">Voluntary Retirement Scheme (VRS)</option>
+                                            <option value="Medical Relief / Health Grounds">Medical Relief / Health Grounds</option>
+                                            <option value="Administrative Transfer / Resignation">Administrative Transfer / Handover</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Security Password Confirmation */}
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.75rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                            🔐 Officer Password (Security Authorization)
+                                        </label>
+                                        <input
+                                            type="password"
+                                            placeholder="Enter your login password to authorize"
+                                            value={retirePassword}
+                                            onChange={e => setRetirePassword(e.target.value)}
+                                            required
+                                            style={{
+                                                width: "100%", padding: "0.65rem 0.85rem", borderRadius: "0.6rem",
+                                                background: "var(--bg-main)", border: "1px solid var(--border)",
+                                                color: "var(--text-main)", fontSize: "0.85rem"
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Official Warning Note */}
+                                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: "1.4", background: "rgba(245, 158, 11, 0.05)", padding: "0.65rem 0.85rem", borderRadius: "0.6rem", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+                                        ⚠️ <strong>Official Protocol:</strong> Upon submission, notice is logged to the District Collector's executive dashboard. You will remain on duty until the Collector officially sanctions retirement and transfers active cases.
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowRetireModal(false)}
+                                            className="btn btn-secondary"
+                                            style={{ flex: 1 }}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={retireLoading}
+                                            className="btn btn-primary"
+                                            style={{ flex: 1.5, background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}
+                                        >
+                                            {retireLoading ? "Submitting Notice..." : "Submit Notice ➔"}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* ── Edit Profile Modal ── */}
                 {showEditModal && (

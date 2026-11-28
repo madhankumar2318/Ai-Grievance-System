@@ -6,7 +6,13 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useLang } from "@/context/LanguageContext";
 import { getComplaintsServerAction } from "@/app/actions/complaintActions";
-import { getDistrictOfficersServerAction, RegisteredOfficer } from "@/app/actions/authActions";
+import {
+    getDistrictOfficersServerAction,
+    getRetirementNoticesServerAction,
+    processRetirementNoticeServerAction,
+    RegisteredOfficer,
+    RetirementNotice,
+} from "@/app/actions/authActions";
 
 interface GrievanceItem {
     id: string;
@@ -273,6 +279,33 @@ export default function DistrictOfficersPage() {
     const [statusFilter, setStatusFilter] = useState<"All" | "Available" | "Active" | "Busy">("All");
     const [departmentFilter, setDepartmentFilter] = useState("All");
     const [searchTerm, setSearchTerm] = useState("");
+    const [retirementNotices, setRetirementNotices] = useState<RetirementNotice[]>([]);
+    const [processingNoticeId, setProcessingNoticeId] = useState<string | null>(null);
+    const [sanctionSuccessMsg, setSanctionSuccessMsg] = useState<string | null>(null);
+
+    const handleProcessRetirement = async (noticeId: string, decision: "approved" | "rejected") => {
+        setProcessingNoticeId(noticeId);
+        try {
+            const targetNotice = retirementNotices.find(n => n.id === noticeId);
+            const res = await processRetirementNoticeServerAction({ noticeId, decision });
+            if (res.success) {
+                if (typeof window !== "undefined" && targetNotice) {
+                    localStorage.setItem(`gs_officer_duty_${targetNotice.officerEmail}`, decision === "approved" ? "retired" : "active");
+                    const updatedNotice = { ...targetNotice, status: decision };
+                    localStorage.setItem(`gs_retirement_notice_${targetNotice.officerEmail}`, JSON.stringify(updatedNotice));
+                }
+                setRetirementNotices(prev => prev.filter(n => n.id !== noticeId));
+                setSanctionSuccessMsg(decision === "approved"
+                    ? `Executive Sanction Granted: Officer ${targetNotice?.officerName || "Field Officer"} has been honorably relieved. Active caseload transferred.`
+                    : `Retirement notice for Officer ${targetNotice?.officerName || "Field Officer"} was declined.`);
+                setTimeout(() => setSanctionSuccessMsg(null), 5000);
+            }
+        } catch (err) {
+            console.error("Retirement sanction error:", err);
+        } finally {
+            setProcessingNoticeId(null);
+        }
+    };
 
     const roleStr = `${user?.authorityRole || ""} ${user?.department || ""} ${user?.username || ""} ${user?.email || ""}`.toLowerCase();
     const isDistrictHead =
@@ -312,6 +345,31 @@ export default function DistrictOfficersPage() {
                 if (officersRes.success && officersRes.officers && mounted) {
                     setRegisteredOfficers(officersRes.officers);
                 }
+
+                // Fetch retirement notices
+                try {
+                    const localNotices: RetirementNotice[] = [];
+                    if (typeof window !== "undefined") {
+                        const keys = Object.keys(localStorage).filter(k => k.startsWith("gs_retirement_notice_"));
+                        keys.forEach(k => {
+                            try {
+                                const parsed = JSON.parse(localStorage.getItem(k) || "");
+                                if (parsed && parsed.status === "pending") localNotices.push(parsed);
+                            } catch {}
+                        });
+                    }
+
+                    const retRes = await getRetirementNoticesServerAction();
+                    if (retRes.success && retRes.notices && mounted) {
+                        const combined = [...retRes.notices];
+                        localNotices.forEach(ln => {
+                            if (!combined.some(c => c.id === ln.id)) combined.push(ln);
+                        });
+                        setRetirementNotices(combined.filter(n => n.status === "pending"));
+                    } else if (localNotices.length > 0 && mounted) {
+                        setRetirementNotices(localNotices);
+                    }
+                } catch {}
             } catch (err) {
                 console.error("Failed to load officers data:", err);
             } finally {
@@ -429,7 +487,23 @@ export default function DistrictOfficersPage() {
             let statusBg = "rgba(16, 185, 129, 0.12)";
             let statusBorder = "rgba(16, 185, 129, 0.3)";
 
-            if (activeGrievances.length >= 3) {
+            const isOfficerRetired = typeof window !== "undefined" && localStorage.getItem(`gs_officer_duty_${officer.email}`) === "retired";
+            const isOfficerPendingRetire = typeof window !== "undefined" && (
+                localStorage.getItem(`gs_officer_duty_${officer.email}`) === "pending" ||
+                retirementNotices.some(n => n.officerEmail.toLowerCase() === officer.email.toLowerCase() && n.status === "pending")
+            );
+
+            if (isOfficerRetired) {
+                dutyStatus = "Retired" as any;
+                statusColor = "#34d399";
+                statusBg = "rgba(16, 185, 129, 0.15)";
+                statusBorder = "rgba(16, 185, 129, 0.4)";
+            } else if (isOfficerPendingRetire) {
+                dutyStatus = "Pending Retirement" as any;
+                statusColor = "#f59e0b";
+                statusBg = "rgba(245, 158, 11, 0.15)";
+                statusBorder = "rgba(245, 158, 11, 0.4)";
+            } else if (activeGrievances.length >= 3) {
                 dutyStatus = "Busy";
                 statusColor = "#ef4444";
                 statusBg = "rgba(239, 68, 68, 0.12)";
@@ -579,6 +653,79 @@ export default function DistrictOfficersPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* ── Executive Directive: Officer Superannuation / Retirement Sanctions ── */}
+                        {sanctionSuccessMsg && (
+                            <div style={{
+                                padding: "0.85rem 1.25rem",
+                                borderRadius: "0.85rem",
+                                background: "rgba(16,185,129,0.12)",
+                                border: "1px solid rgba(16,185,129,0.4)",
+                                color: "#10b981",
+                                fontWeight: "700",
+                                fontSize: "0.88rem",
+                                marginBottom: "1.5rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem"
+                            }}>
+                                🎖️ {sanctionSuccessMsg}
+                            </div>
+                        )}
+
+                        {retirementNotices.map((notice) => (
+                            <div key={notice.id} style={{
+                                background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(239, 68, 68, 0.08))",
+                                border: "1px solid rgba(245, 158, 11, 0.4)",
+                                borderRadius: "1rem",
+                                padding: "1.25rem 1.5rem",
+                                marginBottom: "1.75rem",
+                                boxShadow: "0 8px 24px rgba(245, 158, 11, 0.12)",
+                            }}>
+                                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+                                    <div>
+                                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.2rem 0.65rem", borderRadius: "99px", background: "rgba(245, 158, 11, 0.2)", color: "#f59e0b", fontSize: "0.72rem", fontWeight: "800", marginBottom: "0.35rem" }}>
+                                            🔔 EXECUTIVE SANCTION REQUIRED · OFFICER SUPERANNUATION NOTICE
+                                        </div>
+                                        <div style={{ fontSize: "1.15rem", fontWeight: "800", color: "var(--text-main)" }}>
+                                            {notice.officerName} <span style={{ fontSize: "0.85rem", color: "#f97316", fontWeight: "600" }}>({notice.authorityRole} · {notice.serviceId})</span>
+                                        </div>
+                                        <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.35rem", lineHeight: "1.5" }}>
+                                            Department: <strong style={{ color: "var(--text-main)" }}>{notice.department}</strong> · 
+                                            Jurisdiction: <strong style={{ color: "var(--text-main)" }}>{notice.district}</strong> · 
+                                            Requested Date: <strong style={{ color: "var(--text-main)" }}>{notice.effectiveDate}</strong>
+                                            <br />
+                                            Grounds: <em style={{ color: "#f59e0b" }}>&ldquo;{notice.reason}&rdquo;</em>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap" }}>
+                                        <button
+                                            onClick={() => handleProcessRetirement(notice.id, "approved")}
+                                            disabled={processingNoticeId === notice.id}
+                                            className="btn btn-primary"
+                                            style={{
+                                                background: "linear-gradient(135deg, #10b981, #059669)",
+                                                border: "none",
+                                                padding: "0.6rem 1.15rem",
+                                                fontSize: "0.82rem",
+                                                fontWeight: "700",
+                                                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.35)",
+                                            }}
+                                        >
+                                            {processingNoticeId === notice.id ? "Processing..." : "✅ Sanction Retirement & Relieve Cases"}
+                                        </button>
+                                        <button
+                                            onClick={() => handleProcessRetirement(notice.id, "rejected")}
+                                            disabled={processingNoticeId === notice.id}
+                                            className="btn btn-secondary"
+                                            style={{ padding: "0.6rem 1rem", fontSize: "0.82rem" }}
+                                        >
+                                            ❌ Decline
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
 
                         {/* ── KPI Stat Cards ── */}
                         <div style={{

@@ -783,6 +783,13 @@ export async function claimComplaintServerAction(id: string): Promise<ClaimGriev
     return { success: false, error: "Access Denied: Only officers can claim grievances." };
   }
 
+  // Check if officer is retired
+  const { getOfficerDutyStatusServerAction } = await import("./authActions");
+  const dutyCheck = await getOfficerDutyStatusServerAction(session.user.email);
+  if (dutyCheck.dutyStatus === "retired") {
+    return { success: false, error: "Service Archived: Officer has been honorably retired and relieved from field execution." };
+  }
+
   // 1. Enforce 1-active-grievance-at-a-time rule for this officer
   try {
     const activeRes = await fetch(
