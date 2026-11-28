@@ -264,11 +264,6 @@ function NavbarContent() {
                     {/* Nav Links — hidden on mobile (bottom nav handles those) */}
                     {isLoggedIn && (
                         <div className="desktop-nav-links" style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-                            {user?.role === "user" && (<>
-                                <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
-                                <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
-                                <NavLink href="/my-grievances" active={isActive("/my-grievances")}>📋 {t("nav_my_grievances")}</NavLink>
-                            </>)}
                             {user?.role === "authority" && (
                                 <>
                                     <NavLink href="/admin" active={isActive("/admin")}>🛡️ {t("nav_authority_portal")}</NavLink>
@@ -619,7 +614,7 @@ function NavbarContent() {
                                         <div style={{ padding: "0.35rem 0", borderBottom: "1px solid var(--border)" }}>
                                             {user.role === "user" && (
                                                 <>
-                                                    {/* My Profile - Visible on Desktop & Mobile */}
+                                                    {/* My Profile */}
                                                     <Link
                                                         href="/profile"
                                                         onClick={() => setShowUserMenu(false)}
@@ -631,58 +626,65 @@ function NavbarContent() {
                                                             background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
                                                             transition: "background 0.15s",
                                                         }}
+                                                        onMouseEnter={e => { if (pathname !== "/profile") (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
+                                                        onMouseLeave={e => { if (pathname !== "/profile") (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                                                     >
                                                         <span>👤</span>
                                                         <span>{t("nav_my_profile")}</span>
                                                     </Link>
 
-                                                    {/* Mobile-only Navigation Options */}
+                                                    {/* File Complaint */}
                                                     <Link
                                                         href="/"
-                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            alignItems: "center", gap: "0.6rem",
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/" ? "700" : "600",
                                                             color: pathname === "/" ? "var(--primary)" : "var(--text-main)",
                                                             background: pathname === "/" ? "rgba(99,102,241,0.12)" : "transparent",
                                                             transition: "background 0.15s",
                                                         }}
+                                                        onMouseEnter={e => { if (pathname !== "/") (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
+                                                        onMouseLeave={e => { if (pathname !== "/") (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                                                     >
                                                         <span>📝</span>
                                                         <span>{t("nav_home")}</span>
                                                     </Link>
 
+                                                    {/* Track */}
                                                     <Link
                                                         href="/track"
-                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            alignItems: "center", gap: "0.6rem",
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/track" ? "700" : "600",
                                                             color: pathname === "/track" ? "var(--primary)" : "var(--text-main)",
                                                             background: pathname === "/track" ? "rgba(99,102,241,0.12)" : "transparent",
                                                             transition: "background 0.15s",
                                                         }}
+                                                        onMouseEnter={e => { if (pathname !== "/track") (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
+                                                        onMouseLeave={e => { if (pathname !== "/track") (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                                                     >
                                                         <span>🔍</span>
                                                         <span>{t("nav_track")}</span>
                                                     </Link>
 
+                                                    {/* My Grievances */}
                                                     <Link
                                                         href="/my-grievances"
-                                                        className="mobile-only-control"
                                                         onClick={() => setShowUserMenu(false)}
                                                         style={{
-                                                            alignItems: "center", gap: "0.6rem",
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
                                                             padding: "0.6rem 1rem", textDecoration: "none",
                                                             fontSize: "0.85rem", fontWeight: pathname === "/my-grievances" ? "700" : "600",
                                                             color: pathname === "/my-grievances" ? "var(--primary)" : "var(--text-main)",
                                                             background: pathname === "/my-grievances" ? "rgba(99,102,241,0.12)" : "transparent",
                                                             transition: "background 0.15s",
                                                         }}
+                                                        onMouseEnter={e => { if (pathname !== "/my-grievances") (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; }}
+                                                        onMouseLeave={e => { if (pathname !== "/my-grievances") (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                                                     >
                                                         <span>📋</span>
                                                         <span>{t("nav_my_grievances")}</span>
