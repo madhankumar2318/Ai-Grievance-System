@@ -5,7 +5,13 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useLang } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, claimComplaintServerAction, assignOfficerServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
-import { getDistrictOfficersServerAction, RegisteredOfficer } from "@/app/actions/authActions";
+import {
+    getDistrictOfficersServerAction,
+    getOfficerTransferRecordServerAction,
+    acknowledgeTransferNoticeServerAction,
+    RegisteredOfficer,
+    OfficerTransferRecord,
+} from "@/app/actions/authActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
 import { parseEmbeddedTag, computeDirectiveSlaStatus, findOfficerActiveClaim, mapRoleToDepartment, stripEmbeddedTags, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
 
@@ -243,9 +249,46 @@ export default function AdminDashboard() {
         }
     };
 
-    // Authority Officer's locked jurisdiction (strictly derived from their login / profile)
+    // Active official transfer notice state
+    const [transferNotice, setTransferNotice] = useState<OfficerTransferRecord | null>(null);
+    const [isTransferDismissed, setIsTransferDismissed] = useState(false);
+
+    useEffect(() => {
+        if (!user?.email) return;
+        getOfficerTransferRecordServerAction(user.email).then(res => {
+            if (res.success && res.record && !res.record.acknowledged) {
+                setTransferNotice(res.record);
+            }
+        }).catch(() => {});
+
+        if (typeof window !== "undefined") {
+            const localNotice = localStorage.getItem(`gs_transfer_notice_${user.email}`);
+            if (localNotice) {
+                try {
+                    const parsed = JSON.parse(localNotice);
+                    if (parsed && !parsed.acknowledged) {
+                        setTransferNotice(parsed);
+                    }
+                } catch {}
+            }
+        }
+    }, [user?.email]);
+
+    const handleAcknowledgeTransfer = async () => {
+        setIsTransferDismissed(true);
+        if (transferNotice) {
+            try {
+                await acknowledgeTransferNoticeServerAction(transferNotice.id);
+            } catch {}
+            if (typeof window !== "undefined" && user?.email) {
+                localStorage.setItem(`gs_transfer_notice_${user.email}`, JSON.stringify({ ...transferNotice, acknowledged: true }));
+            }
+        }
+    };
+
+    // Authority Officer's locked jurisdiction (strictly derived from their login / profile / transfer)
     const officerState = user?.state || "Tamil Nadu";
-    const officerDistrict = user?.district || "Tiruchirappalli";
+    const officerDistrict = transferNotice?.toDistrict || user?.district || "Tiruchirappalli";
 
     // ── Role-Based Department Access Control (RBAC) ──────────────────────────────
     // District Collector / Magistrate / Chief: Supervisory authority over All Departments in the district.
@@ -708,6 +751,57 @@ export default function AdminDashboard() {
     return (
         <ProtectedRoute allowedRoles={["authority", "chief"]}>
             <main className="container section">
+
+                {/* ── Official Inter-District Transfer Notification ── */}
+                {transferNotice && !isTransferDismissed && (
+                    <div style={{
+                        background: "linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(99, 102, 241, 0.12))",
+                        border: "1.5px solid rgba(245, 158, 11, 0.45)",
+                        borderRadius: "1rem",
+                        padding: "1.25rem 1.5rem",
+                        marginBottom: "1.75rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        gap: "1rem",
+                        boxShadow: "0 8px 30px rgba(245, 158, 11, 0.12)",
+                    }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "0.85rem", maxWidth: "800px" }}>
+                            <div style={{ fontSize: "2rem", flexShrink: 0 }}>🏛️</div>
+                            <div>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", padding: "0.2rem 0.65rem", borderRadius: "99px", background: "rgba(245, 158, 11, 0.25)", color: "#f59e0b", fontSize: "0.72rem", fontWeight: "800", marginBottom: "0.35rem" }}>
+                                    OFFICIAL GOVERNMENT ORDER · POSTING NOTIFICATION
+                                </div>
+                                <div style={{ fontSize: "1.05rem", fontWeight: "800", color: "var(--text-main)" }}>
+                                    Welcome to {transferNotice.toDistrict} · {transferNotice.toDepartment}
+                                </div>
+                                <div style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.25rem", lineHeight: "1.45" }}>
+                                    You have been officially transferred from <strong>{transferNotice.fromDistrict}</strong> under <strong>{transferNotice.orderNumber}</strong> by the District Collector. Previous open caseload in {transferNotice.fromDistrict} was safely relieved. Your Command Center is now operating in <strong>{transferNotice.toDistrict}</strong>.
+                                </div>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleAcknowledgeTransfer}
+                            className="btn"
+                            style={{
+                                padding: "0.6rem 1.25rem",
+                                borderRadius: "0.65rem",
+                                background: "linear-gradient(135deg, #10b981, #059669)",
+                                color: "white",
+                                fontWeight: "800",
+                                fontSize: "0.82rem",
+                                border: "none",
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                                boxShadow: "0 4px 15px rgba(16, 185, 129, 0.35)",
+                            }}
+                        >
+                            ✓ Acknowledge & Enter Command Center
+                        </button>
+                    </div>
+                )}
 
                 {/* ── Header ── */}
                 <div className="admin-header-container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>

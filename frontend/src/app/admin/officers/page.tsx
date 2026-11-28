@@ -10,9 +10,12 @@ import {
     getDistrictOfficersServerAction,
     getRetirementNoticesServerAction,
     processRetirementNoticeServerAction,
+    transferOfficerServerAction,
     RegisteredOfficer,
     RetirementNotice,
+    OfficerTransferRecord,
 } from "@/app/actions/authActions";
+import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 
 interface GrievanceItem {
     id: string;
@@ -269,6 +272,38 @@ function getRoleMetadata(role: string, dept: string) {
 
 const BASELINE_DEPTS = ["Environment", "Infrastructure", "Public Health", "Safety", "Administrative"];
 
+const DEPARTMENT_ROLES_MAP: Record<string, string[]> = {
+    Environment: [
+        "Environment Protection Officer",
+        "District Forest & Wildlife Officer"
+    ],
+    Infrastructure: [
+        "Infrastructure & PWD Engineer",
+        "Water Supply & Sewerage Officer",
+        "Electricity Board Officer",
+        "Transport & Bus Services Officer"
+    ],
+    Administrative: [
+        "Tahsildar (Revenue Administration)",
+        "Agriculture & Farmers Welfare Officer",
+        "Civil Supplies & Ration Officer",
+        "Social Welfare & Pension Officer",
+        "Municipal Corporation Officer",
+        "Education Department Officer"
+    ],
+    Safety: [
+        "Police Administrative Officer",
+        "Traffic Management Officer",
+        "Cyber Crime Police Officer",
+        "Fire & Disaster Rescue Officer"
+    ],
+    "Public Health": [
+        "Health & Sanitation Inspector",
+        "District Medical Officer",
+        "Food Safety Officer"
+    ]
+};
+
 export default function DistrictOfficersPage() {
     const { user } = useAuth();
     const { t } = useLang();
@@ -304,6 +339,78 @@ export default function DistrictOfficersPage() {
             console.error("Retirement sanction error:", err);
         } finally {
             setProcessingNoticeId(null);
+        }
+    };
+
+    // Transfer state
+    const [showTransferModal, setShowTransferModal] = useState(false);
+    const [selectedOfficerForTransfer, setSelectedOfficerForTransfer] = useState<DisplayOfficer | null>(null);
+    const [targetDistrict, setTargetDistrict] = useState("Madurai");
+    const [targetDepartment, setTargetDepartment] = useState("Environment");
+    const [targetRole, setTargetRole] = useState("Environment Protection Officer");
+    const [targetOffice, setTargetOffice] = useState("");
+    const [transferOrderNo, setTransferOrderNo] = useState("");
+    const [transferReason, setTransferReason] = useState("Administrative Routine Transfer / Public Interest");
+    const [transferLoading, setTransferLoading] = useState(false);
+    const [transferError, setTransferError] = useState("");
+
+    const handleOpenTransferModal = (officer: DisplayOfficer) => {
+        setSelectedOfficerForTransfer(officer);
+        // Default target to a major alternate district (e.g. Madurai)
+        setTargetDistrict("Madurai");
+        const currentDept = officer.category || "Environment";
+        setTargetDepartment(currentDept);
+        const roles = DEPARTMENT_ROLES_MAP[currentDept] || ["Municipal Corporation Officer"];
+        setTargetRole(roles[0] || officer.designation);
+        setTargetOffice(`Madurai District Administration Office`);
+        setTransferOrderNo(`G.O. Ms. No. ${Math.floor(Math.random() * 80 + 100)}/2026`);
+        setTransferReason("Administrative Routine Transfer / Public Interest");
+        setTransferError("");
+        setShowTransferModal(true);
+    };
+
+    const handleDepartmentChange = (newDept: string) => {
+        setTargetDepartment(newDept);
+        const roles = DEPARTMENT_ROLES_MAP[newDept] || ["Municipal Corporation Officer"];
+        setTargetRole(roles[0]);
+    };
+
+    const handleExecuteTransfer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedOfficerForTransfer) return;
+        setTransferLoading(true);
+        setTransferError("");
+        try {
+            const res = await transferOfficerServerAction({
+                officerEmail: selectedOfficerForTransfer.email,
+                toDistrict: targetDistrict,
+                toDepartment: targetDepartment,
+                toRole: targetRole,
+                toOffice: targetOffice,
+                orderNumber: transferOrderNo,
+                reason: transferReason,
+            });
+
+            if (res.success && res.record) {
+                if (typeof window !== "undefined") {
+                    localStorage.setItem(`gs_transfer_notice_${selectedOfficerForTransfer.email}`, JSON.stringify(res.record));
+                }
+                setRegisteredOfficers(prev => prev.map(o => {
+                    if (o.email.toLowerCase() === selectedOfficerForTransfer.email.toLowerCase()) {
+                        return { ...o, district: targetDistrict, authorityRole: targetRole };
+                    }
+                    return o;
+                }));
+                setShowTransferModal(false);
+                setSanctionSuccessMsg(`🎖️ Official Transfer Order Sanctioned: Officer ${selectedOfficerForTransfer.name} has been transferred to ${targetDistrict} (${targetDepartment}) under ${transferOrderNo}. Any active caseload in ${officerDistrict} was safely relieved.`);
+                setTimeout(() => setSanctionSuccessMsg(null), 6000);
+            } else {
+                setTransferError(res.error || "Failed to execute transfer order.");
+            }
+        } catch (err: any) {
+            setTransferError(err?.message || "Transfer sanction failed.");
+        } finally {
+            setTransferLoading(false);
         }
     };
 
@@ -1216,6 +1323,33 @@ export default function DistrictOfficersPage() {
                                                 >
                                                     📞 Call
                                                 </a>
+
+                                                {/* District Collector Official Transfer Action */}
+                                                {isDistrictHead && officer.email.toLowerCase() !== user?.email?.toLowerCase() && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenTransferModal(officer)}
+                                                        style={{
+                                                            padding: "0.55rem 0.85rem",
+                                                            borderRadius: "0.65rem",
+                                                            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.25))",
+                                                            border: "1px solid rgba(245, 158, 11, 0.45)",
+                                                            color: "#fbbf24",
+                                                            fontSize: "0.78rem",
+                                                            fontWeight: "700",
+                                                            cursor: "pointer",
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            gap: "0.3rem",
+                                                            whiteSpace: "nowrap",
+                                                        }}
+                                                        title={`Sanction official inter-district or departmental transfer for ${officer.name}`}
+                                                    >
+                                                        <span>🔄</span>
+                                                        <span>Transfer</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1223,6 +1357,232 @@ export default function DistrictOfficersPage() {
                             </div>
                         )}
                     </>
+                )}
+
+                {/* ── District Collector Service Transfer Modal ── */}
+                {showTransferModal && selectedOfficerForTransfer && (
+                    <div style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.78)",
+                        backdropFilter: "blur(6px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        padding: "1rem"
+                    }} onClick={() => setShowTransferModal(false)}>
+                        <div
+                            className="glass animate-slide-up"
+                            style={{
+                                width: "100%",
+                                maxWidth: "520px",
+                                borderRadius: "1.25rem",
+                                padding: "1.75rem",
+                                border: "1px solid rgba(245, 158, 11, 0.4)",
+                                background: "var(--bg-card, #0f172a)",
+                                boxShadow: "0 20px 50px rgba(0,0,0,0.7)",
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Modal Header */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                                <div style={{ width: "44px", height: "44px", borderRadius: "10px", background: "linear-gradient(135deg, #f59e0b, #d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem" }}>
+                                    🏛️
+                                </div>
+                                <div>
+                                    <div style={{ fontWeight: "800", fontSize: "1.1rem", color: "var(--text-main)" }}>
+                                        Executive Service Transfer Order
+                                    </div>
+                                    <div style={{ fontSize: "0.72rem", color: "#f59e0b", fontWeight: "700" }}>
+                                        OFFICIAL POSTING SANCTION · DISTRICT COLLECTORATE
+                                    </div>
+                                </div>
+                            </div>
+
+                            {transferError && (
+                                <div style={{ padding: "0.75rem 0.95rem", borderRadius: "0.6rem", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", color: "#ef4444", fontSize: "0.8rem", marginBottom: "1rem" }}>
+                                    ⚠️ {transferError}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleExecuteTransfer} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                {/* Officer Dossier Summary */}
+                                <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                    <div style={{ fontSize: "0.68rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase" }}>
+                                        OFFICER CURRENT ASSIGNMENT
+                                    </div>
+                                    <div style={{ fontSize: "0.95rem", fontWeight: "800", color: "var(--text-main)", marginTop: "0.2rem" }}>
+                                        {selectedOfficerForTransfer.name} ({selectedOfficerForTransfer.serviceId})
+                                    </div>
+                                    <div style={{ fontSize: "0.78rem", color: "#f97316", marginTop: "0.15rem" }}>
+                                        {selectedOfficerForTransfer.designation} · {selectedOfficerForTransfer.category} Department
+                                    </div>
+                                    <div style={{ fontSize: "0.74rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
+                                        Current Jurisdiction: <strong>{officerDistrict}, Tamil Nadu</strong>
+                                    </div>
+                                </div>
+
+                                {/* Target District & Department Row */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "800", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                            📍 Target District
+                                        </label>
+                                        <select
+                                            value={targetDistrict}
+                                            onChange={e => {
+                                                const d = e.target.value;
+                                                setTargetDistrict(d);
+                                                setTargetOffice(`${d} Municipal Administration Complex`);
+                                            }}
+                                            style={{
+                                                width: "100%", padding: "0.6rem 0.75rem", borderRadius: "0.6rem",
+                                                background: "var(--bg-main)", border: "1px solid var(--border)",
+                                                color: "var(--text-main)", fontSize: "0.82rem", fontWeight: "600"
+                                            }}
+                                        >
+                                            {TAMIL_NADU_DISTRICTS.map(dist => (
+                                                <option key={dist} value={dist}>{dist}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "800", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                            🏢 Target Department
+                                        </label>
+                                        <select
+                                            value={targetDepartment}
+                                            onChange={e => handleDepartmentChange(e.target.value)}
+                                            style={{
+                                                width: "100%", padding: "0.6rem 0.75rem", borderRadius: "0.6rem",
+                                                background: "var(--bg-main)", border: "1px solid var(--border)",
+                                                color: "var(--text-main)", fontSize: "0.82rem", fontWeight: "600"
+                                            }}
+                                        >
+                                            {Object.keys(DEPARTMENT_ROLES_MAP).map(dept => (
+                                                <option key={dept} value={dept}>{dept}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Target Role & Working Office */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "800", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                            🎖️ New Designation
+                                        </label>
+                                        <select
+                                            value={targetRole}
+                                            onChange={e => setTargetRole(e.target.value)}
+                                            style={{
+                                                width: "100%", padding: "0.6rem 0.75rem", borderRadius: "0.6rem",
+                                                background: "var(--bg-main)", border: "1px solid var(--border)",
+                                                color: "var(--text-main)", fontSize: "0.82rem", fontWeight: "600"
+                                            }}
+                                        >
+                                            {(DEPARTMENT_ROLES_MAP[targetDepartment] || [targetRole]).map(role => (
+                                                <option key={role} value={role}>{role}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "800", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                            🏛️ Target Office / HQ
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={targetOffice}
+                                            onChange={e => setTargetOffice(e.target.value)}
+                                            placeholder="e.g. Madurai Municipal Complex"
+                                            required
+                                            style={{
+                                                width: "100%", padding: "0.6rem 0.75rem", borderRadius: "0.6rem",
+                                                background: "var(--bg-main)", border: "1px solid var(--border)",
+                                                color: "var(--text-main)", fontSize: "0.82rem"
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Government Order Number */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.72rem", fontWeight: "800", color: "var(--text-muted)", marginBottom: "0.35rem", textTransform: "uppercase" }}>
+                                        📜 Official G.O. / Transfer Order No.
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={transferOrderNo}
+                                        onChange={e => setTransferOrderNo(e.target.value)}
+                                        placeholder="e.g. G.O. Ms. No. 108/2026"
+                                        required
+                                        style={{
+                                            width: "100%", padding: "0.6rem 0.75rem", borderRadius: "0.6rem",
+                                            background: "var(--bg-main)", border: "1px solid var(--border)",
+                                            color: "var(--text-main)", fontSize: "0.85rem", fontWeight: "700"
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Automatic Handover Safeguard Callout */}
+                                <div style={{
+                                    padding: "0.75rem 0.95rem",
+                                    borderRadius: "0.75rem",
+                                    background: "rgba(16, 185, 129, 0.08)",
+                                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                                    fontSize: "0.74rem",
+                                    color: "#34d399",
+                                    lineHeight: 1.45
+                                }}>
+                                    🔒 <strong>Zero Abandoned Cases Safeguard:</strong> Any active complaints currently claimed or in progress by this officer in {officerDistrict} will be automatically relieved and returned to the district pool for immediate reassignment.
+                                </div>
+
+                                {/* Modal Buttons */}
+                                <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowTransferModal(false)}
+                                        className="btn"
+                                        style={{
+                                            padding: "0.6rem 1.15rem",
+                                            borderRadius: "0.6rem",
+                                            background: "rgba(255, 255, 255, 0.06)",
+                                            color: "var(--text-muted)",
+                                            border: "1px solid var(--border)",
+                                            fontSize: "0.82rem",
+                                            cursor: "pointer"
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={transferLoading}
+                                        className="btn"
+                                        style={{
+                                            padding: "0.6rem 1.35rem",
+                                            borderRadius: "0.6rem",
+                                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                                            color: "white",
+                                            border: "none",
+                                            fontSize: "0.82rem",
+                                            fontWeight: "800",
+                                            cursor: "pointer",
+                                            boxShadow: "0 4px 15px rgba(245, 158, 11, 0.35)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "0.4rem"
+                                        }}
+                                    >
+                                        {transferLoading ? "Sanctioning Transfer..." : "🎖️ Issue Official Transfer Order"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 )}
             </div>
         </ProtectedRoute>

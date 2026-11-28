@@ -1421,3 +1421,65 @@ export async function getOfficerNotificationsServerAction(): Promise<{
   return { success: true, notifications: uniqueNotifs, hasUnread };
 }
 
+/**
+ * Inter-District Transfer: Automatically releases and reassigns any active complaints
+ * held by an officer being transferred, guaranteeing zero abandoned citizen complaints.
+ */
+export async function relieveOfficerActiveCasesServerAction(
+  officerEmail: string,
+  orderNumber: string,
+  fromDistrict: string
+): Promise<{ success: boolean; relievedCount: number }> {
+  try {
+    const cleanEmail = (officerEmail || "").toLowerCase().trim();
+    if (!cleanEmail) return { success: true, relievedCount: 0 };
+
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/complaints?status=not.in.(Resolved,Rejected)&select=id,subject,description,status`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) return { success: false, relievedCount: 0 };
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return { success: true, relievedCount: 0 };
+
+    let count = 0;
+    for (const c of rows) {
+      const desc = c.description || "";
+      if (desc.includes(cleanEmail) && desc.includes("[CLAIMED_BY:")) {
+        const { stripClaimForTransfer } = await import("@/lib/grievanceUtils");
+        const updatedDesc = stripClaimForTransfer(desc, orderNumber, fromDistrict);
+
+        await fetch(`${SUPABASE_URL}/rest/v1/complaints?id=eq.${c.id}`, {
+          method: "PATCH",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            status: "Pending",
+            description: updatedDesc,
+          }),
+        });
+        count++;
+      }
+    }
+
+    console.log(
+      `SECURITY_AUDIT: timestamp=${new Date().toISOString()} event=CASES_RELIEVED_ON_TRANSFER officer=${cleanEmail} relievedCount=${count} order=${orderNumber}`
+    );
+    return { success: true, relievedCount: count };
+  } catch (err) {
+    console.error("Error relieving cases on transfer:", err);
+    return { success: false, relievedCount: 0 };
+  }
+}
+

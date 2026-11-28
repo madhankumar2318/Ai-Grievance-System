@@ -485,3 +485,24 @@ export function findOfficerActiveClaim(
   }
   return null;
 }
+
+/**
+ * Strips an active officer claim and appends a formal transfer relief record,
+ * allowing open grievances to be smoothly returned to the departmental pool.
+ */
+export function stripClaimForTransfer(
+  description: string,
+  transferOrder: string,
+  fromDistrict: string
+): string {
+  const baseDesc = (description || "")
+    .replace(/\n\n\[CLAIMED_BY:[\s\S]*?\]/g, "")
+    .replace(/\[CLAIMED_BY:[\s\S]*?\]/g, "")
+    .trim();
+  const transferTag = `\n\n[TRANSFER_RELIEF:${JSON.stringify({
+    orderNumber: transferOrder,
+    fromDistrict,
+    relievedAt: new Date().toISOString(),
+  })}]`;
+  return `${baseDesc}${transferTag}`;
+}

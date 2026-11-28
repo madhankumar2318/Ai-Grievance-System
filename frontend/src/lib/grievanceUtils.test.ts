@@ -12,6 +12,7 @@ import {
   findMatchingAreaComplaints,
   findOfficerActiveClaim,
   formatRelativeTime,
+  stripClaimForTransfer,
 } from "./grievanceUtils.ts";
 
 describe("maskEmail (PII Protection)", () => {
@@ -311,5 +312,18 @@ describe("formatRelativeTime", () => {
 
   it("returns fallback for invalid dates safely", () => {
     assert.equal(formatRelativeTime("not-a-date"), "Recent");
+  });
+});
+
+describe("stripClaimForTransfer", () => {
+  it("removes active officer claim and appends transfer relief tag cleanly", () => {
+    const raw =
+      'Garbage accumulated near bus stand\n\n[CLAIMED_BY:{"officerName":"Madhan Kumar S","officerEmail":"skmadhan1823@gmail.com","claimedAt":"2026-11-28T10:00:00Z"}]';
+    const cleaned = stripClaimForTransfer(raw, "G.O. Ms. No. 108/2026", "Tiruchirappalli");
+    assert.ok(!cleaned.includes("[CLAIMED_BY:"));
+    assert.ok(cleaned.includes("Garbage accumulated near bus stand"));
+    assert.ok(cleaned.includes("[TRANSFER_RELIEF:"));
+    assert.ok(cleaned.includes("G.O. Ms. No. 108/2026"));
+    assert.ok(cleaned.includes("Tiruchirappalli"));
   });
 });

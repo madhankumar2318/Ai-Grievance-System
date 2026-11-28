@@ -12,7 +12,9 @@ import {
     changePasswordServerAction,
     submitRetirementNoticeServerAction,
     getOfficerDutyStatusServerAction,
+    getOfficerTransferRecordServerAction,
     RetirementNotice,
+    OfficerTransferRecord,
 } from "@/app/actions/authActions";
 import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 
@@ -102,6 +104,7 @@ function ProfileContent() {
     // Retirement notice state
     const [dutyStatus, setDutyStatus] = useState<"active" | "pending" | "retired">("active");
     const [retirementNotice, setRetirementNotice] = useState<RetirementNotice | null>(null);
+    const [transferRecord, setTransferRecord] = useState<OfficerTransferRecord | null>(null);
     const [showRetireModal, setShowRetireModal] = useState(false);
     const [retireReason, setRetireReason] = useState("Official Retirement (Full Service Completed)");
     const [retireDate, setRetireDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -270,6 +273,20 @@ function ProfileContent() {
                 if (cachedNotice) {
                     try { setRetirementNotice(JSON.parse(cachedNotice)); } catch {}
                 }
+                const cachedTransfer = localStorage.getItem(`gs_transfer_notice_${user.email}`);
+                if (cachedTransfer) {
+                    try {
+                        const tr = JSON.parse(cachedTransfer);
+                        setTransferRecord(tr);
+                        setProfileData(prev => ({
+                            ...prev,
+                            district: tr.toDistrict || prev.district,
+                            department: tr.toDepartment || prev.department,
+                            authorityRole: tr.toRole || prev.authorityRole,
+                            workingPlace: tr.toOffice || prev.workingPlace,
+                        }));
+                    } catch {}
+                }
             }
 
             getOfficerDutyStatusServerAction(user.email).then(st => {
@@ -281,6 +298,19 @@ function ProfileContent() {
                 }
                 if (st?.notice) setRetirementNotice(st.notice);
             });
+
+            getOfficerTransferRecordServerAction(user.email).then(tr => {
+                if (tr?.success && tr.record) {
+                    setTransferRecord(tr.record);
+                    setProfileData(prev => ({
+                        ...prev,
+                        district: tr.record?.toDistrict || prev.district,
+                        department: tr.record?.toDepartment || prev.department,
+                        authorityRole: tr.record?.toRole || prev.authorityRole,
+                        workingPlace: tr.record?.toOffice || prev.workingPlace,
+                    }));
+                }
+            }).catch(() => {});
         }
     }, [user?.email, user?.role, user?.district]);
 
@@ -614,6 +644,33 @@ function ProfileContent() {
                             {/* ── Official Retirement Action Bar (Authority Only) ── */}
                             {user.role === "authority" && (
                                 <div style={{ marginTop: "1.25rem" }}>
+                                    {/* Official Service Posting Order Card */}
+                                    {transferRecord && (
+                                        <div style={{
+                                            padding: "1rem 1.25rem",
+                                            borderRadius: "0.85rem",
+                                            background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.08))",
+                                            border: "1.5px solid rgba(59, 130, 246, 0.35)",
+                                            marginBottom: "1rem",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "1rem",
+                                        }}>
+                                            <div style={{ fontSize: "2rem", flexShrink: 0 }}>🏛️</div>
+                                            <div>
+                                                <div style={{ fontSize: "0.74rem", fontWeight: "800", color: "#60a5fa", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                                                    OFFICIAL SERVICE TRANSFER ORDER · {transferRecord.orderNumber}
+                                                </div>
+                                                <div style={{ fontSize: "0.92rem", fontWeight: "800", color: "var(--text-main)", marginTop: "0.2rem" }}>
+                                                    Transferred: {transferRecord.fromDistrict} ({transferRecord.fromDepartment}) → {transferRecord.toDistrict} ({transferRecord.toDepartment})
+                                                </div>
+                                                <div style={{ fontSize: "0.76rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+                                                    Sanctioned by <strong>{transferRecord.transferredBy}</strong> · Active caseload in {transferRecord.fromDistrict} securely relieved.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {dutyStatus === "active" && (
                                         <div style={{
                                             padding: "1rem 1.25rem",

@@ -1120,4 +1120,215 @@ export async function getOfficerDutyStatusServerAction(email: string): Promise<{
   return { dutyStatus: status, notice };
 }
 
+// ── Official Inter-District & Departmental Transfer System ────────────────────
+export interface OfficerTransferRecord {
+  id: string;
+  officerEmail: string;
+  officerName: string;
+  fromDistrict: string;
+  toDistrict: string;
+  fromDepartment: string;
+  toDepartment: string;
+  fromRole: string;
+  toRole: string;
+  fromOffice?: string;
+  toOffice?: string;
+  orderNumber: string;
+  reason?: string;
+  transferredAt: string;
+  transferredBy: string;
+  acknowledged?: boolean;
+}
+
+const activeTransferRecords: OfficerTransferRecord[] = [];
+
+/**
+ * District Collector sanctions an official transfer for a field officer.
+ * Safely updates jurisdiction in Supabase, relieves open caseload, and mints transfer record.
+ */
+export async function transferOfficerServerAction(data: {
+  officerEmail: string;
+  toDistrict: string;
+  toDepartment: string;
+  toRole: string;
+  toOffice?: string;
+  orderNumber: string;
+  reason?: string;
+}): Promise<{ success: boolean; error?: string; record?: OfficerTransferRecord }> {
+  try {
+    const session = await getVerifiedSessionServerAction();
+    if (!session.authenticated || !session.user) {
+      return { success: false, error: "Authentication required to sanction officer transfer." };
+    }
+
+    const roleStr = `${session.user.authorityRole || ""} ${session.user.role || ""}`.toLowerCase();
+    const isDistrictHead =
+      roleStr.includes("collector") ||
+      roleStr.includes("magistrate") ||
+      roleStr.includes("commissioner") ||
+      session.user.role === "chief";
+
+    if (!isDistrictHead) {
+      return { success: false, error: "Unauthorized: Only the District Collector can sanction official transfers." };
+    }
+
+    const officerEmail = (data.officerEmail || "").toLowerCase().trim();
+    if (!officerEmail) {
+      return { success: false, error: "Officer email is required." };
+    }
+
+    const toDistrict = (data.toDistrict || "").trim();
+    const toDepartment = (data.toDepartment || "").trim();
+    const toRole = (data.toRole || "").trim();
+    const orderNumber = (data.orderNumber || "").trim();
+
+    if (!toDistrict || !toDepartment || !toRole || !orderNumber) {
+      return { success: false, error: "Destination District, Department, Role, and G.O. Order No. are required." };
+    }
+
+    // 1. Fetch current officer data from Supabase
+    let fromDistrict = session.user.district || "Tiruchirappalli";
+    let fromDepartment = "Municipal Administration";
+    let fromRole = "Field Officer";
+    let fromOffice = "District Office";
+    let officerName = "Field Officer";
+
+    try {
+      const userRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(officerEmail)}&select=*`,
+        {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          cache: "no-store",
+        }
+      );
+      if (userRes.ok) {
+        const rows = await userRes.json();
+        if (rows && rows.length > 0) {
+          const u = rows[0];
+          fromDistrict = u.district || fromDistrict;
+          fromDepartment = u.department || fromDepartment;
+          fromRole = u.authority_role || fromRole;
+          fromOffice = u.working_place || fromOffice;
+          officerName = u.username || officerName;
+        }
+      }
+    } catch (err) {
+      console.warn("Could not retrieve officer source details:", err);
+    }
+
+    const toOffice = (data.toOffice || `${toDistrict} Municipal Administrative Complex`).trim();
+
+    // 2. Persist transfer in Supabase users table
+    try {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(officerEmail)}`,
+        {
+          method: "PATCH",
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            district: toDistrict,
+            department: toDepartment,
+            authority_role: toRole,
+            working_place: toOffice,
+          }),
+        }
+      );
+    } catch (err) {
+      console.error("Failed to update officer district in Supabase:", err);
+    }
+
+    // 3. Relieve all active open grievances in the previous district to avoid abandoned complaints
+    try {
+      const { relieveOfficerActiveCasesServerAction } = await import("./complaintActions");
+      await relieveOfficerActiveCasesServerAction(officerEmail, orderNumber, fromDistrict);
+    } catch (err) {
+      console.error("Error relieving active cases on transfer:", err);
+    }
+
+    // 4. Create and cache official transfer record
+    const record: OfficerTransferRecord = {
+      id: `TRF-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+      officerEmail,
+      officerName,
+      fromDistrict,
+      toDistrict,
+      fromDepartment,
+      toDepartment,
+      fromRole,
+      toRole,
+      fromOffice,
+      toOffice,
+      orderNumber,
+      reason: (data.reason || "Administrative Routine Transfer").slice(0, 300),
+      transferredAt: new Date().toISOString(),
+      transferredBy: `${session.user.username} (District Collector)`,
+      acknowledged: false,
+    };
+
+    activeTransferRecords.unshift(record);
+
+    // 5. If the current logged-in user was transferred, update their active cryptographic session cookie
+    if (session.user.email.toLowerCase() === officerEmail) {
+      await setAuthCookie({
+        ...session.user,
+        district: toDistrict,
+        department: toDepartment,
+        authorityRole: toRole,
+        workingPlace: toOffice,
+      });
+    }
+
+    console.log(
+      `SECURITY_AUDIT: timestamp=${new Date().toISOString()} event=OFFICER_TRANSFERRED officer=${officerEmail} fromDistrict=${fromDistrict} toDistrict=${toDistrict} orderNumber=${orderNumber} by=${session.user.email}`
+    );
+
+    return { success: true, record };
+  } catch (err: any) {
+    console.error("Transfer sanction error:", err);
+    return { success: false, error: "Failed to execute officer transfer. Please try again." };
+  }
+}
+
+/**
+ * Fetch latest transfer notice for an officer
+ */
+export async function getOfficerTransferRecordServerAction(email?: string): Promise<{
+  success: boolean;
+  record?: OfficerTransferRecord;
+}> {
+  try {
+    const session = await getVerifiedSessionServerAction();
+    const targetEmail = (email || session.user?.email || "").toLowerCase().trim();
+    if (!targetEmail) return { success: false };
+
+    const record = activeTransferRecords.find(r => r.officerEmail.toLowerCase() === targetEmail);
+    return { success: true, record };
+  } catch {
+    return { success: false };
+  }
+}
+
+/**
+ * Acknowledge an official transfer order upon entering command center
+ */
+export async function acknowledgeTransferNoticeServerAction(transferId: string): Promise<{ success: boolean }> {
+  try {
+    const record = activeTransferRecords.find(r => r.id === transferId);
+    if (record) {
+      record.acknowledged = true;
+    }
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
+}
+
 
