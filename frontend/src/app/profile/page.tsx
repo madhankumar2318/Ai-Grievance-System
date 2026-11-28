@@ -250,17 +250,37 @@ export default function ProfilePage() {
                         </div>
 
                         {/* Avatar + Primary Identification */}
-                        <div style={{ padding: "0 2rem 2rem", position: "relative" }}>
-                            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "1rem" }}>
-                                <div style={{ width: "88px", height: "88px", borderRadius: "50%", background: cfg.gradient, border: "4px solid var(--bg-card)", marginTop: "-44px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.75rem", fontWeight: "900", color: "white", boxShadow: `0 8px 24px ${cfg.color}44` }}>
+                        <div style={{ padding: "0 1.25rem 1.75rem", position: "relative" }}>
+                            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
+                                <div style={{
+                                    width: "88px",
+                                    height: "88px",
+                                    minWidth: "88px",
+                                    minHeight: "88px",
+                                    maxWidth: "88px",
+                                    maxHeight: "88px",
+                                    aspectRatio: "1 / 1",
+                                    flexShrink: 0,
+                                    borderRadius: "50%",
+                                    background: cfg.gradient,
+                                    border: "4px solid var(--bg-card)",
+                                    marginTop: "-44px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "1.75rem",
+                                    fontWeight: "900",
+                                    color: "white",
+                                    boxShadow: `0 8px 24px ${cfg.color}44`,
+                                }}>
                                     {getInitials(profileData.username)}
                                 </div>
-                                <div style={{ display: "flex", gap: "0.5rem", paddingBottom: "0.5rem", flexWrap: "wrap" }}>
-                                    <span style={{ padding: "0.35rem 0.85rem", borderRadius: "99px", background: `${cfg.color}18`, color: cfg.color, fontSize: "0.75rem", fontWeight: "800", border: `1px solid ${cfg.color}35`, display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                                <div style={{ display: "flex", gap: "0.4rem", paddingBottom: "0.2rem", flexWrap: "wrap" }}>
+                                    <span style={{ padding: "0.3rem 0.75rem", borderRadius: "99px", background: `${cfg.color}18`, color: cfg.color, fontSize: "0.72rem", fontWeight: "800", border: `1px solid ${cfg.color}35`, display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
                                         {cfg.icon} {cfg.label}
                                     </span>
                                     {user.role === "authority" && (
-                                        <span style={{ padding: "0.35rem 0.85rem", borderRadius: "99px", background: "rgba(16,185,129,0.15)", color: "#10b981", fontSize: "0.75rem", fontWeight: "800", border: "1px solid rgba(16,185,129,0.3)" }}>
+                                        <span style={{ padding: "0.3rem 0.75rem", borderRadius: "99px", background: "rgba(16,185,129,0.15)", color: "#10b981", fontSize: "0.72rem", fontWeight: "800", border: "1px solid rgba(16,185,129,0.3)" }}>
                                             ✓ Verified Officer
                                         </span>
                                     )}
