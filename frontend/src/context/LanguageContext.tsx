@@ -58,6 +58,7 @@ export type TranslationKey =
     | "profile_clearance_val" | "profile_duty_status" | "profile_duty_status_val"
     | "profile_citizen_role" | "profile_citizen_id" | "profile_civic_body"
     | "profile_civic_tier" | "profile_civic_tier_val" | "profile_resident_title"
+    | "profile_state_label" | "profile_pincode_label"
     | "tab_profile" | "tab_grievances" | "filter_all"
     | "profile_total_filed" | "profile_resolved" | "profile_pending"
     | "profile_recent_complaints" | "profile_loading_complaints" | "profile_no_complaints"
@@ -219,6 +220,8 @@ const translations: Record<Language, Translations> = {
         profile_civic_tier: "CIVIC VERIFICATION TIER",
         profile_civic_tier_val: "Tier 1 Verified Resident ✅",
         profile_resident_title: "Verified Resident · Civic Portal",
+        profile_state_label: "STATE",
+        profile_pincode_label: "PINCODE",
         tab_profile: "Profile Details",
         tab_grievances: "My Grievances",
         filter_all: "All",
@@ -392,6 +395,8 @@ const translations: Record<Language, Translations> = {
         profile_civic_tier: "சரிபார்ப்பு நிலை",
         profile_civic_tier_val: "நிலை 1 சரிபார்க்கப்பட்ட குடியிருப்புவாசி ✅",
         profile_resident_title: "சரிபார்க்கப்பட்ட குடியிருப்புவாசி",
+        profile_state_label: "மாநிலம்",
+        profile_pincode_label: "அஞ்சல் குறியீடு",
         tab_profile: "சுயவிவர விவரங்கள்",
         tab_grievances: "என் புகார்கள்",
         filter_all: "அனைத்தும்",

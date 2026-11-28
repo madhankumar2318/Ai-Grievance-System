@@ -67,6 +67,7 @@ function ProfileContent() {
             role: user?.role || "user",
             state: user?.state || "Tamil Nadu",
             district: user?.district || "Tiruchirappalli",
+            pincode: (user as any)?.pincode || (typeof window !== "undefined" ? localStorage.getItem("gs_user_pincode") || "620 001" : "620 001"),
             authorityRole: initRole,
             serviceId: initServiceId,
             workingPlace: user?.workingPlace || (user?.role === "authority" ? "Tiruchirappalli District Collectorate & Divisional Office" : user?.role === "chief" ? "State Secretariat, Chennai" : "Tiruchirappalli City Corporation"),
@@ -94,6 +95,7 @@ function ProfileContent() {
             role: user.role,
             state: user.state || "Tamil Nadu",
             district: user.district || "Tiruchirappalli",
+            pincode: (user as any).pincode || (typeof window !== "undefined" ? localStorage.getItem("gs_user_pincode") || "620 001" : "620 001"),
             authorityRole: currentRole,
             serviceId: defaultServiceId,
             workingPlace: user.workingPlace || (user.role === "authority" ? `${user.district || "Tiruchirappalli"} District Collectorate & Divisional Office` : user.role === "chief" ? "State Secretariat, Chennai" : `${user.district || "Tiruchirappalli"} City Corporation`),
@@ -114,6 +116,7 @@ function ProfileContent() {
                     phone: res.user.phone || prev.phone,
                     state: res.user.state || prev.state,
                     district: res.user.district || prev.district,
+                    pincode: (res.user as any).pincode || (typeof window !== "undefined" ? localStorage.getItem("gs_user_pincode") || "620 001" : prev.pincode),
                     authorityRole: fetchedRole,
                     serviceId: fetchedId,
                     workingPlace: res.user.workingPlace || prev.workingPlace,
@@ -142,9 +145,12 @@ function ProfileContent() {
                 district: editForm.district,
                 workingPlace: editForm.workingPlace,
             };
+            if (typeof window !== "undefined" && editForm.pincode) {
+                localStorage.setItem("gs_user_pincode", editForm.pincode);
+            }
             const res = await updateUserProfileServerAction(safePayload);
             if (res.success && res.user) {
-                setProfileData(prev => ({ ...prev, ...safePayload }));
+                setProfileData(prev => ({ ...prev, ...safePayload, pincode: editForm.pincode }));
                 login({
                     ...user,
                     ...safePayload,
@@ -391,26 +397,23 @@ function ProfileContent() {
                                             </div>
                                         </div>
 
-                                        {/* 5. Citizen Portal ID (Unique & Locked) */}
+                                        {/* 5. Residence State */}
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
-                                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                                                    🪪 {t("profile_citizen_id")}
-                                                </span>
-                                                <span style={{ fontSize: "0.65rem", color: "#6366f1", fontWeight: "700" }}>🔒 {lang === "ta" ? "அமைப்பு எண்" : "System Issued"}</span>
+                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                🗺️ {t("profile_state_label")}
                                             </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", fontFamily: "monospace", color: "#6366f1" }}>
-                                                {profileData.serviceId}
+                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                {lang === "ta" ? "தமிழ்நாடு" : (profileData.state || "Tamil Nadu")}
                                             </div>
                                         </div>
 
-                                        {/* 6. Local Civic Body / Municipal Corporation */}
+                                        {/* 6. Postal Pincode */}
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
                                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                🏛️ {t("profile_civic_body")}
+                                                📮 {t("profile_pincode_label")}
                                             </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.workingPlace || `${profileData.district} City Corporation`}
+                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", fontFamily: "monospace", color: "#6366f1" }}>
+                                                {profileData.pincode || "620 001"}
                                             </div>
                                         </div>
                                     </>
@@ -646,15 +649,16 @@ function ProfileContent() {
                                         </div>
 
                                         <div>
-                                            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                <span>🪪 {t("profile_citizen_id")}</span>
-                                                <span style={{ fontSize: "0.68rem", color: "#6366f1" }}>🔒 {lang === "ta" ? "அமைப்பு எண்" : "System Issued"}</span>
+                                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                📮 {t("profile_pincode_label")}
                                             </label>
                                             <input
                                                 type="text"
-                                                disabled
-                                                value={editForm.serviceId}
-                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
+                                                value={editForm.pincode || ""}
+                                                onChange={e => setEditForm({ ...editForm, pincode: e.target.value.replace(/[^0-9\s]/g, "").slice(0, 7) })}
+                                                placeholder="620 001"
+                                                maxLength={7}
+                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
                                             />
                                         </div>
                                     </>
