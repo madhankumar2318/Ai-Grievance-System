@@ -55,7 +55,10 @@ export type TranslationKey =
     | "profile_edit_btn" | "profile_email" | "profile_location" | "profile_role"
     | "profile_account_status" | "profile_active_citizen" | "profile_assigned_office"
     | "profile_service_id" | "profile_phone" | "profile_department" | "profile_clearance"
-    | "profile_clearance_val" | "profile_total_filed" | "profile_resolved" | "profile_pending"
+    | "profile_clearance_val" | "profile_duty_status" | "profile_duty_status_val"
+    | "profile_citizen_role" | "profile_citizen_id" | "profile_civic_body"
+    | "profile_civic_tier" | "profile_civic_tier_val" | "profile_resident_title"
+    | "profile_total_filed" | "profile_resolved" | "profile_pending"
     | "profile_recent_complaints" | "profile_loading_complaints" | "profile_no_complaints"
     | "profile_file_first" | "profile_track_btn" | "profile_modal_title" | "profile_fullname"
     | "profile_phone_label" | "profile_workplace_label" | "profile_email_locked"
@@ -207,6 +210,14 @@ const translations: Record<Language, Translations> = {
         profile_department: "DEPARTMENT",
         profile_clearance: "PORTAL CLEARANCE",
         profile_clearance_val: "Level 2 Redressal Officer",
+        profile_duty_status: "OFFICER DUTY STATUS",
+        profile_duty_status_val: "Active on Field Duty ✅",
+        profile_citizen_role: "Citizen (General Public)",
+        profile_citizen_id: "CITIZEN PORTAL ID",
+        profile_civic_body: "LOCAL CIVIC BODY / TALUK",
+        profile_civic_tier: "CIVIC VERIFICATION TIER",
+        profile_civic_tier_val: "Tier 1 Verified Resident ✅",
+        profile_resident_title: "Verified Resident · Civic Portal",
         profile_total_filed: "Total Filed",
         profile_resolved: "Resolved",
         profile_pending: "Pending",
@@ -369,6 +380,14 @@ const translations: Record<Language, Translations> = {
         profile_department: "துறை",
         profile_clearance: "போர்ட்டல் அனுமதி",
         profile_clearance_val: "நிலை 2 குறைதீர்க்கும் அதிகாரி",
+        profile_duty_status: "அதிகாரி பணி நிலை",
+        profile_duty_status_val: "களப்பணியில் உள்ளார் ✅",
+        profile_citizen_role: "குடிமகன் (பொது மக்கள்)",
+        profile_citizen_id: "குடிமக்கள் போர்டல் எண்",
+        profile_civic_body: "உள்ளாட்சி அமைப்பு / வட்டம்",
+        profile_civic_tier: "சரிபார்ப்பு நிலை",
+        profile_civic_tier_val: "நிலை 1 சரிபார்க்கப்பட்ட குடியிருப்புவாசி ✅",
+        profile_resident_title: "சரிபார்க்கப்பட்ட குடியிருப்புவாசி",
         profile_total_filed: "மொத்தம் பதிவு செய்தவை",
         profile_resolved: "தீர்க்கப்பட்டது",
         profile_pending: "நிலுவையில்",

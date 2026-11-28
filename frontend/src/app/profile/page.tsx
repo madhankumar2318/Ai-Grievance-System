@@ -45,17 +45,17 @@ export default function ProfilePage() {
     const { lang, t } = useLang();
 
     const [profileData, setProfileData] = useState(() => {
-        const initRole = user?.authorityRole || (user?.role === "authority" ? "Environment Protection Officer" : "Chief Commissioner");
-        const initDept = user?.department || (user?.role === "authority" ? getDepartmentForRole(initRole) : "Public Grievance Oversight");
+        const initRole = user?.authorityRole || (user?.role === "authority" ? "Environment Protection Officer" : user?.role === "chief" ? "Chief Commissioner" : "Verified Citizen Resident");
+        const initDept = user?.department || (user?.role === "authority" ? getDepartmentForRole(initRole) : user?.role === "chief" ? "Public Grievance Oversight" : "Civic Grievances");
         return {
             username: user?.username || "",
             email: user?.email || "",
             role: user?.role || "user",
             state: user?.state || "Tamil Nadu",
-            district: user?.district || (user?.role === "authority" ? "Tiruchirappalli" : "All Districts"),
+            district: user?.district || "Tiruchirappalli",
             authorityRole: initRole,
-            serviceId: user?.serviceId || (user?.role === "authority" ? "GOV-2026" : "CHIEF-TN-01"),
-            workingPlace: user?.workingPlace || (user?.role === "authority" ? "Tiruchirappalli District Collectorate & Divisional Office" : "State Secretariat, Chennai"),
+            serviceId: user?.serviceId || (user?.role === "authority" ? "GOV-2026" : user?.role === "chief" ? "CHIEF-TN-01" : "CTZ-TN-2026"),
+            workingPlace: user?.workingPlace || (user?.role === "authority" ? "Tiruchirappalli District Collectorate & Divisional Office" : user?.role === "chief" ? "State Secretariat, Chennai" : "Tiruchirappalli City Corporation"),
             phone: user?.phone || "+91 94432 00000",
             department: initDept,
         };
@@ -83,8 +83,8 @@ export default function ProfilePage() {
     useEffect(() => {
         if (!user?.email) return;
 
-        const currentRole = user.authorityRole || (user.role === "authority" ? "Environment Protection Officer" : "Chief Commissioner");
-        const currentDept = user.department || (user.role === "authority" ? getDepartmentForRole(currentRole) : "Public Grievance Oversight");
+        const currentRole = user.authorityRole || (user.role === "authority" ? "Environment Protection Officer" : user.role === "chief" ? "Chief Commissioner" : "Verified Citizen Resident");
+        const currentDept = user.department || (user.role === "authority" ? getDepartmentForRole(currentRole) : user.role === "chief" ? "Public Grievance Oversight" : "Civic Grievances");
 
         // Sync initial state from current user context
         setProfileData({
@@ -92,10 +92,10 @@ export default function ProfilePage() {
             email: user.email || "",
             role: user.role,
             state: user.state || "Tamil Nadu",
-            district: user.district || (user.role === "authority" ? "Tiruchirappalli" : "All Districts"),
+            district: user.district || "Tiruchirappalli",
             authorityRole: currentRole,
-            serviceId: user.serviceId || (user.role === "authority" ? "GOV-2026" : "CHIEF-TN-01"),
-            workingPlace: user.workingPlace || (user.role === "authority" ? `${user.district || "Tiruchirappalli"} District Collectorate & Divisional Office` : "State Secretariat, Chennai"),
+            serviceId: user.serviceId || (user.role === "authority" ? "GOV-2026" : user.role === "chief" ? "CHIEF-TN-01" : "CTZ-TN-2026"),
+            workingPlace: user.workingPlace || (user.role === "authority" ? `${user.district || "Tiruchirappalli"} District Collectorate & Divisional Office` : user.role === "chief" ? "State Secretariat, Chennai" : `${user.district || "Tiruchirappalli"} City Corporation`),
             phone: user.phone || "+91 94432 00000",
             department: currentDept,
         });
@@ -185,6 +185,7 @@ export default function ProfilePage() {
             const safePayload = {
                 username: editForm.username,
                 phone: editForm.phone,
+                district: editForm.district,
                 workingPlace: editForm.workingPlace,
             };
             const res = await updateUserProfileServerAction(safePayload);
@@ -295,14 +296,14 @@ export default function ProfilePage() {
                             <div style={{ marginBottom: "0.35rem" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
                                     <h1 style={{ fontWeight: "800", fontSize: "1.5rem", margin: 0 }}>
-                                        {profileData.username || "Authority Officer"}
+                                        {profileData.username || (user.role === "user" ? "Citizen" : "Authority Officer")}
                                     </h1>
                                     <button onClick={handleOpenEdit} title="Edit details" style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "0.9rem", color: "var(--text-muted)" }}>
                                         ✏️
                                     </button>
                                 </div>
                                 <div style={{ fontSize: "0.9rem", color: cfg.color, fontWeight: "700", marginTop: "0.2rem" }}>
-                                    {profileData.authorityRole}
+                                    {user.role === "user" ? t("profile_resident_title") : profileData.authorityRole}
                                 </div>
                             </div>
 
@@ -379,45 +380,95 @@ export default function ProfilePage() {
 
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
                                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_clearance")}
+                                                {t("profile_duty_status")}
                                             </div>
                                             <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
-                                                {t("profile_clearance_val")}
+                                                {t("profile_duty_status_val")}
                                             </div>
                                         </div>
                                     </>
                                 ) : (
                                     <>
+                                        {/* 1. Official Role */}
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
                                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_email")}
+                                                🎭 {t("profile_role")}
                                             </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
-                                                {profileData.email}
+                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: cfg.color }}>
+                                                {t("profile_citizen_role")}
                                             </div>
                                         </div>
 
+                                        {/* 2. Residence Location */}
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
                                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_location")}
+                                                📍 {t("profile_location")}
                                             </div>
                                             <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
                                                 {profileData.district}, {profileData.state}
                                             </div>
                                         </div>
 
+                                        {/* 3. Registered Email (Locked) */}
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
-                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_role")}
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                    📧 {t("profile_email")}
+                                                </span>
+                                                <span style={{ fontSize: "0.65rem", color: "#fbbf24", fontWeight: "700" }}>🔒 {lang === "ta" ? "சரிபார்க்கப்பட்டது" : "Verified"}</span>
                                             </div>
-                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: cfg.color }}>
-                                                {t(cfg.labelKey)}
+                                            <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "var(--text-main)", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                {profileData.email}
                                             </div>
                                         </div>
 
+                                        {/* 4. Registered Contact Phone */}
                                         <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
                                             <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
-                                                {t("profile_account_status")}
+                                                📞 {t("profile_phone")}
+                                            </div>
+                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                {profileData.phone || "+91 94432 00000"}
+                                            </div>
+                                        </div>
+
+                                        {/* 5. Citizen Portal ID (Locked) */}
+                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                                                <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                                                    🪪 {t("profile_citizen_id")}
+                                                </span>
+                                                <span style={{ fontSize: "0.65rem", color: "#6366f1", fontWeight: "700" }}>🔒 {lang === "ta" ? "அமைப்பு எண்" : "System Issued"}</span>
+                                            </div>
+                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", fontFamily: "monospace", color: "#6366f1" }}>
+                                                {profileData.serviceId || "CTZ-TN-2026"}
+                                            </div>
+                                        </div>
+
+                                        {/* 6. Local Civic Body / Municipal Corporation */}
+                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                🏛️ {t("profile_civic_body")}
+                                            </div>
+                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "var(--text-main)" }}>
+                                                {profileData.workingPlace || `${profileData.district} City Corporation`}
+                                            </div>
+                                        </div>
+
+                                        {/* 7. Civic Verification Tier */}
+                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                🛡️ {t("profile_civic_tier")}
+                                            </div>
+                                            <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
+                                                {t("profile_civic_tier_val")}
+                                            </div>
+                                        </div>
+
+                                        {/* 8. Account Status */}
+                                        <div style={{ padding: "0.85rem 1rem", borderRadius: "0.75rem", background: "var(--bg-main)", border: "1px solid var(--border)" }}>
+                                            <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.25rem" }}>
+                                                🔐 {t("profile_account_status")}
                                             </div>
                                             <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#10b981" }}>
                                                 {t("profile_active_citizen")}
@@ -601,6 +652,67 @@ export default function ProfilePage() {
                                                 type="text"
                                                 disabled
                                                 value={editForm.serviceId}
+                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {user.role === "user" && (
+                                    <>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "0.75rem" }}>
+                                            <div>
+                                                <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                    <span>📍 {t("profile_location")}</span>
+                                                </label>
+                                                <select
+                                                    value={editForm.district}
+                                                    onChange={e => setEditForm({ ...editForm, district: e.target.value, workingPlace: `${e.target.value} City Corporation` })}
+                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                                >
+                                                    {TAMIL_NADU_DISTRICTS.map(d => (
+                                                        <option key={d} value={d} style={{ background: "var(--bg-card)", color: "var(--text-main)" }}>
+                                                            {d}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                    {lang === "ta" ? "🗺️ மாநிலம்" : "🗺️ State"}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    disabled
+                                                    value={editForm.state || (lang === "ta" ? "தமிழ்நாடு" : "Tamil Nadu")}
+                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                <span>📧 {t("profile_email")}</span>
+                                                <span style={{ fontSize: "0.68rem", color: "#fbbf24" }}>🔒 {lang === "ta" ? "சரிபார்க்கப்பட்டது & பூட்டப்பட்டது" : "Verified & Locked"}</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                disabled
+                                                value={editForm.email}
+                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                <span>🪪 {t("profile_citizen_id")}</span>
+                                                <span style={{ fontSize: "0.68rem", color: "#6366f1" }}>🔒 {lang === "ta" ? "அமைப்பு எண்" : "System Issued"}</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                disabled
+                                                value={editForm.serviceId || "CTZ-TN-2026"}
                                                 style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
                                             />
                                         </div>
