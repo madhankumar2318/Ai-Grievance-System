@@ -263,7 +263,7 @@ function NavbarContent() {
 
                     {/* Nav Links — hidden on mobile (bottom nav handles those) */}
                     {isLoggedIn && (
-                        <div className="desktop-nav-links" style={{ display: "flex", alignItems: "center", gap: "0.15rem", overflow: "hidden" }}>
+                        <div className="desktop-nav-links" style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
@@ -844,8 +844,8 @@ function NavbarContent() {
 function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
     return (
         <Link href={href} style={{
-            padding: "0.35rem 0.7rem", borderRadius: "0.5rem",
-            fontWeight: "600", fontSize: "0.8rem", textDecoration: "none",
+            padding: "0.4rem 0.8rem", borderRadius: "0.55rem",
+            fontWeight: "600", fontSize: "0.825rem", textDecoration: "none",
             background: active ? "var(--grad-primary)" : "transparent",
             color: active ? "white" : "var(--text-muted)",
             transition: "all 0.2s ease",
