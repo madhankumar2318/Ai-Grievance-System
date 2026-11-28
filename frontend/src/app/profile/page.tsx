@@ -6,7 +6,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getFullUserProfileServerAction, updateUserProfileServerAction } from "@/app/actions/authActions";
+import { getFullUserProfileServerAction, updateUserProfileServerAction, changePasswordServerAction } from "@/app/actions/authActions";
 import { TAMIL_NADU_DISTRICTS } from "@/lib/indiaGeoData";
 
 const ROLE_CONFIG: Record<string, { label: string; labelKey: "role_citizen" | "role_authority" | "role_chief"; icon: string; color: string; gradient: string }> = {
@@ -81,6 +81,76 @@ function ProfileContent() {
     const [editForm, setEditForm] = useState({ ...profileData });
     const [isSaving, setIsSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+
+    // Change password modal state
+    const [showChangePwModal, setShowChangePwModal] = useState(false);
+    const [pwForm, setPwForm] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    const [showOldPw, setShowOldPw] = useState(false);
+    const [showNewPw, setShowNewPw] = useState(false);
+    const [showConfirmPw, setShowConfirmPw] = useState(false);
+    const [pwLoading, setPwLoading] = useState(false);
+    const [pwError, setPwError] = useState("");
+    const [pwSuccess, setPwSuccess] = useState(false);
+
+    const handleOpenChangePw = () => {
+        setPwForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+        setPwError("");
+        setPwSuccess(false);
+        setShowOldPw(false);
+        setShowNewPw(false);
+        setShowConfirmPw(false);
+        setShowChangePwModal(true);
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPwError("");
+        setPwSuccess(false);
+
+        if (!pwForm.oldPassword) {
+            setPwError(lang === "ta" ? "உங்கள் தற்போதைய கடவுச்சொல்லை உள்ளிடவும்." : "Please enter your current password.");
+            return;
+        }
+        if (!pwForm.newPassword) {
+            setPwError(lang === "ta" ? "புதிய கடவுச்சொல்லை உள்ளிடவும்." : "Please enter your new password.");
+            return;
+        }
+        if (pwForm.newPassword.length < 8) {
+            setPwError(t("profile_pw_min"));
+            return;
+        }
+        if (pwForm.newPassword !== pwForm.confirmPassword) {
+            setPwError(t("profile_pw_mismatch"));
+            return;
+        }
+        if (pwForm.oldPassword === pwForm.newPassword) {
+            setPwError(lang === "ta" ? "புதிய கடவுச்சொல் பழைய கடவுச்சொல்லிலிருந்து மாறுபட்டிருக்க வேண்டும்." : "New password must be different from current password.");
+            return;
+        }
+
+        setPwLoading(true);
+        try {
+            const res = await changePasswordServerAction({
+                oldPassword: pwForm.oldPassword,
+                newPassword: pwForm.newPassword,
+            });
+
+            if (res.success) {
+                setPwSuccess(true);
+                setPwForm({ oldPassword: "", newPassword: "", confirmPassword: "" });
+                setTimeout(() => {
+                    setShowChangePwModal(false);
+                    setPwSuccess(false);
+                }, 1800);
+            } else {
+                setPwError(res.error || (lang === "ta" ? "கடவுச்சொல்லை மாற்ற முடியவில்லை." : "Failed to change password."));
+            }
+        } catch (err: any) {
+            setPwError(lang === "ta" ? "பிணையப் பிழை. மீண்டும் முயற்சிக்கவும்." : "Network error. Please try again.");
+        } finally {
+            setPwLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (!user?.email) return;
@@ -174,8 +244,8 @@ function ProfileContent() {
             <main style={{ minHeight: "100vh", padding: "2rem 1rem" }}>
                 <div className="container" style={{ maxWidth: "780px", margin: "0 auto" }}>
 
-                    {/* Top Row: Back button + Edit Action */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                    {/* Top Row: Back button + Action Buttons */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
                         <Link
                             href={user.role === "user" ? "/" : user.role === "authority" ? "/admin" : "/chief"}
                             style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: "0.875rem", color: "var(--text-muted)", textDecoration: "none", fontWeight: "600" }}
@@ -183,25 +253,48 @@ function ProfileContent() {
                             {user.role === "authority" ? t("profile_back_authority") : user.role === "chief" ? t("profile_back_chief") : t("profile_back_citizen")}
                         </Link>
 
-                        <button
-                            onClick={handleOpenEdit}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.4rem",
-                                padding: "0.45rem 1rem",
-                                borderRadius: "0.6rem",
-                                fontSize: "0.82rem",
-                                fontWeight: "700",
-                                background: `${cfg.color}15`,
-                                color: cfg.color,
-                                border: `1px solid ${cfg.color}35`,
-                                cursor: "pointer",
-                                transition: "all 0.2s ease",
-                            }}
-                        >
-                            <span>{t("profile_edit_btn")}</span>
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                            <button
+                                onClick={handleOpenChangePw}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.4rem",
+                                    padding: "0.45rem 1rem",
+                                    borderRadius: "0.6rem",
+                                    fontSize: "0.82rem",
+                                    fontWeight: "700",
+                                    background: "rgba(255, 255, 255, 0.05)",
+                                    color: "var(--text-main)",
+                                    border: "1px solid var(--border)",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                <span>🔑</span>
+                                <span>{t("profile_change_pw")}</span>
+                            </button>
+
+                            <button
+                                onClick={handleOpenEdit}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "0.4rem",
+                                    padding: "0.45rem 1rem",
+                                    borderRadius: "0.6rem",
+                                    fontSize: "0.82rem",
+                                    fontWeight: "700",
+                                    background: `${cfg.color}15`,
+                                    color: cfg.color,
+                                    border: `1px solid ${cfg.color}35`,
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                <span>{t("profile_edit_btn")}</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Dedicated Standalone Profile Card */}
@@ -644,6 +737,160 @@ function ProfileContent() {
                                         style={{ flex: 1.5, padding: "0.75rem", borderRadius: "0.5rem", border: "none", background: "linear-gradient(135deg, #f97316, #fb923c)", color: "white", fontWeight: "800", cursor: isSaving ? "wait" : "pointer" }}
                                     >
                                         {isSaving ? t("profile_saving") : t("profile_save")}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Change Password Modal ── */}
+                {showChangePwModal && (
+                    <div style={{
+                        position: "fixed",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.75)",
+                        backdropFilter: "blur(6px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        padding: "1rem"
+                    }} onClick={() => setShowChangePwModal(false)}>
+                        <div
+                            className="glass animate-slide-up"
+                            style={{
+                                width: "100%",
+                                maxWidth: "460px",
+                                maxHeight: "90vh",
+                                overflowY: "auto",
+                                borderRadius: "1.25rem",
+                                padding: "2rem",
+                                border: "1px solid var(--border)",
+                                boxShadow: "var(--shadow-xl)",
+                                background: "var(--bg-card)"
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <span style={{ fontSize: "1.3rem" }}>🔑</span>
+                                    <h2 style={{ fontSize: "1.2rem", fontWeight: "800", margin: 0 }}>
+                                        {t("profile_change_pw")}
+                                    </h2>
+                                </div>
+                                <button
+                                    onClick={() => setShowChangePwModal(false)}
+                                    style={{ background: "transparent", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "var(--text-muted)" }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "1.25rem" }}>
+                                {t("profile_change_pw_desc")}
+                            </p>
+
+                            {pwSuccess && (
+                                <div style={{ padding: "0.85rem 1rem", borderRadius: "0.6rem", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", color: "#10b981", fontSize: "0.85rem", fontWeight: "700", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <span>✅</span>
+                                    <span>{t("profile_pw_success")}</span>
+                                </div>
+                            )}
+
+                            {pwError && (
+                                <div style={{ padding: "0.85rem 1rem", borderRadius: "0.6rem", background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", fontSize: "0.85rem", fontWeight: "700", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <span>⚠️</span>
+                                    <span>{pwError}</span>
+                                </div>
+                            )}
+
+                            <form onSubmit={handleChangePassword} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                {/* Current / Old Password */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                        🔒 {t("profile_old_pw")}
+                                    </label>
+                                    <div style={{ position: "relative" }}>
+                                        <input
+                                            type={showOldPw ? "text" : "password"}
+                                            required
+                                            value={pwForm.oldPassword}
+                                            onChange={e => setPwForm({ ...pwForm, oldPassword: e.target.value })}
+                                            placeholder="••••••••"
+                                            style={{ width: "100%", padding: "0.7rem 2.5rem 0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowOldPw(!showOldPw)}
+                                            style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.9rem" }}
+                                        >
+                                            {showOldPw ? "👁️" : "🙈"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* New Password */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                        ✨ {t("profile_new_pw")}
+                                    </label>
+                                    <div style={{ position: "relative" }}>
+                                        <input
+                                            type={showNewPw ? "text" : "password"}
+                                            required
+                                            value={pwForm.newPassword}
+                                            onChange={e => setPwForm({ ...pwForm, newPassword: e.target.value })}
+                                            placeholder={lang === "ta" ? "குறைந்தது 8 எழுத்துக்கள்" : "At least 8 characters"}
+                                            style={{ width: "100%", padding: "0.7rem 2.5rem 0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowNewPw(!showNewPw)}
+                                            style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.9rem" }}
+                                        >
+                                            {showNewPw ? "👁️" : "🙈"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Confirm New Password */}
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                        🛡️ {t("profile_confirm_pw")}
+                                    </label>
+                                    <div style={{ position: "relative" }}>
+                                        <input
+                                            type={showConfirmPw ? "text" : "password"}
+                                            required
+                                            value={pwForm.confirmPassword}
+                                            onChange={e => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
+                                            placeholder="••••••••"
+                                            style={{ width: "100%", padding: "0.7rem 2.5rem 0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPw(!showConfirmPw)}
+                                            style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "0.9rem" }}
+                                        >
+                                            {showConfirmPw ? "👁️" : "🙈"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.75rem" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowChangePwModal(false)}
+                                        style={{ flex: 1, padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "transparent", color: "var(--text-muted)", fontWeight: "700", cursor: "pointer" }}
+                                    >
+                                        {t("profile_cancel")}
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={pwLoading}
+                                        style={{ flex: 1.5, padding: "0.75rem", borderRadius: "0.5rem", border: "none", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "white", fontWeight: "800", cursor: pwLoading ? "wait" : "pointer" }}
+                                    >
+                                        {pwLoading ? (lang === "ta" ? "புதுப்பிக்கப்படுகிறது..." : "Updating...") : t("profile_update_pw")}
                                     </button>
                                 </div>
                             </form>

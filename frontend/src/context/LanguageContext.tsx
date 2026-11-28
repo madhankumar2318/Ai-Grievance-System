@@ -64,7 +64,9 @@ export type TranslationKey =
     | "profile_recent_complaints" | "profile_loading_complaints" | "profile_no_complaints"
     | "profile_file_first" | "profile_track_btn" | "profile_modal_title" | "profile_fullname"
     | "profile_phone_label" | "profile_workplace_label" | "profile_email_locked"
-    | "profile_dept_locked" | "profile_cancel" | "profile_save" | "profile_saving" | "profile_success";
+    | "profile_dept_locked" | "profile_cancel" | "profile_save" | "profile_saving" | "profile_success"
+    | "profile_change_pw" | "profile_change_pw_desc" | "profile_old_pw" | "profile_new_pw"
+    | "profile_confirm_pw" | "profile_pw_mismatch" | "profile_pw_min" | "profile_pw_success" | "profile_update_pw";
 
 type Translations = Record<TranslationKey, string>;
 
@@ -243,6 +245,15 @@ const translations: Record<Language, Translations> = {
         profile_save: "Save Changes",
         profile_saving: "Saving...",
         profile_success: "Profile Updated Successfully!",
+        profile_change_pw: "Change Password",
+        profile_change_pw_desc: "Verify your current password to set a new secure password.",
+        profile_old_pw: "Current Password",
+        profile_new_pw: "New Password",
+        profile_confirm_pw: "Confirm New Password",
+        profile_pw_mismatch: "New passwords do not match.",
+        profile_pw_min: "Password must be at least 8 characters long.",
+        profile_pw_success: "Password updated successfully in database!",
+        profile_update_pw: "Update Password",
     },
     ta: {
         nav_home: "புகார் பதிவு",
@@ -418,6 +429,15 @@ const translations: Record<Language, Translations> = {
         profile_save: "மாற்றங்களைச் சேமி",
         profile_saving: "சேமிக்கப்படுகிறது...",
         profile_success: "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!",
+        profile_change_pw: "கடவுச்சொல் மாற்றம்",
+        profile_change_pw_desc: "புதிய பாதுகாப்பான கடவுச்சொல்லை அமைக்க உங்கள் தற்போதைய கடவுச்சொல்லை சரிபார்க்கவும்.",
+        profile_old_pw: "தற்போதைய பழைய கடவுச்சொல்",
+        profile_new_pw: "புதிய கடவுச்சொல்",
+        profile_confirm_pw: "புதிய கடவுச்சொல்லை உறுதிசெய்க",
+        profile_pw_mismatch: "புதிய கடவுச்சொற்கள் பொருந்தவில்லை.",
+        profile_pw_min: "கடவுச்சொல் குறைந்தது 8 எழுத்துக்கள் இருக்க வேண்டும்.",
+        profile_pw_success: "கடவுச்சொல் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!",
+        profile_update_pw: "கடவுச்சொல்லை புதுப்பி",
     },
 };
 

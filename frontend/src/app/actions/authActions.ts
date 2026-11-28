@@ -763,6 +763,111 @@ export async function updateUserProfileServerAction(data: {
   return { success: true, user: updatedUser };
 }
 
+/**
+ * Securely change citizen/user password:
+ * 1. Verifies existing authenticated session.
+ * 2. Compares old password against bcrypt hash in Supabase.
+ * 3. Validates new password (minimum 8 chars, distinct from old).
+ * 4. Hashes new password with bcrypt (cost 10) and stores in Supabase users table.
+ */
+export async function changePasswordServerAction(data: {
+  oldPassword: string;
+  newPassword: string;
+}): Promise<{ success: boolean; error?: string; message?: string }> {
+  const session = await getVerifiedSessionServerAction();
+  if (!session.authenticated || !session.user) {
+    return { success: false, error: "Authentication required. Please log in again." };
+  }
+
+  const email = (session.user.email || "").toLowerCase().trim();
+  const oldPassword = data.oldPassword || "";
+  const newPassword = data.newPassword || "";
+
+  if (!oldPassword) {
+    return { success: false, error: "Please enter your current password." };
+  }
+  if (!newPassword) {
+    return { success: false, error: "Please enter a new password." };
+  }
+  if (newPassword.length < 8) {
+    return { success: false, error: "New password must be at least 8 characters long." };
+  }
+  if (oldPassword === newPassword) {
+    return { success: false, error: "New password must be different from your current password." };
+  }
+
+  try {
+    // 1. Fetch current user password hash from Supabase
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}&select=password_hash`,
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!res.ok) {
+      return { success: false, error: "Database error while verifying account." };
+    }
+
+    const users = await res.json();
+    if (!Array.isArray(users) || users.length === 0) {
+      return { success: false, error: "User account not found in database." };
+    }
+
+    const currentHash = users[0].password_hash;
+    let isMatch = false;
+    try {
+      isMatch = bcrypt.compareSync(oldPassword, currentHash || "");
+    } catch (cmpErr) {
+      console.error("Bcrypt compare error:", cmpErr);
+    }
+
+    if (!isMatch) {
+      return { success: false, error: "Current password is incorrect. Please verify and try again." };
+    }
+
+    // 2. Hash new password
+    const salt = bcrypt.genSaltSync(10);
+    const newHash = bcrypt.hashSync(newPassword, salt);
+
+    // 3. Update Supabase users table with new password hash
+    const updateRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?email=eq.${encodeURIComponent(email)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify({
+          password_hash: newHash,
+          updated_at: new Date().toISOString(),
+        }),
+      }
+    );
+
+    if (!updateRes.ok) {
+      const errText = await updateRes.text();
+      console.error("Supabase password update error:", errText);
+      return { success: false, error: "Failed to store new password in database." };
+    }
+
+    return {
+      success: true,
+      message: "Password changed and saved successfully in database!",
+    };
+  } catch (err: any) {
+    console.error("Change password exception:", err);
+    return { success: false, error: "Unexpected error while changing password. Please try again." };
+  }
+}
+
 export interface RegisteredOfficer {
   email: string;
   username: string;
