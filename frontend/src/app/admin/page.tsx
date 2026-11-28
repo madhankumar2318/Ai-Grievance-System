@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getComplaintsServerAction, updateComplaintStatusServerAction, transferComplaintDepartmentServerAction, issueCollectorDirectiveServerAction, claimComplaintServerAction, assignOfficerServerAction, ActionTakenReportData, CollectorDirectiveData } from "@/app/actions/complaintActions";
 import { getDistrictOfficersServerAction, RegisteredOfficer } from "@/app/actions/authActions";
 import ActionTakenReportModal from "@/components/ActionTakenReportModal";
-import { parseEmbeddedTag, computeDirectiveSlaStatus, findOfficerActiveClaim, mapRoleToDepartment, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
+import { parseEmbeddedTag, computeDirectiveSlaStatus, findOfficerActiveClaim, mapRoleToDepartment, stripEmbeddedTags, EmbeddedDirective, EmbeddedClaim } from "@/lib/grievanceUtils";
 
 const DIRECTIVE_TIME_CHIPS = [
     { id: "24h", chipLabel: "🚨 24h", hours: 24, targetText: "🚨 24 Hours — Urgent Expedite" },
@@ -1397,11 +1397,7 @@ export default function AdminDashboard() {
                                                 }
                                                 const photoMatch = (c.description || "").match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
                                                 const evidencePhoto = photoMatch ? photoMatch[1] : null;
-                                                const cleanDesc = (c.description || "")
-                                                    .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
-                                                    .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
-                                                    .replace(/\[COLLECTOR_DIRECTIVE:[\s\S]*?\]/g, "")
-                                                    .trim();
+                                                const cleanDesc = stripEmbeddedTags(c.description || "");
 
                                                 return (
                                                     <tr style={{ borderBottom: "1px solid var(--border)" }}>
@@ -1560,6 +1556,33 @@ export default function AdminDashboard() {
                                                                                 <span style={{ color: "var(--text-main)", wordBreak: "break-word" }}>{row.val}</span>
                                                                             </div>
                                                                         ))}
+                                                                        {(() => {
+                                                                            const claim = parseEmbeddedTag<EmbeddedClaim>(c.description || "", "CLAIMED_BY");
+                                                                            if (!claim) return null;
+                                                                            return (
+                                                                                <div style={{
+                                                                                    marginTop: "0.25rem",
+                                                                                    padding: "0.55rem 0.75rem",
+                                                                                    borderRadius: "0.625rem",
+                                                                                    background: "rgba(16, 185, 129, 0.08)",
+                                                                                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                                                                                    display: "flex",
+                                                                                    flexDirection: "column",
+                                                                                    gap: "0.25rem",
+                                                                                }}>
+                                                                                    <div style={{ fontSize: "0.68rem", fontWeight: "800", color: "#34d399", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                                                                                        <span>👮</span>
+                                                                                        <span>Officer In-Charge</span>
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: "0.82rem", fontWeight: "700", color: "#e2e8f0" }}>
+                                                                                        {claim.officerName}
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                                                                        {claim.officerRole || "Field Officer"}
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })()}
                                                                     </div>
 
                                                                     {/* Col 3 — AI Note + Actions */}
@@ -2138,10 +2161,7 @@ export default function AdminDashboard() {
                                     }
                                     const photoMatch = (c.description || "").match(/\[EVIDENCE_PHOTO:([^\]]+)\]/);
                                     const evidencePhoto = photoMatch ? photoMatch[1] : null;
-                                    const cleanDesc = (c.description || "")
-                                        .replace(/\[EVIDENCE_PHOTO:[^\]]+\]/g, "")
-                                        .replace(/\[ACTION_TAKEN_REPORT:[\s\S]*?\]/g, "")
-                                        .trim();
+                                    const cleanDesc = stripEmbeddedTags(c.description || "");
 
                                     return (
                                         <div className="admin-mobile-card-details">
