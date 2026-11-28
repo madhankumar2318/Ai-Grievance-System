@@ -651,24 +651,26 @@ function ProfileContent() {
 
                                 {user.role === "user" && (
                                     <>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "0.75rem" }}>
-                                            <div>
-                                                <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                    <span>📍 {t("profile_location")}</span>
-                                                </label>
-                                                <select
-                                                    value={editForm.district}
-                                                    onChange={e => setEditForm({ ...editForm, district: e.target.value, workingPlace: `${e.target.value} City Corporation` })}
-                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
-                                                >
-                                                    {TAMIL_NADU_DISTRICTS.map(d => (
-                                                        <option key={d} value={d} style={{ background: "var(--bg-card)", color: "var(--text-main)" }}>
-                                                            {d}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
+                                        {/* 1. Location / District - Full width, clean single-line label and dropdown */}
+                                        <div>
+                                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                📍 {t("profile_location")}
+                                            </label>
+                                            <select
+                                                value={editForm.district}
+                                                onChange={e => setEditForm({ ...editForm, district: e.target.value, workingPlace: `${e.target.value} City Corporation` })}
+                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                            >
+                                                {TAMIL_NADU_DISTRICTS.map(d => (
+                                                    <option key={d} value={d} style={{ background: "var(--bg-card)", color: "var(--text-main)" }}>
+                                                        {d}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
 
+                                        {/* 2. State & Pincode - Perfect 50/50 alignment, full room for "Tamil Nadu", zero truncation */}
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                                             <div>
                                                 <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
                                                     {lang === "ta" ? "🗺️ மாநிலம்" : "🗺️ State"}
@@ -680,8 +682,23 @@ function ProfileContent() {
                                                     style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
                                                 />
                                             </div>
+
+                                            <div>
+                                                <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
+                                                    📮 {t("profile_pincode_label")}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={editForm.pincode || ""}
+                                                    onChange={e => setEditForm({ ...editForm, pincode: e.target.value.replace(/[^0-9\s]/g, "").slice(0, 7) })}
+                                                    placeholder="620 001"
+                                                    maxLength={7}
+                                                    style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
+                                                />
+                                            </div>
                                         </div>
 
+                                        {/* 3. Email (Locked) + Change Password Button */}
                                         <div>
                                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
                                                 <label style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", margin: 0 }}>
@@ -715,20 +732,6 @@ function ProfileContent() {
                                                 disabled
                                                 value={editForm.email}
                                                 style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-muted)", fontSize: "0.9rem", cursor: "not-allowed", opacity: 0.8 }}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginBottom: "0.3rem" }}>
-                                                📮 {t("profile_pincode_label")}
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={editForm.pincode || ""}
-                                                onChange={e => setEditForm({ ...editForm, pincode: e.target.value.replace(/[^0-9\s]/g, "").slice(0, 7) })}
-                                                placeholder="620 001"
-                                                maxLength={7}
-                                                style={{ width: "100%", padding: "0.7rem 0.85rem", borderRadius: "0.5rem", border: "1px solid var(--border)", background: "var(--bg-main)", color: "var(--text-main)", fontSize: "0.9rem" }}
                                             />
                                         </div>
                                     </>

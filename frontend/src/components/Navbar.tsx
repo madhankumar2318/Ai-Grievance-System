@@ -28,7 +28,6 @@ function NavbarContent() {
     const { lang, setLang, t } = useLang();
     const [showLangMenu, setShowLangMenu] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showNotifMenu, setShowNotifMenu] = useState(false);
     const [hasUnread, setHasUnread] = useState(false);
     const [notifications, setNotifications] = useState<{ id: string; title: string; message: string; time: string; icon: string; link?: string; unread: boolean; }[]>([]);
@@ -212,7 +211,6 @@ function NavbarContent() {
     }, [isLoggedIn, user]);
 
     useEffect(() => {
-        setIsMobileMenuOpen(false);
         setShowNotifMenu(false);
         setShowLangMenu(false);
         setShowUserMenu(false);
@@ -567,26 +565,14 @@ function NavbarContent() {
                         </button>
                     </div>
 
-                    {/* Hamburger Menu Button — mobile only */}
-                    {isLoggedIn && (
-                        <button
-                            className="mobile-only-control mobile-menu-toggle"
-                            onClick={() => setIsMobileMenuOpen(p => !p)}
-                            title="Toggle Menu"
-                        >
-                            {isMobileMenuOpen ? "✕" : "☰"}
-                        </button>
-                    )}
-
-
-                    {/* User Avatar + Dropdown */}
+                    {/* User Avatar + Unified Navigation Dropdown */}
                     {isLoggedIn && user ? (
                         <div style={{ position: "relative" }}>
                             <button
                                 onClick={() => setShowUserMenu(p => !p)}
                                 style={{
                                     display: "flex", alignItems: "center", gap: "0.5rem",
-                                    padding: "0.3rem 0.3rem 0.3rem 0.3rem",
+                                    padding: "0.3rem 0.45rem 0.3rem 0.3rem",
                                     borderRadius: "99px", border: "1px solid var(--border)",
                                     background: "var(--bg-card)", cursor: "pointer",
                                     transition: "var(--transition)",
@@ -599,7 +585,7 @@ function NavbarContent() {
                                     width: "30px", height: "30px", borderRadius: "50%",
                                     background: `linear-gradient(135deg, ${ROLE_BADGE[user.role].color}, ${ROLE_BADGE[user.role].color}aa)`,
                                     display: "flex", alignItems: "center", justifyContent: "center",
-                                    fontSize: "0.7rem", fontWeight: "800", color: "white",
+                                    fontSize: "0.72rem", fontWeight: "800", color: "white",
                                     flexShrink: 0,
                                 }}>
                                     {getInitials(user.username)}
@@ -607,43 +593,187 @@ function NavbarContent() {
                                 <span className="nav-btn-text" style={{ fontSize: "0.8rem", fontWeight: "700", color: ROLE_BADGE[user.role].color, paddingRight: "0.25rem" }}>
                                     {t(ROLE_BADGE[user.role].labelKey)}
                                 </span>
-                                <span style={{ fontSize: "0.6rem", color: "var(--text-muted)", paddingRight: "0.5rem" }}>▾</span>
+                                <span style={{ fontSize: "0.6rem", color: "var(--text-muted)", paddingRight: "0.25rem" }}>▾</span>
                             </button>
 
                             {showUserMenu && (
                                 <>
                                     <div className="glass animate-fade-in" style={{
                                         position: "absolute", top: "calc(100% + 0.5rem)", right: 0,
-                                        minWidth: "180px", borderRadius: "0.875rem",
+                                        minWidth: "220px", borderRadius: "0.875rem",
                                         border: "1px solid var(--border)",
-                                        boxShadow: "var(--shadow-lg)", zIndex: 200,
+                                        boxShadow: "var(--shadow-xl)", zIndex: 200,
                                         overflow: "hidden",
+                                        background: "var(--bg-card)",
                                     }}>
-                                        {/* User info */}
-                                        <div style={{ padding: "0.875rem 1rem", borderBottom: "1px solid var(--border)" }}>
-                                            <div style={{ fontWeight: "700", fontSize: "0.875rem" }}>{user.username}</div>
-                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>{user.email}</div>
+                                        {/* User info header */}
+                                        <div style={{ padding: "0.875rem 1rem", borderBottom: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
+                                            <div style={{ fontWeight: "800", fontSize: "0.9rem", color: "var(--text-main)" }}>{user.username}</div>
+                                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem", wordBreak: "break-all" }}>{user.email}</div>
+                                            <div style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem", marginTop: "0.4rem", padding: "0.15rem 0.5rem", borderRadius: "99px", background: `${ROLE_BADGE[user.role].color}18`, color: ROLE_BADGE[user.role].color, fontSize: "0.7rem", fontWeight: "700", border: `1px solid ${ROLE_BADGE[user.role].color}30` }}>
+                                                {t(ROLE_BADGE[user.role].labelKey)}
+                                            </div>
                                         </div>
 
-                                        {/* My Profile link */}
-                                        <Link
-                                            href="/profile"
-                                            onClick={() => setShowUserMenu(false)}
-                                            style={{
-                                                display: "flex", alignItems: "center", gap: "0.5rem",
-                                                padding: "0.65rem 1rem", textDecoration: "none",
-                                                fontSize: "0.85rem", fontWeight: "600",
-                                                color: pathname === "/profile" ? "var(--primary)" : "var(--text-main)",
-                                                background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
-                                                borderBottom: "1px solid var(--border)",
-                                                transition: "background 0.15s",
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = pathname === "/profile" ? "rgba(99,102,241,0.18)" : "var(--bg-main)"; }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent"; }}
-                                        >
-                                            👤 {t("nav_my_profile")}
-                                        </Link>
-                                        {/* Logout */}
+                                        {/* All Navigation Links */}
+                                        <div style={{ padding: "0.35rem 0", borderBottom: "1px solid var(--border)" }}>
+                                            {user.role === "user" && (
+                                                <>
+                                                    <Link
+                                                        href="/"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/" ? "700" : "600",
+                                                            color: pathname === "/" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>📝</span>
+                                                        <span>{t("nav_home")}</span>
+                                                    </Link>
+
+                                                    <Link
+                                                        href="/track"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/track" ? "700" : "600",
+                                                            color: pathname === "/track" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/track" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>🔍</span>
+                                                        <span>{t("nav_track")}</span>
+                                                    </Link>
+
+                                                    <Link
+                                                        href="/my-grievances"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/my-grievances" ? "700" : "600",
+                                                            color: pathname === "/my-grievances" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/my-grievances" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>📋</span>
+                                                        <span>{t("nav_my_grievances")}</span>
+                                                    </Link>
+
+                                                    <Link
+                                                        href="/profile"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/profile" ? "700" : "600",
+                                                            color: pathname === "/profile" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>👤</span>
+                                                        <span>{t("nav_my_profile")}</span>
+                                                    </Link>
+                                                </>
+                                            )}
+
+                                            {user.role === "authority" && (
+                                                <>
+                                                    <Link
+                                                        href="/admin"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/admin" ? "700" : "600",
+                                                            color: pathname === "/admin" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/admin" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>🛡️</span>
+                                                        <span>{t("nav_authority_portal")}</span>
+                                                    </Link>
+                                                    {isDistrictHead && (
+                                                        <Link
+                                                            href="/admin/officers"
+                                                            onClick={() => setShowUserMenu(false)}
+                                                            style={{
+                                                                display: "flex", alignItems: "center", gap: "0.6rem",
+                                                                padding: "0.6rem 1rem", textDecoration: "none",
+                                                                fontSize: "0.85rem", fontWeight: pathname === "/admin/officers" ? "700" : "600",
+                                                                color: pathname === "/admin/officers" ? "var(--primary)" : "var(--text-main)",
+                                                                background: pathname === "/admin/officers" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                                transition: "background 0.15s",
+                                                            }}
+                                                        >
+                                                            <span>👥</span>
+                                                            <span>{t("nav_district_officers")}</span>
+                                                        </Link>
+                                                    )}
+                                                    <Link
+                                                        href="/profile"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/profile" ? "700" : "600",
+                                                            color: pathname === "/profile" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>👤</span>
+                                                        <span>{t("nav_my_profile")}</span>
+                                                    </Link>
+                                                </>
+                                            )}
+
+                                            {user.role === "chief" && (
+                                                <>
+                                                    <Link
+                                                        href="/chief"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/chief" ? "700" : "600",
+                                                            color: pathname === "/chief" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/chief" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>⭐</span>
+                                                        <span>{t("nav_chief")}</span>
+                                                    </Link>
+                                                    <Link
+                                                        href="/profile"
+                                                        onClick={() => setShowUserMenu(false)}
+                                                        style={{
+                                                            display: "flex", alignItems: "center", gap: "0.6rem",
+                                                            padding: "0.6rem 1rem", textDecoration: "none",
+                                                            fontSize: "0.85rem", fontWeight: pathname === "/profile" ? "700" : "600",
+                                                            color: pathname === "/profile" ? "var(--primary)" : "var(--text-main)",
+                                                            background: pathname === "/profile" ? "rgba(99,102,241,0.12)" : "transparent",
+                                                            transition: "background 0.15s",
+                                                        }}
+                                                    >
+                                                        <span>👤</span>
+                                                        <span>{t("nav_my_profile")}</span>
+                                                    </Link>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Logout Button */}
                                         <button
                                             onClick={() => { setShowUserMenu(false); handleLogout(); }}
                                             style={{
@@ -651,13 +781,14 @@ function NavbarContent() {
                                                 border: "none", background: "transparent",
                                                 textAlign: "left", cursor: "pointer",
                                                 fontSize: "0.85rem", fontWeight: "600",
-                                                color: "#ef4444", display: "flex", alignItems: "center", gap: "0.5rem",
+                                                color: "#ef4444", display: "flex", alignItems: "center", gap: "0.6rem",
                                                 transition: "background 0.15s",
                                             }}
                                             onMouseEnter={e => { e.currentTarget.style.background = "#ef444412"; }}
                                             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                                         >
-                                            🚪 {t("nav_logout")}
+                                            <span>🚪</span>
+                                            <span>{t("nav_logout")}</span>
                                         </button>
                                     </div>
                                     <div onClick={() => setShowUserMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 199 }} />
@@ -689,73 +820,6 @@ function NavbarContent() {
                     )}
                 </div>
             </div>
-
-            {/* Mobile menu drawer */}
-            {isMobileMenuOpen && isLoggedIn && user && (
-                <div className="mobile-menu-drawer animate-fade-in">
-                    {user.role === "user" && (
-                        <>
-                            <Link
-                                href="/"
-                                className={`mobile-menu-drawer-item${isActive("/") ? " mobile-menu-drawer-item--active" : ""}`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                📝 {t("nav_home")}
-                            </Link>
-                            <Link
-                                href="/track"
-                                className={`mobile-menu-drawer-item${isActive("/track") ? " mobile-menu-drawer-item--active" : ""}`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                🔍 {t("nav_track")}
-                            </Link>
-                            <Link
-                                href="/my-grievances"
-                                className={`mobile-menu-drawer-item${isActive("/my-grievances") ? " mobile-menu-drawer-item--active" : ""}`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                📋 {t("nav_my_grievances")}
-                            </Link>
-                            <Link
-                                href="/profile"
-                                className={`mobile-menu-drawer-item${isActive("/profile") ? " mobile-menu-drawer-item--active" : ""}`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                👤 {t("nav_my_profile")}
-                            </Link>
-                        </>
-                    )}
-                    {user.role === "authority" && (
-                        <>
-                            <Link
-                                href="/admin"
-                                className={`mobile-menu-drawer-item${isActive("/admin") ? " mobile-menu-drawer-item--active" : ""}`}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                                🛡️ {t("nav_authority_portal")}
-                            </Link>
-                            {isDistrictHead && (
-                                <Link
-                                    href="/admin/officers"
-                                    className={`mobile-menu-drawer-item${isActive("/admin/officers") ? " mobile-menu-drawer-item--active" : ""}`}
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                >
-                                    👥 {t("nav_district_officers")}
-                                </Link>
-                            )}
-                        </>
-                    )}
-                    {user.role === "chief" && (
-                        <Link
-                            href="/chief"
-                            className={`mobile-menu-drawer-item${isActive("/chief") ? " mobile-menu-drawer-item--active" : ""}`}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                            ⭐ {t("nav_chief")}
-                        </Link>
-                    )}
-                </div>
-            )}
 
             <style>{`
                 @keyframes ping {
