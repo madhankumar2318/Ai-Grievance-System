@@ -710,21 +710,21 @@ export default function AdminDashboard() {
             <main className="container section">
 
                 {/* ── Header ── */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem", flexWrap: "wrap", gap: "1rem" }}>
+                <div className="admin-header-container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
                     <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                            <h1 className="gradient-text" style={{ fontSize: "2.5rem", margin: 0 }}>{t("admin_title")}</h1>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.4rem" }}>
+                            <h1 className="gradient-text admin-header-title">{t("admin_title")}</h1>
                             {/* Locked District Badge */}
-                            <div style={{
+                            <div className="admin-header-badge" style={{
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "0.4rem",
-                                padding: "0.35rem 0.85rem",
+                                gap: "0.35rem",
+                                padding: "0.3rem 0.75rem",
                                 borderRadius: "99px",
                                 background: "rgba(16, 185, 129, 0.12)",
                                 border: "1.5px solid rgba(16, 185, 129, 0.35)",
                                 color: "#34d399",
-                                fontSize: "0.82rem",
+                                fontSize: "0.8rem",
                                 fontWeight: "700",
                                 boxShadow: "0 0 15px rgba(16, 185, 129, 0.15)",
                             }}>
@@ -733,23 +733,23 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Officer Role / Authority Badge */}
-                            <div style={{
+                            <div className="admin-header-badge" style={{
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "0.4rem",
-                                padding: "0.35rem 0.85rem",
+                                gap: "0.35rem",
+                                padding: "0.3rem 0.75rem",
                                 borderRadius: "99px",
                                 background: isDistrictHead ? "rgba(245, 158, 11, 0.14)" : "rgba(99, 102, 241, 0.14)",
                                 border: isDistrictHead ? "1.5px solid rgba(245, 158, 11, 0.4)" : "1.5px solid rgba(99, 102, 241, 0.4)",
                                 color: isDistrictHead ? "#fbbf24" : "#a5b4fc",
-                                fontSize: "0.82rem",
+                                fontSize: "0.8rem",
                                 fontWeight: "700",
                             }}>
                                 <span>{isDistrictHead ? "🏛️" : (CATEGORY_ICONS[assignedDepartment || ""] || "🎖️")}</span>
                                 <span>{user?.authorityRole || (isDistrictHead ? "District Collector & District Magistrate" : "Department Authority Officer")}</span>
                             </div>
                         </div>
-                        <p style={{ marginTop: "0.35rem", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                        <p className="admin-header-desc" style={{ margin: "0.25rem 0 0 0", color: "var(--text-muted)", fontSize: "0.85rem" }}>
                             {isDistrictHead ? (
                                 <>
                                     🏛️ <strong>District Collector Oversight:</strong> Supervising all department grievances across <strong>{officerDistrict} ({officerState})</strong>
@@ -766,13 +766,15 @@ export default function AdminDashboard() {
                 {/* ── Stat Cards ── */}
                 <div className="stagger-children admin-stats-grid">
                     {STATS.map(({ label, value, color, icon, grad }, idx) => (
-                        <div key={`${lang}-${idx}`} className="glass card-hover animate-fade-in" style={{ padding: "1.75rem 1.25rem", borderRadius: "var(--radius)", textAlign: "center", borderTop: `3px solid ${color}`, position: "relative", overflow: "hidden" }}>
+                        <div key={`${lang}-${idx}`} className="glass card-hover animate-fade-in admin-stat-card" style={{ borderTop: `3px solid ${color}`, position: "relative", overflow: "hidden" }}>
                             <div style={{ position: "absolute", top: "-20px", right: "-20px", width: "80px", height: "80px", borderRadius: "50%", background: `${color}18`, filter: "blur(20px)" }} />
-                            <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px", borderRadius: "10px", background: grad, fontSize: "1.1rem", marginBottom: "0.75rem", boxShadow: `0 4px 12px ${color}44` }}>
+                            <div className="admin-stat-icon-wrapper" style={{ background: grad, boxShadow: `0 4px 12px ${color}44` }}>
                                 {icon}
                             </div>
-                            <div style={{ fontSize: "2.25rem", fontWeight: "900", color, lineHeight: 1, marginBottom: "0.3rem" }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35, letterSpacing: "2px" }}>···</span> : value}</div>
-                            <div style={{ fontSize: "0.78rem", fontWeight: "600", color: "var(--text-muted)" }}>{label}</div>
+                            <div className="admin-stat-content">
+                                <div className="admin-stat-number" style={{ color }}>{loading && complaints.length === 0 ? <span style={{ opacity: 0.35, letterSpacing: "2px" }}>···</span> : value}</div>
+                                <div className="admin-stat-label">{label}</div>
+                            </div>
                             {isDistrictHead && (
                                 <div style={{ fontSize: "0.68rem", fontWeight: "700", color: departmentFilter !== "All" ? color : "var(--text-muted)", marginTop: "0.3rem", opacity: departmentFilter !== "All" ? 0.95 : 0.65 }}>
                                     {departmentFilter !== "All" ? `${CATEGORY_ICONS[departmentFilter] || ""} ${departmentFilter}` : "All Departments"}
@@ -923,7 +925,7 @@ export default function AdminDashboard() {
                                         }}
                                     >
                                         {/* 1. Department Identity Column */}
-                                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", width: "230px", minWidth: "210px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flex: "1 1 180px", minWidth: "0", maxWidth: "100%" }}>
                                             <div style={{
                                                 width: "34px",
                                                 height: "34px",
@@ -957,7 +959,7 @@ export default function AdminDashboard() {
                                         </div>
 
                                         {/* 2. Animated Percentage Loading Bar Strip */}
-                                        <div style={{ flex: 1, minWidth: "220px", display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                                        <div style={{ flex: "1 1 150px", minWidth: "0", display: "flex", alignItems: "center", gap: "0.85rem" }}>
                                             <div style={{
                                                 flex: 1,
                                                 height: "9px",
@@ -1040,21 +1042,10 @@ export default function AdminDashboard() {
                 )}
 
                 {/* ── Filter Bar ── */}
-                <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "0.75rem",
-                    marginBottom: "1.25rem",
-                    flexWrap: "wrap",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "1rem",
-                    background: "rgba(255, 255, 255, 0.02)",
-                    border: "1px solid var(--border)",
-                }}>
+                <div className="admin-filter-bar">
                     {/* Left: Status Filter Pills */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginRight: "0.2rem" }}>
+                    <div className="admin-filter-status-group">
+                        <span style={{ fontSize: "0.78rem", fontWeight: "700", color: "var(--text-muted)", marginRight: "0.2rem", flexShrink: 0 }}>
                             Status:
                         </span>
                         {FILTERS.map(f => (
@@ -1069,162 +1060,173 @@ export default function AdminDashboard() {
                                     color: filter === f ? "white" : "var(--text-muted)",
                                     cursor: "pointer", transition: "var(--transition)",
                                     boxShadow: filter === f ? "0 2px 8px var(--primary-glow)" : "none",
+                                    flexShrink: 0,
                                 }}
                             >{f}</button>
                         ))}
                     </div>
 
                     {/* Right: Jurisdiction Indicator + Department + Search + Clear */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                        {/* Locked District Tag */}
-                        <div
-                            title={`Showing complaints for ${officerDistrict}, ${officerState}.`}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.35rem",
-                                padding: "0.35rem 0.75rem",
-                                borderRadius: "0.5rem",
-                                background: "rgba(16, 185, 129, 0.08)",
-                                border: "1px solid rgba(16, 185, 129, 0.25)",
-                                color: "#34d399",
-                                fontSize: "0.76rem",
-                                fontWeight: "700",
-                                cursor: "default",
-                            }}
-                        >
-                            <span>📍</span>
-                            <span>{officerDistrict}</span>
-                            <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>🔒</span>
-                        </div>
-
-                        {/* Department Filter / Locked Boundary */}
-                        {assignedDepartment ? (
+                    <div className="admin-filter-controls-group">
+                        <div className="admin-filter-selectors-row">
+                            {/* Locked District Tag */}
                             <div
-                                title={`Security Locked: As ${user?.authorityRole || "Department Officer"}, your access is strictly confined to the ${assignedDepartment} department.`}
+                                title={`Showing complaints for ${officerDistrict}, ${officerState}.`}
                                 style={{
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "0.35rem",
                                     padding: "0.35rem 0.75rem",
                                     borderRadius: "0.5rem",
-                                    background: "rgba(99, 102, 241, 0.12)",
-                                    border: "1.5px solid rgba(99, 102, 241, 0.35)",
-                                    color: "#a5b4fc",
+                                    background: "rgba(16, 185, 129, 0.08)",
+                                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                                    color: "#34d399",
                                     fontSize: "0.76rem",
                                     fontWeight: "700",
+                                    cursor: "default",
                                 }}
                             >
-                                <span>{CATEGORY_ICONS[assignedDepartment] || "📁"}</span>
-                                <span>Dept: {assignedDepartment}</span>
+                                <span>📍</span>
+                                <span>{officerDistrict}</span>
                                 <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>🔒</span>
                             </div>
-                        ) : (
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                                <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "#fbbf24" }}>🏛️ Collector Oversight:</span>
-                                <select
-                                    value={departmentFilter}
-                                    onChange={e => setDepartmentFilter(e.target.value)}
+
+                            {/* Department Filter / Locked Boundary */}
+                            {assignedDepartment ? (
+                                <div
+                                    title={`Security Locked: As ${user?.authorityRole || "Department Officer"}, your access is strictly confined to the ${assignedDepartment} department.`}
                                     style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.35rem",
                                         padding: "0.35rem 0.75rem",
                                         borderRadius: "0.5rem",
-                                        border: departmentFilter !== "All" ? "1.5px solid #f59e0b" : "1.5px solid var(--border)",
-                                        background: "var(--bg-card)",
-                                        color: departmentFilter !== "All" ? "#fbbf24" : "var(--text-main)",
+                                        background: "rgba(99, 102, 241, 0.12)",
+                                        border: "1.5px solid rgba(99, 102, 241, 0.35)",
+                                        color: "#a5b4fc",
                                         fontSize: "0.76rem",
-                                        fontWeight: "600",
-                                        cursor: "pointer",
-                                        outline: "none",
+                                        fontWeight: "700",
                                     }}
                                 >
-                                    {availableDepartments.map(dept => (
-                                        <option key={dept} value={dept} style={{ background: "#0f172a", color: "#f8fafc" }}>
-                                            {dept === "All" ? "All Departments" : `${CATEGORY_ICONS[dept] || "📁"} ${dept}`}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        )}
-
-                        {/* Priority Filter */}
-                        <select
-                            value={priorityFilter}
-                            onChange={e => setPriorityFilter(e.target.value)}
-                            aria-label="Filter by Priority"
-                            style={{
-                                padding: "0.35rem 0.65rem",
-                                borderRadius: "0.5rem",
-                                border: priorityFilter !== "All" ? "1.5px solid #ef4444" : "1.5px solid var(--border)",
-                                background: "var(--bg-card)",
-                                color: priorityFilter !== "All" ? "#fca5a5" : "var(--text-main)",
-                                fontSize: "0.76rem",
-                                fontWeight: "600",
-                                cursor: "pointer",
-                                outline: "none",
-                            }}
-                        >
-                            <option value="All" style={{ background: "#0f172a", color: "#f8fafc" }}>All Priorities</option>
-                            <option value="Critical" style={{ background: "#0f172a", color: "#fca5a5" }}>🚨 Critical</option>
-                            <option value="High" style={{ background: "#0f172a", color: "#fdba74" }}>⚠️ High</option>
-                            <option value="Medium" style={{ background: "#0f172a", color: "#fde68a" }}>📍 Medium</option>
-                            <option value="Low" style={{ background: "#0f172a", color: "#6ee7b7" }}>✅ Low</option>
-                        </select>
-
-                        {/* Search Input */}
-                        <div style={{ position: "relative" }}>
-                            <input
-                                type="text"
-                                placeholder={`Search in ${officerDistrict}...`}
-                                value={searchQuery}
-                                onChange={e => setSearchQuery(e.target.value)}
-                                style={{
-                                    padding: "0.35rem 0.65rem 0.35rem 1.65rem",
-                                    borderRadius: "0.5rem",
-                                    border: searchQuery ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
-                                    background: "var(--bg-card)",
-                                    color: "var(--text-main)",
-                                    fontSize: "0.76rem",
-                                    width: "140px",
-                                    outline: "none",
-                                }}
-                            />
-                            <span style={{ position: "absolute", left: "0.5rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "var(--text-muted)", pointerEvents: "none" }}>
-                                🔍
-                            </span>
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery("")}
-                                    style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.7rem" }}
-                                >
-                                    ✕
-                                </button>
+                                    <span>{CATEGORY_ICONS[assignedDepartment] || "📁"}</span>
+                                    <span>Dept: {assignedDepartment}</span>
+                                    <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>🔒</span>
+                                </div>
+                            ) : (
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                                    <span style={{ fontSize: "0.76rem", fontWeight: "700", color: "#fbbf24" }}>🏛️ Collector:</span>
+                                    <select
+                                        value={departmentFilter}
+                                        onChange={e => setDepartmentFilter(e.target.value)}
+                                        style={{
+                                            padding: "0.35rem 0.75rem",
+                                            borderRadius: "0.5rem",
+                                            border: departmentFilter !== "All" ? "1.5px solid #f59e0b" : "1.5px solid var(--border)",
+                                            background: "var(--bg-card)",
+                                            color: departmentFilter !== "All" ? "#fbbf24" : "var(--text-main)",
+                                            fontSize: "0.76rem",
+                                            fontWeight: "600",
+                                            cursor: "pointer",
+                                            outline: "none",
+                                        }}
+                                    >
+                                        {availableDepartments.map(dept => (
+                                            <option key={dept} value={dept} style={{ background: "#0f172a", color: "#f8fafc" }}>
+                                                {dept === "All" ? "All Departments" : `${CATEGORY_ICONS[dept] || "📁"} ${dept}`}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             )}
-                        </div>
 
-                        {/* Reset Button */}
-                        {(filter !== "All" || departmentFilter !== "All" || priorityFilter !== "All" || searchQuery) && (
-                            <button
-                                onClick={() => {
-                                    setFilter("All");
-                                    setDepartmentFilter("All");
-                                    setPriorityFilter("All");
-                                    setSearchQuery("");
-                                }}
+                            {/* Priority Filter */}
+                            <select
+                                value={priorityFilter}
+                                onChange={e => setPriorityFilter(e.target.value)}
+                                aria-label="Filter by Priority"
                                 style={{
                                     padding: "0.35rem 0.65rem",
                                     borderRadius: "0.5rem",
-                                    border: "1px solid #ef444440",
-                                    background: "#ef444415",
-                                    color: "#f87171",
-                                    fontSize: "0.74rem",
-                                    fontWeight: "700",
+                                    border: priorityFilter !== "All" ? "1.5px solid #ef4444" : "1.5px solid var(--border)",
+                                    background: "var(--bg-card)",
+                                    color: priorityFilter !== "All" ? "#fca5a5" : "var(--text-main)",
+                                    fontSize: "0.76rem",
+                                    fontWeight: "600",
                                     cursor: "pointer",
+                                    outline: "none",
                                 }}
-                                title="Reset filters"
                             >
-                                ✕ Reset
-                            </button>
-                        )}
+                                <option value="All" style={{ background: "#0f172a", color: "#f8fafc" }}>All Priorities</option>
+                                <option value="Critical" style={{ background: "#0f172a", color: "#fca5a5" }}>🚨 Critical</option>
+                                <option value="High" style={{ background: "#0f172a", color: "#fdba74" }}>⚠️ High</option>
+                                <option value="Medium" style={{ background: "#0f172a", color: "#fde68a" }}>📍 Medium</option>
+                                <option value="Low" style={{ background: "#0f172a", color: "#6ee7b7" }}>✅ Low</option>
+                            </select>
+                        </div>
+
+                        {/* Search Input & Reset Box */}
+                        <div className="admin-search-wrapper">
+                            <div style={{ position: "relative", flex: 1 }}>
+                                <input
+                                    type="text"
+                                    className="admin-search-input"
+                                    placeholder={`Search in ${officerDistrict}...`}
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    style={{
+                                        padding: "0.35rem 0.65rem 0.35rem 1.65rem",
+                                        borderRadius: "0.5rem",
+                                        border: searchQuery ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+                                        background: "var(--bg-card)",
+                                        color: "var(--text-main)",
+                                        fontSize: "0.76rem",
+                                        width: "100%",
+                                        outline: "none",
+                                        boxSizing: "border-box",
+                                    }}
+                                />
+                                <span style={{ position: "absolute", left: "0.5rem", top: "50%", transform: "translateY(-50%)", fontSize: "0.7rem", color: "var(--text-muted)", pointerEvents: "none" }}>
+                                    🔍
+                                </span>
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        style={{ position: "absolute", right: "0.35rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.7rem" }}
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Reset Button */}
+                            {(filter !== "All" || departmentFilter !== "All" || priorityFilter !== "All" || searchQuery) && (
+                                <button
+                                    onClick={() => {
+                                        setFilter("All");
+                                        setDepartmentFilter("All");
+                                        setPriorityFilter("All");
+                                        setSearchQuery("");
+                                    }}
+                                    style={{
+                                        padding: "0.35rem 0.75rem",
+                                        borderRadius: "0.5rem",
+                                        border: "1px solid #ef444440",
+                                        background: "#ef444415",
+                                        color: "#f87171",
+                                        fontSize: "0.74rem",
+                                        fontWeight: "700",
+                                        cursor: "pointer",
+                                        flexShrink: 0,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "0.25rem",
+                                    }}
+                                    title="Reset filters"
+                                >
+                                    ✕ Reset
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 

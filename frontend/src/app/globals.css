@@ -668,18 +668,165 @@ tbody tr:hover {
   margin-bottom: 2.5rem;
 }
 
+.admin-stat-card {
+  padding: 1.5rem 1.15rem;
+  border-radius: var(--radius);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.admin-stat-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-stat-number {
+  font-size: 2.25rem;
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+.admin-stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 @media (max-width: 1024px) {
   .admin-stats-grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
   }
 }
 
 @media (max-width: 640px) {
   .admin-stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+    gap: 0.65rem;
+    margin-bottom: 1.5rem;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .admin-stat-card {
+    padding: 1rem 0.65rem !important;
+  }
+
+  .admin-stat-icon-wrapper {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.95rem !important;
+    margin-bottom: 0.4rem !important;
+    border-radius: 8px !important;
+  }
+
+  .admin-stat-number {
+    font-size: 1.65rem !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  .admin-stat-label {
+    font-size: 0.72rem !important;
+  }
+
+  /* The 5th item (Rejected) spans both columns and is beautifully balanced */
+  .admin-stats-grid > div:last-child:nth-child(odd) {
+    grid-column: span 2;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 1rem !important;
+    padding: 0.75rem 1rem !important;
+    text-align: left !important;
+  }
+
+  .admin-stats-grid > div:last-child:nth-child(odd) .admin-stat-icon-wrapper {
+    margin-bottom: 0 !important;
+    flex-shrink: 0;
+  }
+
+  .admin-stats-grid > div:last-child:nth-child(odd) .admin-stat-content {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .admin-stats-grid > div:last-child:nth-child(odd) .admin-stat-number {
+    font-size: 1.65rem !important;
+    margin-bottom: 0 !important;
+  }
+
+  .admin-stats-grid > div:last-child:nth-child(odd) .admin-stat-label {
+    font-size: 0.78rem !important;
+  }
+
+  /* Header adjustments for mobile */
+  .admin-header-title {
+    font-size: 1.65rem !important;
+  }
+  .admin-header-badge {
+    font-size: 0.74rem !important;
+    padding: 0.25rem 0.65rem !important;
+  }
+
+  /* Filter bar adjustments for mobile */
+  .admin-filter-bar {
+    padding: 0.75rem 0.85rem !important;
+    gap: 0.75rem !important;
+  }
+  .admin-filter-status-group {
+    width: 100% !important;
+    display: flex !important;
+    overflow-x: auto !important;
+    padding-bottom: 0.25rem !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+    gap: 0.4rem !important;
+  }
+  .admin-filter-status-group::-webkit-scrollbar {
+    display: none !important;
+  }
+  .admin-filter-status-group button {
+    flex-shrink: 0 !important;
+    font-size: 0.74rem !important;
+    padding: 0.35rem 0.85rem !important;
+  }
+  .admin-filter-controls-group {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  .admin-filter-selectors-row {
+    display: flex !important;
+    gap: 0.4rem !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+  .admin-filter-selectors-row > div,
+  .admin-filter-selectors-row > select {
+    flex: 1 1 auto !important;
+    min-width: 130px !important;
+  }
+  .admin-search-wrapper {
+    width: 100% !important;
+    display: flex !important;
+    gap: 0.4rem !important;
+  }
+  .admin-search-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 
