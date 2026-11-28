@@ -267,7 +267,7 @@ export default function Navbar() {
                             {user?.role === "user" && (<>
                                 <NavLink href="/" active={isActive("/")}>{t("nav_home")}</NavLink>
                                 <NavLink href="/track" active={isActive("/track")}>🔍 {t("nav_track")}</NavLink>
-                                <NavLink href="/profile" active={isActive("/profile")}>👤 {t("nav_my_profile")}</NavLink>
+                                <NavLink href="/profile" active={isActive("/profile")}>📋 {t("nav_my_grievances")}</NavLink>
                             </>)}
                             {user?.role === "authority" && (
                                 <>
@@ -710,7 +710,7 @@ export default function Navbar() {
                                 className={`mobile-menu-drawer-item${isActive("/profile") ? " mobile-menu-drawer-item--active" : ""}`}
                                 onClick={() => setIsMobileMenuOpen(false)}
                             >
-                                👤 {t("nav_my_profile")}
+                                📋 {t("nav_my_grievances")}
                             </Link>
                         </>
                     )}
